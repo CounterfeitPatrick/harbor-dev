@@ -17,7 +17,7 @@ Write the §7 DR config at the existing slot — empty (create mode) or populate
 ```json
 {
   "repo_path":   "<abs path>",
-  "task_dir":    "<abs path>/harbor/task-creation/<slug>",
+  "task_dir":    "<abs path>/harbor/create-task/<slug>",
   "task_id":     "<TaskID>",
   "description": "<one paragraph>"
 }
@@ -39,7 +39,7 @@ Write the §7 DR config at the existing slot — empty (create mode) or populate
 
 ## Permitted reads + writes
 
-- **Read** `<repo>/harbor/task-creation/task-implementation.md` — per-benchmark file pointers (NOT the smoke contract).
+- **Read** `<repo>/harbor/create-task/task-implementation.md` — per-benchmark file pointers (NOT the smoke contract).
 - **Read** the canonical example file end-to-end + scan the rest of the repo freely.
 - **Edit** `task-implementation.md` surgically when you find a bug. Log the edit in `dr-history.md`. Don't rewrite wholesale.
 - **Write** the DR config into the new task's env_cfg.
@@ -62,7 +62,7 @@ Render to `<task_dir>/smokes/smoke_s7.py` substituting `{{TASK_ID}}` and `{{DR_D
 ```bash
 cd "<repo_path>"
 test -x .venv/bin/python                                       || exit 1
-test -f harbor/task-creation/task-implementation.md          || exit 1
+test -f harbor/create-task/task-implementation.md          || exit 1
 .venv/bin/python -c "import gymnasium as gym; gym.make('<task_id>'); print('build ok')" || exit 1
 mkdir -p "<task_dir>/smokes"
 ```

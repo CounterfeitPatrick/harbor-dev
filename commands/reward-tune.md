@@ -1,9 +1,9 @@
 ---
-description: Iteratively tune the reward function (§6) for an EXISTING task. Per iteration the reward-generator agent authors / edits the reward (and may surgically edit §1–§5 if needed), the orchestrator trains a policy via the rendered train.py at the algorithm's default num_envs (e.g. 2048 for PPO), renders a rollout to MP4, then analyzes per-term reward log + visual frames against the task description. Findings accumulate across iterations. Loops UNTIL `success_rate ≥ 0.5` (or user interrupts) — no hard cap. All artifacts live under `<repo>/harbor/task-creation/<task_slug>/` next to task-generator's outputs (no separate tune dir). Use when the user types /harbor:reward-tune task=<id> [algorithm=<algo>] [wandb=<project>] [mode=local|cluster] [success_threshold=0.5] [timesteps_per_iter=N], or asks "tune the reward for task X", "iterate on the reward and verify with training".
+description: Iteratively tune the reward function (§6) for an EXISTING task. Per iteration the reward-generator agent authors / edits the reward (and may surgically edit §1–§5 if needed), the orchestrator trains a policy via the rendered train.py at the algorithm's default num_envs (e.g. 2048 for PPO), renders a rollout to MP4, then analyzes per-term reward log + visual frames against the task description. Findings accumulate across iterations. Loops UNTIL `success_rate ≥ 0.5` (or user interrupts) — no hard cap. All artifacts live under `<repo>/harbor/create-task/<task_slug>/` next to task-generator's outputs (no separate tune dir). Use when the user types /harbor:reward-tune task=<id> [algorithm=<algo>] [wandb=<project>] [mode=local|cluster] [success_threshold=0.5] [timesteps_per_iter=N], or asks "tune the reward for task X", "iterate on the reward and verify with training".
 argument-hint: task=<id> [algorithm=<ppo|sac|td3>] [wandb=<project>] [mode=local|cluster] [success_threshold=0.5] [timesteps_per_iter=N] [seed=N]
 ---
 
-# /harbor:reward-tune — Iterative Reward Tuning, Co-located Under `task-creation/<slug>/`
+# /harbor:reward-tune — Iterative Reward Tuning, Co-located Under `create-task/<slug>/`
 
 Per iteration the orchestrator runs the loop:
 
@@ -16,13 +16,13 @@ LOOP iter (no hard cap):
     5. DECIDE  → success_rate ≥ threshold ? STOP : continue
 ```
 
-## File layout (single root: `task-creation/<slug>/`)
+## File layout (single root: `create-task/<slug>/`)
 
 The principle: **one source of truth per kind of information, no per-iter duplication of reward-history / handoff**.
 
 ```
-<repo>/harbor/task-creation/<task_slug>/
-├── spec.json                          # task-creation/task-generator metadata (existing)
+<repo>/harbor/create-task/<task_slug>/
+├── spec.json                          # create-task/task-generator metadata (existing)
 ├── task-history.md                    # task-generator's verbose log (existing)
 ├── reward-history.md                  # SHARED reward-tune log; new "## Iter <N>" section appended each iter
 ├── handoff-reward-generator.md        # LATEST reward state — overwritten each iter
@@ -72,12 +72,12 @@ cd "$(pwd)"
 test -x .venv/bin/python                                                || exit 1
 test -f harbor/benchmark-spec.json                                    || exit 1
 test -f harbor/rl-suite-spec.json                                     || exit 1
-test -f harbor/task-creation/task-implementation.md                   || exit 1
+test -f harbor/create-task/task-implementation.md                   || exit 1
 .venv/bin/python -c "import gymnasium as gym; gym.make('<task>'); print('build ok')" || exit 1
 command -v ffmpeg >/dev/null                                            || exit 1
 ```
 
-Resolve `task_dir = harbor/task-creation/<slug>` (slug derived from task name). The dir MUST already exist (`task-creation` or earlier `reward-tune` runs have used it).
+Resolve `task_dir = harbor/create-task/<slug>` (slug derived from task name). The dir MUST already exist (`create-task` or earlier `reward-tune` runs have used it).
 
 If `mode=cluster`, log "cluster not implemented; using local" and continue.
 
@@ -134,7 +134,7 @@ mkdir -p <task_dir>/iter_<NNN>/
 
 Agent(reward-generator, prompt={
   repo_path:           "<abs>",
-  task_dir:            "<abs>/harbor/task-creation/<task_slug>",
+  task_dir:            "<abs>/harbor/create-task/<task_slug>",
   task_id:             "<task>",
   description:         "<from spec.json>",
   iter:                <N>,

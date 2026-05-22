@@ -1,10 +1,10 @@
 # Task Implementation Doc — Authoring Contract
 
-Read by `benchmark-generator` when filling `templates/benchmark-generator/task-implementation.md.template` into `<repo>/harbor/task-creation/task-implementation.md`. The output of that step is the **input** to three future agents (`task-generator`, `reward-generator`, `dr-generator`) dispatched by `/harbor:task-creation` — so the rules here exist to keep downstream behaviour stable.
+Read by `benchmark-generator` when filling `templates/benchmark-generator/task-implementation.md.template` into `<repo>/harbor/create-task/task-implementation.md`. The output of that step is the **input** to three future agents (`task-generator`, `reward-generator`, `dr-generator`) dispatched by `/harbor:create-task` — so the rules here exist to keep downstream behaviour stable.
 
 ## What the doc is for
 
-Each future invocation of `/harbor:task-creation` boots three agents in sequence. None of them re-scan the upstream repo from scratch — they all read this single doc. So the doc has to be:
+Each future invocation of `/harbor:create-task` boots three agents in sequence. None of them re-scan the upstream repo from scratch — they all read this single doc. So the doc has to be:
 
 1. **Self-sufficient** — the agents must be able to write a working task using only this doc + the user's task description, without re-discovering the repo's layout.
 2. **Family-faithful** — the patterns in the code templates must compile against the venv at `<repo>/.venv/`. If the family uses `mdp.JointPositionActionCfg`, do not invent `mdp.JointPositionActionConfig`.
@@ -14,9 +14,9 @@ If you cannot anchor a section to a smoke-passing example, the section's "File p
 
 ## Where the doc lives
 
-`<repo>/harbor/task-creation/task-implementation.md`
+`<repo>/harbor/create-task/task-implementation.md`
 
-The folder is `task-creation/` (not `task_creation/`) to match the slash command's name. Future per-task scaffolding may also drop artefacts here — keep the folder; never delete it.
+The folder is `create-task/` (not `task_creation/`) to match the slash command's name. Future per-task scaffolding may also drop artefacts here — keep the folder; never delete it.
 
 ## Hard rules
 
@@ -29,7 +29,7 @@ The folder is `task-creation/` (not `task_creation/`) to match the slash command
 
 ## The seven sections (fixed schema)
 
-| § | Section | Owner agent at /task-creation | Smoke verifies |
+| § | Section | Owner agent at /create-task | Smoke verifies |
 |---|---------|-------------------------------|----------------|
 | 1 | Register task + setup scene | task-generator | `gym.make` (or family equivalent) returns a working env |
 | 2 | Action types | task-generator | action_space matches the chosen mode; one step does not error |
@@ -159,4 +159,4 @@ Detect: env registers via plain `gym.register` and inherits `gymnasium.Env`; no 
    - Enumerate 2-4 **Decisions** the future agent will need to ask the user about.
    - Write the **Smoke check** as a one-liner that runs against the canonical example today (so you know it works) and is parameterised on `<NewTaskID>` for future agents to swap in.
 3. Don't render the doc unless §1's smoke command actually passes when you run it inside the venv. Run it once, paste the literal expected output into `*_SMOKE_EXPECTED`. (You can skip running §2..§7's smoke at this stage — that becomes the future agents' job.)
-4. After writing, check the doc loads: `head -5 <repo>/harbor/task-creation/task-implementation.md` should show the title and family table.
+4. After writing, check the doc loads: `head -5 <repo>/harbor/create-task/task-implementation.md` should show the title and family table.

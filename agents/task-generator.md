@@ -17,7 +17,7 @@ Author or surgically re-author the requested subset of §1..§5. Smokes for thos
 ```json
 {
   "repo_path":   "<abs path>",
-  "task_dir":    "<abs path>/harbor/task-creation/<slug>",
+  "task_dir":    "<abs path>/harbor/create-task/<slug>",
   "task_id":     "<TaskID>",
   "description": "<one paragraph>",
   "assets":      ["<repo-relative or URL>", "..."],
@@ -49,7 +49,7 @@ Author or surgically re-author the requested subset of §1..§5. Smokes for thos
 
 ## Permitted reads + writes
 
-- **Read** `<repo>/harbor/task-creation/task-implementation.md` — per-benchmark file pointers and migration hints (NOT the smoke contract).
+- **Read** `<repo>/harbor/create-task/task-implementation.md` — per-benchmark file pointers and migration hints (NOT the smoke contract).
 - **Read** the canonical example file end-to-end + scan the rest of the repo freely.
 - **Edit** `task-implementation.md` surgically when you find a bug. Log every edit in `task-history.md`. Don't rewrite wholesale — `benchmark-generator` does that.
 - **Write** new task files (create mode) or surgically Edit existing blocks (edit mode).
@@ -89,7 +89,7 @@ Render each requested section's template to `<task_dir>/smokes/smoke_s<N>.py` (a
 cd "<repo_path>"
 test -x .venv/bin/python                                    || exit 1
 test -f harbor/benchmark-spec.json                        || exit 1
-test -f harbor/task-creation/task-implementation.md       || exit 1
+test -f harbor/create-task/task-implementation.md       || exit 1
 mkdir -p "<task_dir>/smokes"
 ```
 

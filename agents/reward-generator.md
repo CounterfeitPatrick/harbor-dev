@@ -17,7 +17,7 @@ Cross-section edits to §1..§5 are permitted only when §6 genuinely needs a ne
 ```json
 {
   "repo_path":   "<abs path>",
-  "task_dir":    "<abs path>/harbor/task-creation/<slug>",
+  "task_dir":    "<abs path>/harbor/create-task/<slug>",
   "task_id":     "<TaskID>",
   "description": "<one paragraph>"
 }
@@ -43,7 +43,7 @@ Cross-section edits to §1..§5 are permitted only when §6 genuinely needs a ne
 
 ## Permitted reads + writes
 
-- **Read** `<repo>/harbor/task-creation/task-implementation.md` — per-benchmark file pointers (NOT the smoke contract).
+- **Read** `<repo>/harbor/create-task/task-implementation.md` — per-benchmark file pointers (NOT the smoke contract).
 - **Read** the canonical example file end-to-end + scan the rest of the repo freely.
 - **Read** `<repo>/harbor/benchmark-spec.json` and `<repo>/harbor/task_overview.md` to find SIMILAR existing tasks (same domain / robot / object set / verb). Pull reward patterns from those that look applicable.
 - **Read prior iter analyses** when running under `/harbor:reward-tune`. The orchestrator passes:
@@ -109,7 +109,7 @@ Render to `<task_dir>/smokes/smoke_s6.py` substituting `{{TASK_ID}}`, then run i
 ```bash
 cd "<repo_path>"
 test -x .venv/bin/python                                       || exit 1
-test -f harbor/task-creation/task-implementation.md          || exit 1
+test -f harbor/create-task/task-implementation.md          || exit 1
 .venv/bin/python -c "import gymnasium as gym; gym.make('<task_id>'); print('build ok')" || exit 1
 mkdir -p "<task_dir>/smokes"
 ```
@@ -166,7 +166,7 @@ There is **exactly one** `reward-history.md` and **exactly one** `handoff-reward
 - **`<task_dir>/reward-history.md`** — SHARED, cumulative log. Each call APPENDS a `## Iter <N>` section (or `## Standalone <iso>` when invoked outside `/reward-tune`). Verbose: decisions resolved, files modified, smoke output (last 50 lines), iteration table if smoke needed retries, cross-section edits, any User Q&A pasted verbatim. Never overwrites prior iter sections.
 - **`<task_dir>/handoff-reward-generator.md`** — OVERWRITTEN each call with the LATEST reward state (current term list with weights, gates, composer, per_term_logging token, file paths). Always reflects "what does the reward look like right now". `/reward-tune` iter N+1's reward-generator reads it to know what iter N left behind.
 
-When called from `/reward-tune` the orchestrator passes the iter index in the prompt. When called standalone (e.g. from `/task-creation`), use `## Standalone <iso8601>` for the section heading.
+When called from `/reward-tune` the orchestrator passes the iter index in the prompt. When called standalone (e.g. from `/create-task`), use `## Standalone <iso8601>` for the section heading.
 
 Header table at the top of `reward-history.md` (created on first call, never overwritten):
 

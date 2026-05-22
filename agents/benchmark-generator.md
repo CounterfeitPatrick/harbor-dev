@@ -30,7 +30,7 @@ env-generator already injects `imageio[ffmpeg]` (and the rest of the harbor extr
   "smoke_results": {"L1": "pass|fail", "L2": "pass|fail"},
   "benchmark_spec_path": "<repo>/harbor/benchmark-spec.json",
   "task_overview_md_path": "<repo>/harbor/task_overview.md",
-  "task_implementation_md_path": "<repo>/harbor/task-creation/task-implementation.md",
+  "task_implementation_md_path": "<repo>/harbor/create-task/task-implementation.md",
   "history_md_path": "<repo>/harbor/history.md",
   "benchmark_md_path": "<repo>/harbor/benchmark.md",
   "diagnostics_applied": [],
@@ -88,7 +88,7 @@ Load via Read on demand:
 - `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/smoke-test-contract.md` — Step 4 two-tier protocol (L1/L2)
 - `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/case-studies.md` — annotated worked examples
 - `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/receipt-generation.md` — Step 5 placeholder registry + failure handling
-- `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/task-implementation-contract.md` — Step 3.7 authoring rules for the task-implementation guide consumed by `/harbor:task-creation`
+- `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/task-implementation-contract.md` — Step 3.7 authoring rules for the task-implementation guide consumed by `/harbor:create-task`
 
 ## Workflow
 
@@ -98,7 +98,7 @@ Load via Read on demand:
 - [ ] Step 3: Smoke test L1 (random) / L2 (render)
 - [ ] Step 3.5: Capture suite spec → <repo>/harbor/benchmark-spec.json
 - [ ] Step 3.6: Build task_overview.md (registered-task universe)
-- [ ] Step 3.7: Author task-implementation.md (read by /harbor:task-creation)
+- [ ] Step 3.7: Author task-implementation.md (read by /harbor:create-task)
 - [ ] Step 4: Render history.md + benchmark.md
 ```
 
@@ -253,63 +253,23 @@ After capture, surface a one-line note: `Suite spec captured. Dispatch rl-integr
    - `no` — no wrapper applied. `/rl-run` will dispatch `/add-reward-log` before training.
    Downstream `/harbor:rl-run` greps for this column: `yes` and `total only` proceed (the latter with a one-line warning); `no` triggers `/add-reward-log`. The deterministic renderer (`render_task_overview.py`) decides per task using the gym entry_point — manager-based → `yes`, Direct → `total only` — so you do not pick this by hand.
 
-## Step 3.7 — Author `task-creation/task-implementation.md`
+## Step 3.7 — Author `create-task/task-implementation.md`
 
-`/harbor:task-creation` boots three agents (`task-generator` → `reward-generator` → `dr-generator`) that each read **one shared file**: `<repo>/harbor/task-creation/task-implementation.md`. That file is authored here. The downstream agents do **not** re-scan the upstream repo — they trust this doc, so getting it right is part of benchmark-generator's contract.
+`/harbor:create-task` boots three agents (`task-generator` → `reward-generator` → `dr-generator`) that each read **one shared file**: `<repo>/harbor/create-task/task-implementation.md`. That file is authored here. The downstream agents do **not** re-scan the upstream repo — they trust this doc, so getting it right is part of benchmark-generator's contract.
 
-**Inputs you already have**:
+**This step delegates to `/harbor:probe-benchmark`**. The canonical procedure (family detection, canonical-example pick, template render, §1 smoke verification) lives in `${CLAUDE_PLUGIN_ROOT}/commands/probe-benchmark.md` — read that file and follow its 8-step Action block verbatim against `<repo_path>`. Re-using the command body means every future improvement to probe-benchmark flows through to Step 3.7 automatically.
+
+**Inputs you already have** (probe-benchmark expects these to exist):
 - `<repo>/harbor/benchmark-spec.json` (Step 3.5) — pick a smoke-passing task as the canonical example.
 - `<repo>/harbor/task_overview.md` (Step 3.6) — task universe + categories.
 - `<repo>/harbor/probe.json` — `markdown_files` list.
 - The repo tree itself.
 
-**Procedure**:
+**Pass-through** the optional `canonical_task=<id>` override if the user supplied one upstream; otherwise let probe-benchmark auto-pick.
 
-1. Load the contract: `Read ${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/task-implementation-contract.md`. It lists per-family evidence-gathering rules and the seven-section schema. Do not improvise around it.
-
-2. Pick `BENCHMARK_FAMILY` using the contract's detection cues (`isaaclab-manager-based` / `isaaclab-direct` / `dexteroushands` / `loco-mujoco` / `dm_control` / `gymnasium-generic`). If the repo doesn't fit, ask the user via a single `AskUserQuestion` with the six options — do not silently pick one.
-
-3. Pick `CANONICAL_EXAMPLE_TASK_ID` from `benchmark-spec.json:tasks[]` where `smoke_status` starts with `L1`. If no task smoke-passed, refuse to author the doc and surface that to the user (the downstream agents would have nothing to mirror).
-
-4. Locate the canonical example file (the per-family table in the contract tells you where to look). Open it with `Read` and confirm the section anchors exist:
-   - registration entry,
-   - scene/cfg class,
-   - actions definition,
-   - reset hook,
-   - termination + (optional) command,
-   - observations definition,
-   - rewards definition,
-   - DR / event terms.
-   If any anchor is missing in the canonical example, pick a different canonical example (one of the other smoke-passing tasks) — never fall back to "skeleton-only" for §1 or §2.
-
-5. Render the doc by copying `${CLAUDE_PLUGIN_ROOT}/templates/benchmark-generator/task-implementation.md.template` and filling every `{{...}}` placeholder. Each section has five sub-blocks (Description / File pointers / Code template / Decisions / Smoke check). The contract's per-family table tells you where to source File pointers.
-
-6. **Verify §1's smoke before saving**. The §1 smoke command must pass when run today against the canonical example. Run it inside the venv:
-
-   ```bash
-   cd <repo_path>
-   .venv/bin/python -c "import gymnasium as gym; env = gym.make('<canonical_id>'); print(env.observation_space, env.action_space); env.close()"
-   ```
-
-   (or the family equivalent — see contract). Paste the literal stdout into `{{REGISTER_SMOKE_EXPECTED}}`. §2..§7 smoke commands are written but not executed at this stage — they become the per-phase smoke for the future agents.
-
-7. Write the file:
-   ```bash
-   mkdir -p <repo_path>/harbor/task-creation
-   ```
-   Then `Write` the rendered content to `<repo>/harbor/task-creation/task-implementation.md`.
-
-8. Surface a one-line note: `task-implementation.md authored — /harbor:task-creation can now run.`
-
-**Hard rules** (full list in the contract):
-- English-only.
-- Regenerated on every re-run; hand-edits are lost.
-- Code templates ≤ 60 lines each, with `<TaskName>` / `<Robot>` / `<Object>` placeholders — never paste the canonical task verbatim.
-- Skeleton is fixed: seven sections in order. If a section is unsupported by the family (e.g. delta-EE-pose actions in `isaaclab-direct`), keep the header and write `<unsupported in this benchmark>` under each sub-block; do not delete the section.
-
-**On failure**:
+**Failure modes** (delegated; copied here for context — see `commands/probe-benchmark.md` for the full list):
 - Cannot detect family → ask user (one `AskUserQuestion`).
-- No canonical example smoke-passed → emit a stub doc with `BENCHMARK_FAMILY: <unknown>` and add `task-implementation: skipped (no smoke-passing canonical example)` to the agent's verdict; future `/harbor:task-creation` will refuse to run.
+- No canonical example smoke-passed → emit a stub doc with `BENCHMARK_FAMILY: <unknown>` and add `task-implementation: skipped (no smoke-passing canonical example)` to the agent's verdict; future `/harbor:create-task` will refuse to run.
 - §1 smoke fails on the canonical example → that means Step 3 already had a problem; surface up rather than fabricating expected output.
 
 ## Step 4 — Render receipts

@@ -1,0 +1,143 @@
+---
+description: Probe an existing task in the current benchmark repo and emit `<task-slug>-implementation.md` — a portable per-task design-choice spec capturing scene / actions / reset / termination / observation / reward / DR. Use when the user types /harbor:probe-task task=<id> [repo=<path>] [output=<path>] or asks "document this task", "make a reproduction spec for task X", "extract the design choices of task Y".
+argument-hint: task=<id> [repo=<path>] [output=<path>]
+---
+
+# /harbor:probe-task — Author Per-Task Reproduction Spec
+
+Read an existing task's source (registration entry, env_cfg, `mdp/` tree, asset paths) and emit a single self-contained `<task-slug>-implementation.md` documenting every design choice. The output is a portable reproduction spec — feeding it back into `/harbor:create-task from=<path>` rebuilds the task identically on any other benchmark of the same family.
+
+Distinct from `/harbor:probe-benchmark`, which authors the *family-level* guide (`task-implementation.md`). probe-task is *per-task* and contains the actual code / values, not placeholders.
+
+## Required argument
+
+| Arg | Notes |
+|---|---|
+| `task` | Task ID already registered in `<repo>/harbor/benchmark-spec.json:tasks[].id` and importable via `gym.make`. |
+
+## Optional arguments
+
+| Arg | Default | Effect |
+|---|---|---|
+| `repo` | `$(pwd)` | Benchmark repo root. |
+| `output` | `<repo>/harbor/create-task/<task-slug>-implementation.md` | Where to write the spec. |
+
+## Pre-flight
+
+```bash
+test -f "<repo>/harbor/benchmark-spec.json"             || { echo "benchmark-spec.json missing — run benchmark-generator first"; exit 1; }
+test -x "<repo>/.venv/bin/python"                         || { echo ".venv/ missing — run /harbor:env-generator first"; exit 1; }
+"<repo>/.venv/bin/python" -c "import gymnasium as gym; gym.make('<task>'); print('build ok')" \
+                                                          || { echo "task '<task>' does not build via gym.make — refuse to probe"; exit 1; }
+```
+
+## Action
+
+1. **Resolve family** from `<repo>/harbor/create-task/task-implementation.md` (`BENCHMARK_FAMILY` header) if present, else fall back to family detection per the `task-implementation-contract.md` cues.
+
+2. **Locate per-task source files.** The per-family table in `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/task-implementation-contract.md` maps `<task_id>` → source files. For `isaaclab-manager-based` (the most common): walk `source/isaaclab_tasks/isaaclab_tasks/manager_based/<category>/<task_root>/` for:
+   - `config/<robot>/__init__.py` — `gym.register(id=…, entry_point=…, kwargs=…)`
+   - `config/<robot>/joint_pos_env_cfg.py` (or family equivalent) — per-robot scene + action + reset wiring
+   - `<task_root>_env_cfg.py` — abstract base: SceneCfg, ActionsCfg, ObservationsCfg, EventCfg (reset + DR), RewardsCfg, TerminationsCfg, EnvCfg
+   - `mdp/{actions,actions_cfg,observations,rewards,terminations}.py` — task-local function defs
+
+   For other families, follow the contract's per-family layout.
+
+3. **Extract design choices per section** (read with `Read`; never paraphrase code — paste verbatim):
+
+   - **§1 Registration + Scene**
+     - `gym.register(id, entry_point, kwargs)` block.
+     - `SceneCfg`: robot articulation cfg (USD path, prim_path, init joint pose, actuator stiffness/damping), objects (`RigidObjectCfg`, `ArticulationCfg`), all `FrameTransformerCfg` / `ContactSensorCfg` / camera defs, table + ground + lights. List the resolved USD/asset paths verbatim.
+   - **§2 Actions**
+     - `ActionsCfg`: arm_action class + ctor params (scale, alpha, body_offset, IK controller cfg, pos/joint limits, forbidden zones); gripper_action class + commands.
+   - **§3 Reset**
+     - `EventCfg`: every `mode="reset"` term with its function, `params` dict, and ranges. Include `position_range`, `velocity_range`, `pose_range`, `asset_cfg` exactly.
+   - **§4 Goal + Termination**
+     - `TerminationsCfg`: every DoneTerm with `func`, `params`, `time_out` flag.
+     - `CommandsCfg` (if not `None`): command term definitions + ranges.
+   - **§5 Observation**
+     - `ObservationsCfg.PolicyCfg`: every `ObsTerm` (`func`, `params`, `noise`), the `__post_init__` flags (`enable_corruption`, `concatenate_terms`), and any masking/zero-gate references inside `mdp/observations.py`. Resolved total obs dim.
+   - **§6 Reward** (fully reproducible)
+     - `RewardsCfg`: every `RewTerm` with `func`, `params`, `weight`.
+     - Composer (sum / product).
+     - **Embed the full source of every reward function from `mdp/rewards.py` (verbatim, in a code block).** Include latch buffers, helpers, gate logic — everything the function needs to run.
+     - The planning-budget docstring per `experiences/reward-generator/reward-experience.md` entry #2 (per-stage saturated per-step magnitudes) — extract from the `RewardsCfg` docstring if present; else compute from the weights and note "(retro-computed)".
+   - **§7 DR**
+     - `EventCfg`: every term with `mode != "reset"` (i.e. `startup` / `interval`). Function, params, ranges. If none, write `<no DR>`.
+
+4. **Run the §1 build smoke** (must already pass per pre-flight, but capture canonical stdout to bake into the spec):
+   ```bash
+   cd "<repo>"
+   .venv/bin/python -c "import gymnasium as gym; env = gym.make('<task>'); print(env.observation_space, env.action_space); env.close()"
+   ```
+   Paste literal stdout into the spec.
+
+5. **Render the doc** into a single self-contained markdown with this top-level structure:
+   ```
+   # <task_id> — Implementation Spec
+
+   - benchmark_family: <family>
+   - source_repo: <name>
+   - probed_from_commit: <sha>            # `git rev-parse HEAD` in repo
+   - probed_at: <iso8601>
+   - canonical_build: <observation_space + action_space line from step 4>
+
+   ## §1 Registration + Scene
+   ...
+   ## §2 Actions
+   ...
+   ## §3 Reset
+   ...
+   ## §4 Goal + Termination
+   ...
+   ## §5 Observation
+   ...
+   ## §6 Reward
+   ...
+   ## §7 DR
+   ...
+
+   ## Source files (relative to source_repo)
+   - <path>:<line-range>  # what was read here
+   ```
+
+   Within each section, include subblocks:
+   - **Description** — one-paragraph plain-English summary of what this section does.
+   - **Decisions resolved** — the concrete values chosen (e.g. `action.scale = (0.02, 0.02, 0.02)`, `episode_length_s = 9.0`).
+   - **Code** — verbatim source blocks pulled from the repo.
+   - **Smoke** — the §N smoke command + expected stdout (literal copy from a passing run; for §2..§7 the agents will run these when reproducing).
+
+6. **Write** the rendered content to `<output>` (default `<repo>/harbor/create-task/<task-slug>-implementation.md`). Compute `<task-slug>` the same way `/harbor:create-task` does:
+   ```bash
+   slug=$(echo "<task>" | tr '[:upper:]' '[:lower:]' | tr -c '[:alnum:]' '-' | sed 's/--*/-/g; s/^-//; s/-$//')
+   ```
+
+7. **Self-verify** the spec is reproducible:
+   - Every code block must compile (`py_compile` on extracted snippets).
+   - Every referenced asset path must exist on disk (warn on missing — the spec is still emitted, but the reproduction will fail downstream).
+   - Every `func=<...>` in §3..§7 must resolve in the repo's mdp tree (`grep -r "def <name>" <mdp_dir>`).
+
+8. Surface a one-line note:
+   ```
+   probe-task: wrote <output> (sections §1..§7, <N> reward funcs, <M> obs terms)
+                Reproduce via: /harbor:create-task name=<new_task_id> from=<output>
+   ```
+
+## Hard rules
+
+- **Verbatim code, not paraphrased.** Every reward / observation / action function in §6 / §5 / §2 is pasted as-is. The spec must be self-contained enough that a downstream agent can recreate the file without re-reading the source repo.
+- **Resolve asset paths.** Where the env_cfg uses `Path(__file__).resolve().parents[N] / "..."`, resolve to the actual path (relative to `<source_repo>`) so the downstream agent can locate equivalent assets in the destination repo.
+- **English-only.**
+- **Read-only.** probe-task never modifies the source repo — it only reads + writes the output file.
+
+## On failure
+
+- Task doesn't build (`gym.make` raises) → refuse, do not emit a partial spec.
+- Family undetectable → ask user (one `AskUserQuestion` listing the six family options).
+- A reward function references a helper that probe-task can't locate → emit the spec with a `WARN:` annotation in §6 noting the missing helper; the user will need to fix this before `/harbor:create-task from=...` can succeed.
+
+## Constraints
+
+- **Do NOT** modify the source repo's task files.
+- **Do NOT** embed binary assets (USDs, meshes) — only paths and metadata. The reproduction agent locates equivalent assets in the destination repo.
+- **Do NOT** silently fall back to a partial spec — if a section can't be probed, mark it `WARN:` so the failure is visible at reproduction time.

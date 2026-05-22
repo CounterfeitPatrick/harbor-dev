@@ -60,13 +60,15 @@ L2 vs L3 are **not the same axis**:
 - `commands/help.md` — `/harbor:help` plugin overview
 - `commands/env-generator.md` — `/harbor:env-generator [path]` — uv-only env setup; renders `<repo>/harbor/setup_uv.sh` and creates `<repo>/.venv/`
 - `commands/benchmark.md` — `/harbor:benchmark list / submit / verify`
+- `commands/probe-benchmark.md` — `/harbor:probe-benchmark [repo=<path>] [canonical_task=<id>]` — author `<repo>/harbor/create-task/task-implementation.md` (Step 3.7 of `benchmark-generator`, extracted so it can be re-run standalone or delegated from the agent)
+- `commands/probe-task.md` — `/harbor:probe-task task=<id> [repo=<path>] [output=<path>]` — emit a per-task `<task-slug>-implementation.md` capturing every design choice (scene / actions / reset / termination / observation / reward / DR) with verbatim code. Feed back into `/harbor:create-task from=<path>` to clone the task identically into another benchmark.
 - `commands/list-task.md` — `/harbor:list-task` — list/inspect tasks in a benchmark; defaults to cwd-local `harbor/benchmark-spec.json`, falls back to registry via `list_tasks` MCP tool
 - `commands/rl-run.md` — `/harbor:rl-run task=<id> algorithm=<algo> [k=v ...]` — single-trial training; wraps `harbor/scripts/rl/<impl>/train.py` against `<repo>/.venv/bin/python`
 - `commands/rl-eval.md` — `/harbor:rl-eval checkpoint=<path> [k=v ...]` — single-checkpoint eval; writes `metrics.json` next to checkpoint
 - `commands/rl-visualize.md` — `/harbor:rl-visualize checkpoint=<path> [k=v ...]` — open headed GLFW viewer; requires `$DISPLAY`
 - `commands/rl-sweep.md` — `/harbor:rl-sweep task=<list> algorithm=<list> [k=v1,v2,...]` — Cartesian-product sweep; one sub-agent per trial; results under `harbor/rl_experiments/sweeps/<sweep_id>/`
 - `commands/rl-tune.md` — `/harbor:rl-tune task=<list> algorithm=<list> [mode=local|cluster]` — Cartesian-product grid TUNING (open-ended hyperparameter loop); one rl-tuning-agent subagent per cell; tune-level history.md + final cross-cell summary under `harbor/rl_experiments/tunes/<tune_id>/`. One-time scaffolding lives in the `rl-integration-generator` subagent (dispatched directly).
-- `commands/task-creation.md` — `/harbor:task-creation name=<TaskID> description="..." [assets=<paths>]` — author a NEW task in the current benchmark repo. Pre-flight requires `<repo>/harbor/task-creation/task-implementation.md` to exist (created by `benchmark-generator` Step 3.7). Dispatches `task-generator` (§1–§5) → `reward-generator` (§6) → `dr-generator` (§7) sequentially with per-phase smoke gates.
+- `commands/create-task.md` — `/harbor:create-task name=<TaskID> (description="..." | from=<spec.md>) [sections=<list>] [assets=<paths>]` — author a NEW task in the current benchmark repo, or reproduce one from a `/harbor:probe-task` spec. Pre-flight requires `<repo>/harbor/create-task/task-implementation.md` to exist (created by `benchmark-generator` Step 3.7). Dispatches `task-generator` (§1–§5) → `reward-generator` (§6) → `dr-generator` (§7) sequentially with per-phase smoke gates.
 - `commands/reward-tune.md` — `/harbor:reward-tune task=<id> [algorithm=<algo>] [wandb=<project>] [mode=local|cluster] [max_iterations=N] [timesteps_per_iter=N]` — iteratively tune the §6 reward for an existing task. Per iteration: dispatches `reward-generator` (with `permit_env_edits=true`, recent findings, prior analyses) → trains a policy via `train.py` → renders rollout to MP4 → analyzes per-term reward log + visual frames vs the task description → decides continue / success / stuck. Memory of findings is shared across iterations via `<tune_dir>/memories.jsonl`. Cluster mode currently falls back to local.
 - `skills/karpathy-guidelines/` — coding behaviour rules; auto-loaded whenever code is written
 - `skills/add-data-logger/` — drop a parameterized `data_logger.py` (TensorBoard / W&B); auto-loaded when user mentions data logging
@@ -79,9 +81,9 @@ L2 vs L3 are **not the same axis**:
 - `agents/benchmark-generator.md` — env-sanity layer: random rollout + render-to-MP4 + 2-tier smoke (L1 random / L2 render). Always treats the repo as RL — no IL detection. Does NOT generate train/eval scripts (rl-integration-generator owns those).
 - `agents/rl-integration-generator.md` — RL experiment scaffold: configs, train/eval/render/visualize scripts, algorithm adapter, smoke per algorithm
 - `agents/rl-tuning-agent.md` — algorithm-by-algorithm hyperparameter tuning loop (train→eval→render→analyze→suggest)
-- `agents/task-generator.md` — authors §1–§5 of a new task (register/scene · actions · reset · goal+termination · observation) with one smoke per section; iterates up to 2× per section before escalating. Reads `<repo>/harbor/task-creation/task-implementation.md`. Dispatched only by `/harbor:task-creation`.
-- `agents/reward-generator.md` — authors §6 (reward) at the placeholder `task-generator` left. Runs the §6 smoke (finite + composer assertion). Dispatched only by `/harbor:task-creation` after `task-generator` passes.
-- `agents/dr-generator.md` — authors §7 (domain randomization) at the placeholder. Runs the §7 smoke (seed-matched obs trajectories diverge). Final agent in the `/task-creation` chain; `skipped` is a valid success when the user's description and the canonical example both have no DR.
+- `agents/task-generator.md` — authors §1–§5 of a new task (register/scene · actions · reset · goal+termination · observation) with one smoke per section; iterates up to 2× per section before escalating. Reads `<repo>/harbor/create-task/task-implementation.md`. Dispatched only by `/harbor:create-task`.
+- `agents/reward-generator.md` — authors §6 (reward) at the placeholder `task-generator` left. Runs the §6 smoke (finite + composer assertion). Dispatched only by `/harbor:create-task` after `task-generator` passes.
+- `agents/dr-generator.md` — authors §7 (domain randomization) at the placeholder. Runs the §7 smoke (seed-matched obs trajectories diverge). Final agent in the `/create-task` chain; `skipped` is a valid success when the user's description and the canonical example both have no DR.
 
 ### L4 — Tools (deterministic CLIs and MCP functions)
 
@@ -107,7 +109,7 @@ MCP functions (read-only): `list_benchmarks`, `lookup_benchmark`, `get_benchmark
 templates/
   env-generator/         install.md.template, history.md.template
   benchmark-generator/   benchmark.md, history.md, task_overview.md,
-                         task-implementation.md (read by /harbor:task-creation),
+                         task-implementation.md (read by /harbor:create-task),
                          scripts/{run_random, render_random}.py.template
   rl-integration-generator/  per-source subtrees (renderer picks one):
                                stable_baseline3/scripts/{train,eval,render,env_wrapper}.py.template
@@ -146,7 +148,7 @@ references/
   benchmark-generator/   decision-matrix, smoke-test-contract,
                          receipt-generation, case-studies,
                          task-implementation-contract (rules for the
-                           /harbor:task-creation guide)
+                           /harbor:create-task guide)
   rl-integration-generator/ rl-suite-spec (schema for harbor/rl-suite-spec.json + benchmark-spec rl extension)
   rl-tuning-agent/       tuning-instruction (procedure + 4 hard constraints)
   task-generator/        isaaclab-code-reference (action / scene / obs / termination /
@@ -193,9 +195,9 @@ mcp/harbor/specs/      benchmarks/<name>.json
     ├── setup_uv.sh                                               env-generator output (re-runnable)
     ├── run-log/NN-<task>.md                                      L6a process logs
     ├── rl_experiments/                                           rl-tuning-agent trial state
-    ├── task-creation/                                            /harbor:task-creation workspace
+    ├── create-task/                                            /harbor:create-task workspace
     │   ├── task-implementation.md                                family guide (benchmark-generator output)
-    │   └── <slug>/                                               per-task workspace, one folder per /task-creation run
+    │   └── <slug>/                                               per-task workspace, one folder per /create-task run
     │       ├── spec.json                                         args + per-phase status (orchestrator)
     │       ├── task-history.md                                   verbose log: §1..§5 phases (task-generator)
     │       ├── reward-history.md                                 verbose log: §6 (reward-generator)

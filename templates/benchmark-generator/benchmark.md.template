@@ -105,7 +105,7 @@ After that step, follow `rl-integration.md`.
 ## References
 
 - This guide (`benchmark.md`) — env sanity walk-through
-- `task-creation/task-implementation.md` — per-section guide for authoring NEW tasks (read by `/harbor:task-creation`)
+- `create-task/task-implementation.md` — per-section guide for authoring NEW tasks (read by `/harbor:create-task`)
 - `rl-integration.md` — Train / Evaluate / Override hyperparameters (rendered by `rl-integration-generator`)
 - `install.md` — minimum reproduction recipe (env-generator output)
 - `history.md` — probe results + smoke test results + generation log
