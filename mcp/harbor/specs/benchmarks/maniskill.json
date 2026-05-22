@@ -1,0 +1,80 @@
+{
+  "benchmark_name": "maniskill",
+  "schema_version": 1,
+  "captured_at": "2026-04-26T19:40:27+00:00",
+  "captured_from": {
+    "repo_path": "/home/yjin/repos/ManiSkill",
+    "env_id": "PickCube-v1",
+    "make_expr": "gym.make('PickCube-v1', num_envs=1, render_mode='rgb_array', obs_mode='rgbd')",
+    "category": "IL"
+  },
+  "obs_spec": {
+    "sensor_data.base_camera.rgb": {
+      "dtype": "Tensor",
+      "shape": [],
+      "kind": "scalar"
+    },
+    "sensor_data.base_camera.depth": {
+      "dtype": "Tensor",
+      "shape": [],
+      "kind": "depth"
+    }
+  },
+  "action_spec": {
+    "shape": [
+      8
+    ],
+    "dtype": "float32",
+    "low": [
+      -1.0,
+      -1.0,
+      -1.0,
+      -1.0,
+      -1.0,
+      -1.0,
+      -1.0,
+      -1.0
+    ],
+    "high": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "controller": "pd_joint_delta_pos (Panda 7-DoF arm joint position delta + 1 gripper)",
+    "gripper_convention": {
+      "open": 1,
+      "close": -1,
+      "binary": true,
+      "index": 7
+    },
+    "components": [
+      "q1_delta",
+      "q2_delta",
+      "q3_delta",
+      "q4_delta",
+      "q5_delta",
+      "q6_delta",
+      "q7_delta",
+      "gripper"
+    ]
+  },
+  "task_description_source": "<NONE>",
+  "step_signature": "5-tuple",
+  "smoke_test_passed": true,
+  "dropped_task_specific_keys": [
+    "agent.qpos",
+    "agent.qvel",
+    "extra.is_grasped",
+    "extra.tcp_pose",
+    "extra.goal_pos",
+    "sensor_param.base_camera.extrinsic_cv",
+    "sensor_param.base_camera.cam2world_gl",
+    "sensor_param.base_camera.intrinsic_cv"
+  ],
+  "extra_notes": "Classification: dual-track IL+RL. RL aux score 7/8 (gym.register, VecEnv via num_envs GPU-batched, max_episode_steps, gym.spaces, README RL keywords, dense reward; only missing in-tree algorithms/ \u2014 RL baselines live under examples/baselines/ as PPO/SAC/TD3 reference impls). IL track: examples/baselines/{bc,diffusion_policy,act}/ + HuggingFace demonstration datasets via mani_skill/utils/download_demo.py. Camera setup varies by task (PickCube vs StackCube hand_camera.depth differs); cross-task verify done with PushCube-v1 as it shares PickCube's exact sensor layout. [gripper_convention] normalized [-1, 1]; -1 = close, +1 = open"
+}

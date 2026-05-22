@@ -1,0 +1,46 @@
+# Trial {{TRIAL_ID}}
+
+- **Algorithm**: {{ALGO}}
+- **Task**: {{TASK}}
+- **Loop index**: {{LOOP_INDEX}} / {{LOOPS_PER_ALGO}}
+- **Status**: {{STATUS}}            <!-- ok | failed | unstable -->
+- **Started**: {{STARTED_AT}}
+- **Wall time**: {{WALL_TIME_SEC}} s
+
+## Score
+
+| Metric | Value |
+|---|---|
+| Composite score        | {{SCORE}} |
+| Success rate           | {{SUCCESS_RATE}} |
+| Eval return mean       | {{EVAL_RETURN_MEAN}} |
+| Eval return std        | {{EVAL_RETURN_STD}} |
+| Sample efficiency      | {{SAMPLE_EFFICIENCY}} |
+| Instability penalty    | {{INSTABILITY_PENALTY}} |
+
+## Resolved hyperparameters
+
+```yaml
+{{RESOLVED_CONFIG_YAML}}
+```
+
+## Behavior notes
+
+{{BEHAVIOR_NOTES}}
+
+## Suggested next config
+
+{{NEXT_CONFIG_NOTES}}
+
+## Artifacts
+
+- `config.yaml`              — input config for this trial
+- `resolved_config.yaml`     — config after hydra composition
+- `train.log`                — full training stdout/stderr
+- `eval.log`                 — eval stdout/stderr
+- `metrics.json`             — final eval metrics (single record)
+- `metrics.jsonl`            — per-rollout metrics (one JSON per line)
+- `checkpoint.zip`           — saved model
+- `video.mp4`                — render of one greedy episode
+- `video_contact_sheet.jpg`  — sampled frames
+- `video_analysis.md`        — agent's behavior write-up

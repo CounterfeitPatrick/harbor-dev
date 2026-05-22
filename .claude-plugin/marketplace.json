@@ -1,0 +1,24 @@
+{
+  "name": "harbor",
+  "owner": {
+    "name": "yufengjin",
+    "email": "jyf931118@gmail.com"
+  },
+  "metadata": {
+    "description": "Marketplace for the harbor plugin (set up Python GPU robotics repos with uv, track verified benchmark entries).",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "harbor",
+      "source": "./",
+      "description": "Set up Python GPU repos with uv and track verified benchmark entries. Includes env-generator + role-specific generator subagents, MCP registry server, and lifecycle hooks.",
+      "version": "0.1.0",
+      "author": {
+        "name": "yufengjin"
+      },
+      "keywords": ["robotics", "uv", "benchmark", "rl"],
+      "category": "workflow"
+    }
+  ]
+}

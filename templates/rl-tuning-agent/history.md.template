@@ -1,0 +1,14 @@
+# RL Experiment History — {{BENCHMARK_NAME}}
+
+Legacy append-only ledger from the deprecated `/rl-experiment` skill. Kept for
+back-compat with older trial dirs. The current rl-tuning-agent writes per-tune
+state under `harbor/rl-experiment/<tune_id>/<wandb_project>/tuning-history.md`,
+and `/harbor:rl-tune` writes a tune-level rollup at
+`harbor/rl-experiment/<tune_id>/history.md`. Per-trial detail still
+lives in `harbor/rl_experiments/runs/<trial_id>/`.
+
+## Log
+
+| When | Action | Algos | Tasks | Loops | Result |
+|---|---|---|---|---|---|
+{{HISTORY_ROWS}}

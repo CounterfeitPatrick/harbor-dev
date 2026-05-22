@@ -1,0 +1,86 @@
+"""Success-replicate smoke — drive the env into the success scenario, verify the
+success termination fires.
+
+This smoke is rendered once per task and run alongside S1..S5 in Phase B. It
+catches a class of bugs S4's termination-force block doesn't:
+
+  - the success criterion fires for the wrong scenario (e.g. timeout instead),
+  - the success criterion never fires because thresholds are too tight,
+  - the success criterion never fires because the entity write doesn't propagate
+    to the post-step articulation data on the simulation step that runs the
+    termination check.
+
+Substitutions:
+  {{TASK_ID}}              — gym task id
+  {{SUCCESS_TERM_NAME}}    — the name of the success termination term in
+                              `TerminationsCfg` (e.g. "success", "all_cups_stacked")
+  {{SUCCESS_FORCE_BLOCK}}  — Python lines that put the relevant scene entities
+                              into the success configuration. Common pattern for
+                              a multi-object success: read the goal entity's
+                              root pose, compute the target pose for each other
+                              entity from it, then `write_root_pose_to_sim` +
+                              `write_root_velocity_to_sim` to apply. With
+                              num_envs=128 the pose tensors must be (128, 7).
+"""
+import argparse
+import os
+import torch
+from isaaclab.app import AppLauncher
+
+parser = argparse.ArgumentParser()
+AppLauncher.add_app_launcher_args(parser)
+args = parser.parse_args([])
+# Default to headless for CI / regression runs; flip with `HEADLESS=0` env var
+# to launch the GLFW viewer (useful for visualising the success scenario).
+args.headless = os.environ.get("HEADLESS", "1") != "0"
+args.enable_cameras = False
+sim_app = AppLauncher(args).app
+
+import gymnasium as gym  # noqa: E402
+import isaaclab_tasks    # noqa: F401, E402
+from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
+
+TASK_ID      = "{{TASK_ID}}"
+SUCCESS_TERM = "{{SUCCESS_TERM_NAME}}"
+# Default 128 envs for CI / smoke regression; override via `NUM_ENVS=N` env var
+# (e.g. `NUM_ENVS=2 HEADLESS=0 ...` for a small headed sanity check).
+NUM_ENVS     = int(os.environ.get("NUM_ENVS", "128"))
+
+cfg = parse_env_cfg(TASK_ID, device="cuda:0", num_envs=NUM_ENVS, use_fabric=True)
+env = gym.make(TASK_ID, cfg=cfg)
+unw = env.unwrapped
+obs, _ = env.reset(seed=0)
+
+# Drive every env into the success configuration.
+{{SUCCESS_FORCE_BLOCK}}
+
+# Step once with zero action. The success termination should fire on this step.
+zero_action = torch.zeros((unw.num_envs, env.action_space.shape[-1]), device=unw.device)
+obs, rew, terminated, truncated, info = env.step(zero_action)
+
+# Identify which termination term(s) fired. IsaacLab stores per-term dones in
+# `_last_episode_dones` (a (N, num_terms) bool tensor) — the live `_term_dones`
+# tensor is cleared by the auto-reset for envs that terminated this step.
+tm          = unw.termination_manager
+term_names  = tm.active_terms                                          # ordered list
+last_dones  = tm._last_episode_dones                                   # (N, num_terms) bool
+fired       = {name: int(last_dones[:, i].sum().item()) for i, name in enumerate(term_names)}
+print(f"[success-smoke] termination terms fired (env count): {fired}")
+
+assert SUCCESS_TERM in term_names, (
+    f"success termination '{SUCCESS_TERM}' not in termination manager. "
+    f"Active: {term_names}"
+)
+n_succ = fired[SUCCESS_TERM]
+assert n_succ > 0, (
+    f"success termination '{SUCCESS_TERM}' did NOT fire after replicating the "
+    f"success scenario across {unw.num_envs} envs (terminated={int(terminated.sum().item())}, "
+    f"truncated={int(truncated.sum().item())}, term_dones={fired})"
+)
+
+print(
+    f"S-success OK: '{SUCCESS_TERM}' fired in {n_succ}/{unw.num_envs} envs after the "
+    f"replicate-success scenario; total terminated={int(terminated.sum().item())}"
+)
+env.close()
+sim_app.close()

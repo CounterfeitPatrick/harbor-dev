@@ -1,0 +1,72 @@
+"""S4 smoke — goal value matches in obs + termination fires when forced.
+
+The agent fills:
+
+  {{TASK_ID}}                   — gym task id
+  {{GOAL_OVERRIDES_BLOCK}}      — Python lines that pin cfg.commands.<name>.ranges.* to point
+                                   intervals so the sampled goal is deterministic
+  {{GOAL_NAME}}                 — string command-term name (e.g. "object_pose")
+  {{EXPECTED_GOAL_PY}}          — Python literal tensor / list, the expected goal
+                                   (shape matches command_manager.get_command output)
+  {{GOAL_OBS_TERM_NAME}}        — name of the policy-group obs term carrying the goal
+                                   (e.g. "target_object_position"); empty string to skip the obs check
+  {{GOAL_OBS_DIMS}}              — int, number of leading dims of the goal that appear in the obs
+                                   (e.g. 3 for position-only)
+  {{TERMINATION_FORCE_BLOCK}}   — Python lines that drive the env into a failure scenario
+                                   (e.g. write below-floor pose) followed by an env.step + assertion.
+                                   When using `write_root_pose_to_sim`, broadcast to all envs:
+                                       pose = torch.tensor([px, py, pz, qw, qx, qy, qz], device=unw.device)
+                                       unw.scene[<obj>].write_root_pose_to_sim(pose.expand(unw.num_envs, -1).contiguous())
+                                   (smokes run at num_envs=128, so a (1, 7) tensor will be rejected)
+"""
+import argparse
+import torch
+from isaaclab.app import AppLauncher
+
+parser = argparse.ArgumentParser()
+AppLauncher.add_app_launcher_args(parser)
+args = parser.parse_args([])
+args.headless = True
+args.enable_cameras = False
+sim_app = AppLauncher(args).app
+
+import gymnasium as gym  # noqa: E402
+import isaaclab_tasks    # noqa: F401, E402
+from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
+
+TASK_ID = "{{TASK_ID}}"
+cfg = parse_env_cfg(TASK_ID, device="cuda:0", num_envs=128, use_fabric=True)
+
+# Pin goal sampler to a known value
+{{GOAL_OVERRIDES_BLOCK}}
+
+env = gym.make(TASK_ID, cfg=cfg)
+unw = env.unwrapped
+obs, _ = env.reset(seed=0)
+
+# (a) goal-in-command check
+GOAL_NAME      = "{{GOAL_NAME}}"
+EXPECTED_GOAL  = torch.tensor({{EXPECTED_GOAL_PY}}, device=unw.device, dtype=torch.float32)
+sampled_goal   = unw.command_manager.get_command(GOAL_NAME)[0]
+assert torch.allclose(sampled_goal[: EXPECTED_GOAL.numel()], EXPECTED_GOAL, atol=1e-3), \
+    f"goal mismatch: sampled={sampled_goal} expected={EXPECTED_GOAL}"
+
+# (b) goal-in-obs check (skipped if {{GOAL_OBS_TERM_NAME}} is empty)
+GOAL_OBS_TERM = "{{GOAL_OBS_TERM_NAME}}"
+GOAL_OBS_DIMS = int("{{GOAL_OBS_DIMS}}" or 0)
+if GOAL_OBS_TERM:
+    term_order = unw.observation_manager.active_terms["policy"]
+    term_dims  = unw.observation_manager.group_obs_term_dim["policy"]
+    idx        = term_order.index(GOAL_OBS_TERM)
+    offset     = sum(d[0] for d in term_dims[:idx])
+    width      = term_dims[idx][0]
+    goal_in_obs = obs["policy"][0, offset : offset + width][:GOAL_OBS_DIMS]
+    assert torch.allclose(goal_in_obs, EXPECTED_GOAL[:GOAL_OBS_DIMS], atol=1e-3), \
+        f"goal not surfaced in obs slot {GOAL_OBS_TERM}: {goal_in_obs} != {EXPECTED_GOAL[:GOAL_OBS_DIMS]}"
+
+# (c) force termination
+{{TERMINATION_FORCE_BLOCK}}
+
+print("S4 OK: goal sampled deterministically; goal-in-obs slice matches; termination fires when forced")
+env.close()
+sim_app.close()

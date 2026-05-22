@@ -1,0 +1,78 @@
+"""S7 smoke — DR makes a measurable difference in obs trajectories.
+
+Build two envs (DR ON / DR OFF) at num_envs=128, drive both with seed=0 +
+identical action sequences, assert the obs trajectories diverge.
+
+Substitutions:
+  {{TASK_ID}}                — gym task id
+  {{DR_DISABLE_OVERRIDES}}   — Python lines that collapse every §7 randomization range on
+                                cfg_off to a point interval (no-op). Reset terms (`reset_*`)
+                                belong to §3 — do NOT collapse them here.
+"""
+import argparse
+import numpy as np
+import torch
+from isaaclab.app import AppLauncher
+
+parser = argparse.ArgumentParser()
+AppLauncher.add_app_launcher_args(parser)
+args = parser.parse_args([])
+args.headless = True
+args.enable_cameras = False
+sim_app = AppLauncher(args).app
+
+import gymnasium as gym  # noqa: E402
+import isaaclab_tasks    # noqa: F401, E402
+from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
+
+TASK_ID  = "{{TASK_ID}}"
+NUM_ENVS = 128
+
+
+def _flatten_obs(obs):
+    if isinstance(obs, dict):
+        return torch.cat([v.reshape(v.shape[0], -1) for v in obs.values()], dim=-1)
+    return obs.reshape(obs.shape[0], -1)
+
+
+def rollout(cfg, action_seq):
+    env = gym.make(TASK_ID, cfg=cfg)
+    obs, _ = env.reset(seed=0)
+    flat = [_flatten_obs(obs).cpu().numpy()]
+    for a in action_seq:
+        obs, r, term, trunc, info = env.step(a)
+        flat.append(_flatten_obs(obs).cpu().numpy())
+        # IsaacLab auto-resets terminated envs internally — no manual reset needed.
+    env.close()
+    return np.stack(flat, axis=0)
+
+
+# Build DR ON and DR OFF cfgs from the same parse
+cfg_on  = parse_env_cfg(TASK_ID, device="cuda:0", num_envs=NUM_ENVS, use_fabric=True)
+cfg_off = parse_env_cfg(TASK_ID, device="cuda:0", num_envs=NUM_ENVS, use_fabric=True)
+
+# Collapse every §7 DR term on cfg_off to a no-op (reset terms left alone)
+{{DR_DISABLE_OVERRIDES}}
+
+# Sample a deterministic action sequence (seeded so both rollouts see the same actions)
+_probe = gym.make(TASK_ID, cfg=parse_env_cfg(TASK_ID, num_envs=NUM_ENVS))
+action_space = _probe.action_space
+action_space.seed(0)
+action_seq = []
+for _ in range(20):
+    a = action_space.sample()
+    a_t = torch.from_numpy(np.asarray(a)).to("cuda:0")
+    if a_t.ndim == 1:                 # some envs return (action_dim,) — broadcast to (num_envs, dim)
+        a_t = a_t.unsqueeze(0).expand(NUM_ENVS, -1).contiguous()
+    action_seq.append(a_t)
+_probe.close()
+
+a = rollout(cfg_off, action_seq)
+b = rollout(cfg_on,  action_seq)
+
+assert a.shape == b.shape, f"shape mismatch — DR is changing obs structure: off={a.shape} on={b.shape}"
+delta = float(np.abs(a - b).max())
+assert delta > 1e-3, f"DR is no-op — max obs delta = {delta:.6f}"
+
+print(f"S7 OK: 128 envs × 20 steps, max obs delta with DR vs no-DR = {delta:.4f}")
+sim_app.close()

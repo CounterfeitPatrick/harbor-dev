@@ -1,0 +1,166 @@
+{
+  "benchmark_name": "robotwin",
+  "schema_version": 1,
+  "captured_at": "2026-04-26T19:15:20.129350Z",
+  "captured_from": {
+    "repo_path": "/home/yjin/repos/RoboTwin",
+    "env_id": "beat_block_hammer",
+    "make_expr": "<MANUAL: yaml-driven setup_demo via build_eval_args_from_yaml + class_decorator>",
+    "category": "IL"
+  },
+  "obs_spec": {
+    "joint_action.vector": {
+      "dtype": "float64",
+      "shape": [
+        14
+      ],
+      "kind": "proprio_joint",
+      "notes": "[6 left arm + 1 left gripper] + [6 right arm + 1 right gripper]"
+    },
+    "joint_action.left_arm": {
+      "dtype": "float64",
+      "shape": [
+        6
+      ],
+      "kind": "proprio_joint"
+    },
+    "joint_action.right_arm": {
+      "dtype": "float64",
+      "shape": [
+        6
+      ],
+      "kind": "proprio_joint"
+    },
+    "joint_action.left_gripper": {
+      "dtype": "float64",
+      "shape": [
+        1
+      ],
+      "kind": "proprio_gripper"
+    },
+    "joint_action.right_gripper": {
+      "dtype": "float64",
+      "shape": [
+        1
+      ],
+      "kind": "proprio_gripper"
+    },
+    "endpose.left_endpose": {
+      "dtype": "float64",
+      "shape": [
+        7
+      ],
+      "kind": "proprio_pos",
+      "notes": "xyz + quat (xyzw)"
+    },
+    "endpose.right_endpose": {
+      "dtype": "float64",
+      "shape": [
+        7
+      ],
+      "kind": "proprio_pos"
+    },
+    "observation.head_camera.rgb": {
+      "dtype": "uint8",
+      "shape": [
+        240,
+        320,
+        3
+      ],
+      "kind": "image_primary"
+    },
+    "observation.left_camera.rgb": {
+      "dtype": "uint8",
+      "shape": [
+        240,
+        320,
+        3
+      ],
+      "kind": "image_other"
+    },
+    "observation.right_camera.rgb": {
+      "dtype": "uint8",
+      "shape": [
+        240,
+        320,
+        3
+      ],
+      "kind": "image_other"
+    },
+    "observation.front_camera.rgb": {
+      "dtype": "uint8",
+      "shape": [
+        240,
+        320,
+        3
+      ],
+      "kind": "image_other"
+    }
+  },
+  "action_spec": {
+    "shape": [
+      14
+    ],
+    "dtype": "float64",
+    "low": [
+      -3.14159,
+      -3.14159,
+      -3.14159,
+      -3.14159,
+      -3.14159,
+      -3.14159,
+      -3.14159,
+      -3.14159,
+      -3.14159,
+      -3.14159,
+      -3.14159,
+      -3.14159,
+      -3.14159,
+      -3.14159
+    ],
+    "high": [
+      3.14159,
+      3.14159,
+      3.14159,
+      3.14159,
+      3.14159,
+      3.14159,
+      3.14159,
+      3.14159,
+      3.14159,
+      3.14159,
+      3.14159,
+      3.14159,
+      3.14159,
+      3.14159
+    ],
+    "controller": "RoboTwin SAPIEN bimanual qpos (action_type=qpos)",
+    "components": [
+      "left_arm_q1",
+      "left_arm_q2",
+      "left_arm_q3",
+      "left_arm_q4",
+      "left_arm_q5",
+      "left_arm_q6",
+      "left_gripper",
+      "right_arm_q1",
+      "right_arm_q2",
+      "right_arm_q3",
+      "right_arm_q4",
+      "right_arm_q5",
+      "right_arm_q6",
+      "right_gripper"
+    ],
+    "gripper_convention": {
+      "open": 1.0,
+      "close": 0.0,
+      "binary": false,
+      "index": 6
+    }
+  },
+  "step_signature": "via TASK_ENV.take_action(action) - non-standard",
+  "smoke_test_passed": true,
+  "task_description_source": "TASK_ENV.instruction (set via set_instruction)",
+  "dropped_task_specific_keys": [],
+  "extra_notes": "RoboTwin's task class extends _base_task and uses .take_action() instead of standard env.step(); env construction goes through build_eval_args_from_yaml() + class_decorator() + setup_demo(**args) - yaml-driven. Action vector is action_type=qpos by default. action_dim=14 from policy_websocket server metadata; chunk_len=16 means server returns 16 actions per infer call. Cross-task verify NOT performed (non-standard step API would require a wrapper class). [gripper indices] bimanual: index=6 is left arm gripper; right arm gripper at idx=13. Original string was: '[6, 13] (one per arm); normalized continuous'."
+}

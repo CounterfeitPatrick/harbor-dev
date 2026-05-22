@@ -1,0 +1,79 @@
+"""S6 smoke — reward is finite, non-constant, and composer matches per-term decomposition.
+
+Runs at num_envs=128. Reward is a (128,) tensor each step; the contract checks
+that EVERY env returns a finite scalar, that the cross-step time series of the
+mean-across-envs has non-zero std, and that the composer match holds element-wise
+across all envs at every step (when `info["detailed_reward"]` is present).
+
+Substitutions:
+  {{TASK_ID}} — gym task id
+"""
+import argparse
+import numpy as np
+from isaaclab.app import AppLauncher
+
+parser = argparse.ArgumentParser()
+AppLauncher.add_app_launcher_args(parser)
+args = parser.parse_args([])
+args.headless = True
+args.enable_cameras = False
+sim_app = AppLauncher(args).app
+
+import gymnasium as gym  # noqa: E402
+import isaaclab_tasks    # noqa: F401, E402
+from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
+
+
+def _to_np(t):
+    return t.detach().cpu().numpy() if hasattr(t, "detach") else np.asarray(t)
+
+
+cfg = parse_env_cfg("{{TASK_ID}}", device="cuda:0", num_envs=128, use_fabric=True)
+env = gym.make("{{TASK_ID}}", cfg=cfg)
+obs, info = env.reset(seed=0)
+
+step_means = []                  # mean reward across envs at each step (for time-std)
+term_sums = {}                   # name -> running sum (mean across envs)
+saw_detailed = False
+all_finite = True
+
+for _ in range(30):
+    a = env.action_space.sample()
+    obs, r, term, trunc, info = env.step(a)
+
+    r_np = _to_np(r).reshape(-1)                      # (128,)
+    if not np.all(np.isfinite(r_np)):
+        all_finite = False
+    step_means.append(float(r_np.mean()))
+
+    detailed = info.get("detailed_reward")
+    if detailed is not None:
+        saw_detailed = True
+        per_term_np = {k: _to_np(v).reshape(-1) for k, v in detailed.items()}
+        composed = np.zeros_like(r_np)
+        for v in per_term_np.values():
+            composed = composed + v
+        assert np.allclose(composed, r_np, atol=1e-5), (
+            "composer mismatch (some env): "
+            f"max|sum(terms) - reward|={np.max(np.abs(composed - r_np)):.6f} "
+            f"terms={list(per_term_np)}"
+        )
+        for k, v in per_term_np.items():
+            term_sums[k] = term_sums.get(k, 0.0) + float(v.mean())
+    # IsaacLab auto-resets terminated envs internally — no manual reset needed.
+
+assert all_finite, "NaN or Inf in reward at 128 envs over 30 steps"
+arr = np.asarray(step_means)
+assert arr.std() > 0, f"reward (mean across envs) is constant over 30 steps (mean={arr.mean()})"
+
+if saw_detailed:
+    print("per-term episodic mean (across 128 envs, summed over 30 steps):")
+    for k, v in sorted(term_sums.items(), key=lambda kv: -abs(kv[1])):
+        print(f"  {k}: {v:+.4f}")
+
+print(
+    f"S6 OK: 30 steps × 128 envs, reward mean={arr.mean():.3f} std={arr.std():.3f} "
+    f"composer={'sum-verified' if saw_detailed else 'passthrough'}"
+)
+env.close()
+sim_app.close()

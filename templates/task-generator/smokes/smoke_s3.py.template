@@ -1,0 +1,42 @@
+"""S3 smoke — reset values match simulation state.
+
+Pin reset terms to point intervals (no-op DR), reset the env, read state from sim,
+assert match. The agent fills:
+
+  {{TASK_ID}}                  — gym task id
+  {{INIT_OVERRIDES_BLOCK}}     — Python lines that pin cfg.events.<term>.params to point intervals
+                                  (e.g. cfg.events.reset_object_position.params["pose_range"] = ...)
+  {{EXPECTED_STATE_CHECKS}}    — assertions reading unw.scene[...].data.<field> against the
+                                  injected values via torch.allclose
+"""
+import argparse
+import torch
+from isaaclab.app import AppLauncher
+
+parser = argparse.ArgumentParser()
+AppLauncher.add_app_launcher_args(parser)
+args = parser.parse_args([])
+args.headless = True
+args.enable_cameras = False
+sim_app = AppLauncher(args).app
+
+import gymnasium as gym  # noqa: E402
+import isaaclab_tasks    # noqa: F401, E402
+from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
+
+TASK_ID = "{{TASK_ID}}"
+cfg = parse_env_cfg(TASK_ID, device="cuda:0", num_envs=128, use_fabric=True)
+
+# Pin reset ranges to point intervals (DR-aware-but-noop check)
+{{INIT_OVERRIDES_BLOCK}}
+
+env = gym.make(TASK_ID, cfg=cfg)
+unw = env.unwrapped
+obs, _ = env.reset(seed=0)
+
+# Assert sim state matches the injected values
+{{EXPECTED_STATE_CHECKS}}
+
+print("S3 OK: every injected init value matches simulation state after reset")
+env.close()
+sim_app.close()

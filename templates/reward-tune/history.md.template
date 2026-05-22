@@ -1,0 +1,31 @@
+# Reward Tune — `{{TUNE_ID}}`
+
+| Field | Value |
+|---|---|
+| tune_id | `{{TUNE_ID}}` |
+| task_id | `{{TASK_ID}}` |
+| algorithm | {{ALGORITHM}} |
+| wandb_project | `{{WANDB_PROJECT}}` |
+| mode | {{MODE}} |
+| max_iterations | {{MAX_ITERATIONS}} |
+| timesteps_per_iter | {{TIMESTEPS_PER_ITER}} |
+| stuck_threshold | {{STUCK_THRESHOLD}} |
+| seed | {{SEED}} |
+| started_at | {{STARTED_AT}} |
+| finished_at | (in progress) |
+| status | (in progress) |
+
+## Per-iteration log
+
+| iter | reward edits | success_rate | total_reward | episode_length | improvement | decision | files |
+|---|---|---|---|---|---|---|---|
+
+(rows appended as iters complete)
+
+## Memory of findings
+
+`memories.jsonl` (sibling file) holds per-iter findings shared across iterations.
+
+## Final summary
+
+(populated after the loop ends)

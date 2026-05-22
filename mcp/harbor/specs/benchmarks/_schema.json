@@ -1,0 +1,176 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://anthropic.com/claude-skills/benchmark-generator/registry/_schema.json",
+  "title": "Benchmark obs/action spec",
+  "type": "object",
+  "required": [
+    "benchmark_name",
+    "schema_version",
+    "captured_at",
+    "captured_from",
+    "obs_spec",
+    "action_spec",
+    "step_signature"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "benchmark_name": {
+      "type": "string",
+      "description": "Lowercase canonical family name (e.g. libero, robocasa, maniskill, robotwin).",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "captured_from": {
+      "type": "object",
+      "required": ["repo_path", "env_id", "make_expr"],
+      "additionalProperties": false,
+      "properties": {
+        "repo_path": {"type": "string"},
+        "env_id": {"type": "string"},
+        "make_expr": {
+          "type": "string",
+          "description": "One-liner that constructs the env (mirrors {{SMOKE_ENV_BUILD}} from the smoke-test contract)."
+        },
+        "category": {"enum": ["IL", "RL", "<UNKNOWN>"]}
+      }
+    },
+    "obs_spec": {
+      "type": "object",
+      "description": "Map obs-dict key -> ObsKey descriptor.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["dtype", "shape", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "examples": ["uint8", "float32", "float64", "int32", "bool", "str", "<UNKNOWN>"]
+          },
+          "shape": {
+            "type": "array",
+            "items": {"type": "integer", "minimum": 0}
+          },
+          "kind": {
+            "enum": [
+              "image_primary",
+              "image_wrist",
+              "image_other",
+              "depth",
+              "pointcloud",
+              "segmentation",
+              "proprio_pos",
+              "proprio_quat",
+              "proprio_axisangle",
+              "proprio_joint",
+              "proprio_velocity",
+              "proprio_gripper",
+              "proprio_other",
+              "scalar",
+              "language",
+              "task_id",
+              "<UNHANDLED>",
+              "<UNKNOWN>"
+            ]
+          },
+          "notes": {
+            "type": "string",
+            "description": "Free-text hints (e.g. 'renders upside-down — flipud+fliplr', 'xyzw quaternion', 'normalized to [-1,1]')."
+          }
+        }
+      }
+    },
+    "action_spec": {
+      "type": "object",
+      "required": ["shape", "dtype", "controller", "gripper_convention"],
+      "additionalProperties": false,
+      "properties": {
+        "shape": {
+          "type": "array",
+          "items": {"type": "integer", "minimum": 1}
+        },
+        "dtype": {"type": "string"},
+        "low": {
+          "anyOf": [
+            {"type": "array", "items": {"type": "number"}},
+            {"type": "string", "const": "<UNKNOWN>"}
+          ]
+        },
+        "high": {
+          "anyOf": [
+            {"type": "array", "items": {"type": "number"}},
+            {"type": "string", "const": "<UNKNOWN>"}
+          ]
+        },
+        "controller": {
+          "type": "string",
+          "examples": [
+            "OSC_POSE",
+            "OSC_POSITION",
+            "JOINT_POSITION",
+            "JOINT_VELOCITY",
+            "JOINT_TORQUE",
+            "cartesian_pose",
+            "cartesian_velocity",
+            "<UNKNOWN>"
+          ]
+        },
+        "components": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Per-dim semantic labels. Length must match shape[0]."
+        },
+        "gripper_convention": {
+          "type": "object",
+          "required": ["open", "close", "binary"],
+          "additionalProperties": false,
+          "properties": {
+            "open": {
+              "anyOf": [
+                {"type": "number"},
+                {"type": "string", "const": "<UNKNOWN>"}
+              ]
+            },
+            "close": {
+              "anyOf": [
+                {"type": "number"},
+                {"type": "string", "const": "<UNKNOWN>"}
+              ]
+            },
+            "binary": {
+              "anyOf": [
+                {"type": "boolean"},
+                {"type": "string", "const": "<UNKNOWN>"}
+              ]
+            },
+            "index": {
+              "type": "integer",
+              "description": "Index of the gripper dim within the action vector. Defaults to last."
+            }
+          }
+        }
+      }
+    },
+    "task_description_source": {
+      "type": "string",
+      "description": "Where task text comes from at runtime (e.g. 'env.language_instruction', 'CLI --task_name', '<NONE>')."
+    },
+    "step_signature": {
+      "type": "string",
+      "description": "Free-text description of env.step's return shape, e.g. 'obs, reward, done, info = env.step(action)' (gym v21) or '5-tuple terminated/truncated' (gym v26)."
+    },
+    "smoke_test_passed": {"type": "boolean"},
+    "dropped_task_specific_keys": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "obs keys filtered out at capture time because they are task-dependent (per-object poses like '<object>_pos'/'<object>_quat'/'<object>_to_robot0_eef_*', aggregated 'object-state', etc). Audit field only — not consumed by downstream skills."
+    },
+    "extra_notes": {"type": "string"}
+  }
+}
