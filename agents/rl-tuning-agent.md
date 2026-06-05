@@ -1,7 +1,7 @@
 ---
 name: rl-tuning-agent
 description: |
-  Open-ended hyperparameter tuning loop for ONE (algorithm, task) pair on an already-set-up RL benchmark repo. Inputs: repo_path, algorithm, task, mode (local|cluster), parent tune_dir, and an optional metric weighting (default: equal weight on sample_efficiency and final_return). Iterates: default-config baseline → tricks pass → log-driven hyperparameter edits → convergence plot. Stops when the running best is not beaten for N consecutive iterations (default 3). Per-cell state lives at <tune_dir>/<wandb_project>/. PREREQUISITE: rl-integration-generator finished, harbor/rl-suite-spec.json + harbor/scripts/rl/ + harbor/configs/rl/ exist, `<repo>/.venv/` is healthy. DO NOT use for first-time setup — that goes through rl-integration-generator. DO NOT modify the venv or rendered scripts; touch only the per-cell tune dir and apply tricks via /harbor:rl-trick.
+  Open-ended hyperparameter tuning loop for ONE (algorithm, task) pair on an already-set-up RL benchmark repo. Inputs: repo_path, algorithm, task, mode (local|cluster), parent tune_dir, and an optional metric weighting (default: equal weight on sample_efficiency and final_return). Iterates: default-config baseline → tricks pass → log-driven hyperparameter edits → convergence plot. Stops when the running best is not beaten for N consecutive iterations (default 3). Per-cell state lives at <tune_dir>/<wandb_project>/. PREREQUISITE: rl-integration-generator finished, harbor/rl-integration-generator/rl-suite-spec.json + harbor/scripts/rl/ + harbor/configs/rl/ exist, `<repo>/.venv/` is healthy. DO NOT use for first-time setup — that goes through rl-integration-generator. DO NOT modify the venv or rendered scripts; touch only the per-cell tune dir and apply tricks via /harbor:rl-add-trick.
 tools: [Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion]
 model: opus
 ---
@@ -17,8 +17,8 @@ The procedural details (phases, slash-command mirroring) and the four hard const
 | Key | Required | Notes |
 |---|---|---|
 | `repo_path` | yes | Absolute path to the benchmark repo. |
-| `algorithm` | yes | One of `ppo`, `sac`, `td3` — must appear in `harbor/rl-suite-spec.json:algorithms[]`. |
-| `task` | yes | One task ID — must appear in `harbor/benchmark-spec.json:tasks[].id`. |
+| `algorithm` | yes | One of `ppo`, `sac`, `td3` — must appear in `harbor/rl-integration-generator/rl-suite-spec.json:algorithms[]`. |
+| `task` | yes | One task ID — must appear in `harbor/benchmark-generator/benchmark-spec.json:tasks[].id`. |
 | `mode` | yes | `local` or `cluster`. |
 | `tune_dir` | no | Parent dir under which to mint the per-cell folder. When dispatched by `/harbor:rl-tune` it is `<repo>/harbor/rl-experiment/tune_<id>/`. Standalone fallback: `<repo>/harbor/rl-experiment/standalone_<UTC-ts>/`. |
 | `metric_weights` | no | Dict; default `{"sample_efficiency": 0.5, "final_return": 0.5}`. Both are min-max normalized to [0,1] across the iterations seen so far, then weighted. |
@@ -33,7 +33,7 @@ The procedural details (phases, slash-command mirroring) and the four hard const
 ```
 wandb_project = f"tuning-{benchmark_name}-{task}-{algorithm}"
 ```
-Read `benchmark_name` from `<repo>/harbor/benchmark-spec.json:benchmark_name`.
+Read `benchmark_name` from `<repo>/harbor/benchmark-generator/benchmark-spec.json:benchmark_name`.
 
 **Run names** within that project follow the format `v<N>_<slug>`, where `<slug>` is a short snake_case label of what THIS iteration changed vs. its parent (≤ 30 chars, alphanumeric + underscore only). Examples:
 - `v1_baseline`            — iteration #0, default config
@@ -175,8 +175,8 @@ See `tuning-instruction.md` for the exact Bash incantations and finding-emission
 
 ## Do NOT
 
-- **Do NOT** modify the venv, `harbor/setup_uv.sh`, or `harbor/scripts/rl/*.py`.
-- **Do NOT** hand-edit `harbor/configs/rl/<algo>.parallel.yaml`. Every tuning candidate's overrides go into `<tune_dir>/<wandb_project>/iter_<NNN>/overrides.yaml` (or as Hydra overrides on the train-command); the only legal mutation of the suite config is via `/harbor:rl-trick`.
+- **Do NOT** modify the venv, `harbor/env-generator/setup_uv.sh`, or `harbor/scripts/rl/*.py`.
+- **Do NOT** hand-edit `harbor/configs/rl/<algo>.parallel.yaml`. Every tuning candidate's overrides go into `<tune_dir>/<wandb_project>/iter_<NNN>/overrides.yaml` (or as Hydra overrides on the train-command); the only legal mutation of the suite config is via `/harbor:rl-add-trick`.
 - **Do NOT** stack two tricks before judging the first.
 - **Do NOT** dispatch other subagents.
 - **Do NOT** delete trial artifacts from earlier tunes — `harbor/rl-experiment/` is append-only.
@@ -206,4 +206,4 @@ See `tuning-instruction.md` for the exact Bash incantations and finding-emission
 - `${CLAUDE_PLUGIN_ROOT}/experiences/rl-tuning-agent/tuning-experience.md` — cross-run heuristics (read at Phase 0)
 - `${CLAUDE_PLUGIN_ROOT}/templates/rl-tuning-agent/tuning-history.md.template` — per-tune ledger template
 - `${CLAUDE_PLUGIN_ROOT}/references/rl-integration-generator/rl-suite-spec.md` — score formula + suite-spec schema
-- `${CLAUDE_PLUGIN_ROOT}/commands/{rl-run,rl-sweep,plot,rl-trick}.md` — slash-command bodies the agent mirrors
+- `${CLAUDE_PLUGIN_ROOT}/commands/{rl-run,rl-sweep,plot,rl-add-trick}.md` — slash-command bodies the agent mirrors

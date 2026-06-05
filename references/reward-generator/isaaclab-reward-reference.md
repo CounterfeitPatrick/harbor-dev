@@ -7,7 +7,7 @@ Loaded by `reward-generator` on demand. Per-family rules for composing the §6 r
 | Family | Composer | per_term_logging |
 |---|---|---|
 | `isaaclab-manager-based` | sum (`RewardManager` sums weighted terms) | `yes` (auto-decompose via `info["detailed_reward"]` once `_DetailedRewardWrapper` is in place) |
-| `isaaclab-direct` | sum (you write the body; default to summed named tensors) | `total only` (Direct envs have no RewardManager; `/add-reward-log` falls through to passthrough) |
+| `isaaclab-direct` | sum (you write the body; default to summed named tensors) | `total only` (Direct envs have no RewardManager; `/harbor:reward-add-log` falls through to passthrough) |
 | `dexteroushands` | sum | `total only` |
 | `loco-mujoco` | sum (selected by `reward_type` env_param) | `yes` if the upstream type exposes terms, else `total only` |
 | `dm_control` | whatever your body computes | depends on the env wrapper |
@@ -86,7 +86,7 @@ def _get_rewards(self) -> torch.Tensor:
     return self.r_track + self.r_action
 ```
 
-`/add-reward-log` cannot decompose this without the named-tensor side effect, so per_term_logging is `total only` here.
+`/harbor:reward-add-log` cannot decompose this without the named-tensor side effect, so per_term_logging is `total only` here.
 
 ## info["detailed_reward"] shape
 

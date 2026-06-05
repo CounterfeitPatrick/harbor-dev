@@ -39,13 +39,13 @@ Cross-section edits to §1..§5 are permitted only when §6 genuinely needs a ne
 }
 ```
 
-`per_term_logging` mirrors the `Reward logger added` token semantics in `task_overview.md` so `/add-reward-log` and `/harbor:rl-run` can read it post-hoc.
+`per_term_logging` mirrors the `Reward logger added` token semantics in `task_overview.md` so `/harbor:reward-add-log` and `/harbor:rl-run` can read it post-hoc.
 
 ## Permitted reads + writes
 
 - **Read** `<repo>/harbor/create-task/task-implementation.md` — per-benchmark file pointers (NOT the smoke contract).
 - **Read** the canonical example file end-to-end + scan the rest of the repo freely.
-- **Read** `<repo>/harbor/benchmark-spec.json` and `<repo>/harbor/task_overview.md` to find SIMILAR existing tasks (same domain / robot / object set / verb). Pull reward patterns from those that look applicable.
+- **Read** `<repo>/harbor/benchmark-generator/benchmark-spec.json` and `<repo>/harbor/benchmark-generator/task_overview.md` to find SIMILAR existing tasks (same domain / robot / object set / verb). Pull reward patterns from those that look applicable.
 - **Read prior iter analyses** when running under `/harbor:reward-tune`. The orchestrator passes:
   - `recent_findings` — distilled JSONL summary from `<task_dir>/memories.jsonl` (last 20 entries)
   - `prior_handoff` — the LATEST `handoff-reward-generator.md` (term list + weights + gates after the previous iter's edit)
@@ -71,7 +71,8 @@ Every cross-section edit MUST be logged in `reward-history.md` with a one-line r
 
 Find tasks similar to `<task_id>` already in the benchmark / repo and use them as a starting point:
 
-1. **Same family**: scan `harbor/benchmark-spec.json:tasks[]` for tasks in the same category (e.g. `manipulation`). Note their reward types (read each task's `*_env_cfg.py:RewardsCfg`).
+0. **Task-library FIRST** (per `references/task-library-search.md`): classify the embodiment, grep `experiences/task-library/<folder>/` for the 1–3 most relevant prior specs, and read their **§6 Reward** (term ladder, weights, composer, gating) + `experiences/reward-generator/reward-experience.md`. The library holds full cross-benchmark reward designs — the richest starting point. Record matches in `lookup.md`. If the dispatcher passed `library_refs` (from `/harbor:task-create` or `/harbor:reward-tune`), read those specs directly and skip the classify+grep.
+1. **Same family**: scan `harbor/benchmark-generator/benchmark-spec.json:tasks[]` for tasks in the same category (e.g. `manipulation`). Note their reward types (read each task's `*_env_cfg.py:RewardsCfg`).
 2. **Same robot + same object class**: e.g. for a Franka + cup task, look at Lift-Cube-Franka, Reach-Franka, Push-Block-Franka.
 3. **Same verb**: e.g. for a "stack" task, look for any existing stacking task in IsaacLab or DexterousHands.
 4. **Cross-benchmark via MCP**: when stuck, the orchestrator may surface registry entries via `mcp__plugin_harbor_harbor__lookup_benchmark` for a manual review — but the agent itself sticks to in-repo evidence.
@@ -94,7 +95,8 @@ Skip the lookup phase only when prior iters in the same `/reward-tune` run have 
 - `${CLAUDE_PLUGIN_ROOT}/experiences/reward-generator/reward-experience.md` — Cross-run advice from human-in-the-loop tuning (staging, gating, scale ratios, per-stage tracking). Heuristics, not rules — consult before designing or editing a reward and weigh against the task at hand.
 - `${CLAUDE_PLUGIN_ROOT}/references/reward-generator/isaaclab-reward-reference.md` — composer-by-family, RewTerm idiom, common `mdp.*` building blocks, weight conventions, sign convention, `info["detailed_reward"]` shape.
 - `${CLAUDE_PLUGIN_ROOT}/references/reward-generator/smoke-contract.md` — what S6 verifies + substitution slot specs.
-- `${CLAUDE_PLUGIN_ROOT}/skills/add-reward-log/SKILL.md` — composer assertion semantics.
+- `${CLAUDE_PLUGIN_ROOT}/commands/reward-add-log.md` — composer assertion semantics.
+- `${CLAUDE_PLUGIN_ROOT}/references/task-library-search.md` — **run FIRST** (step 0 of the lookup phase): find a similar prior task's §6 reward in the task-library and reuse its term ladder / composer / gating.
 
 ## Smoke template
 
@@ -154,7 +156,7 @@ Retry loop on failure (3 attempts; `task-implementation.md` patches allowed duri
 
 - **English-only** for any comments.
 - **§7 DR placeholder stays untouched.** Even if the reward needs noisy obs, that's a separate phase.
-- **No registry mutations.** `harbor/benchmark-spec.json` is owned by `benchmark-generator`.
+- **No registry mutations.** `harbor/benchmark-generator/benchmark-spec.json` is owned by `benchmark-generator`.
 - **No silent edits to sibling tasks.** Touch only the new task's files (and the doc, if buggy).
 - **`task-implementation.md` edits are surgical** — one bug at a time, logged.
 - **Cross-section edits to §1..§5** require a real need, logged explicitly.
@@ -166,7 +168,7 @@ There is **exactly one** `reward-history.md` and **exactly one** `handoff-reward
 - **`<task_dir>/reward-history.md`** — SHARED, cumulative log. Each call APPENDS a `## Iter <N>` section (or `## Standalone <iso>` when invoked outside `/reward-tune`). Verbose: decisions resolved, files modified, smoke output (last 50 lines), iteration table if smoke needed retries, cross-section edits, any User Q&A pasted verbatim. Never overwrites prior iter sections.
 - **`<task_dir>/handoff-reward-generator.md`** — OVERWRITTEN each call with the LATEST reward state (current term list with weights, gates, composer, per_term_logging token, file paths). Always reflects "what does the reward look like right now". `/reward-tune` iter N+1's reward-generator reads it to know what iter N left behind.
 
-When called from `/reward-tune` the orchestrator passes the iter index in the prompt. When called standalone (e.g. from `/create-task`), use `## Standalone <iso8601>` for the section heading.
+When called from `/reward-tune` the orchestrator passes the iter index in the prompt. When called standalone (e.g. from `/task-create`), use `## Standalone <iso8601>` for the section heading.
 
 Header table at the top of `reward-history.md` (created on first call, never overwritten):
 

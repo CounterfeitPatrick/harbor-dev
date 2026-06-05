@@ -11,7 +11,7 @@ Single-trial training entry point. Reads the rendered RL suite spec, picks the m
 
 | Arg | Values | Notes |
 |---|---|---|
-| `task` | string | Task ID (e.g. `UnitreeH1`). Must appear in `harbor/benchmark-spec.json:tasks[].id`. |
+| `task` | string | Task ID (e.g. `UnitreeH1`). Must appear in `harbor/benchmark-generator/benchmark-spec.json:tasks[].id`. |
 | `algorithm` | `ppo` \| `sac` \| `td3` | Picks `harbor/configs/rl/<algo>.parallel.yaml` (or `<algo>.yaml` if the suite spec says `parallel=false`). |
 
 ## Optional arguments
@@ -32,13 +32,13 @@ Any other `key=value` token after the required two is forwarded **verbatim** as 
 1. **Pre-flight**:
    ```bash
    cd "$(pwd)"
-   test -f harbor/rl-suite-spec.json || { echo "no rl-suite-spec.json — run rl-integration-generator first"; exit 1; }
+   test -f harbor/rl-integration-generator/rl-suite-spec.json || { echo "no rl-suite-spec.json — run rl-integration-generator first"; exit 1; }
    ```
 
 2. **Load suite spec** to discover `algorithm_slug`, `scripts_dir`, and `parallel`:
    ```python
    import json
-   spec = json.loads(open("harbor/rl-suite-spec.json").read())
+   spec = json.loads(open("harbor/rl-integration-generator/rl-suite-spec.json").read())
    slug      = spec["algorithm_source"]["algorithm_slug"]   # "custom_jax" / "custom_torch" / ...
    scripts   = spec.get("scripts_dir", f"harbor/scripts/rl/{slug}")
    parallel  = bool(spec.get("parallel", False))
@@ -46,7 +46,7 @@ Any other `key=value` token after the required two is forwarded **verbatim** as 
 
 3. **Pick config name**: `<algo>.parallel` if `parallel=true` else `<algo>`.
 
-4. **Reward-logger pre-flight**. Before launching training, check that the chosen task has the per-term reward wrapper wired (so W&B will show per-term curves, and so the user has the diagnostic signal `/add-reward-log` was meant to provide):
+4. **Reward-logger pre-flight**. Before launching training, check that the chosen task has the per-term reward wrapper wired (so W&B will show per-term curves, and so the user has the diagnostic signal `/harbor:reward-add-log` was meant to provide):
 
    ```bash
    python3 "${CLAUDE_PLUGIN_ROOT}/scripts/rl-run/check_reward_logger.py" \
@@ -56,14 +56,14 @@ Any other `key=value` token after the required two is forwarded **verbatim** as 
 
    - **rc=0** → reward logger present (full per-term). Proceed to step 5.
    - **rc=3** → reward logger present **but Direct env** (passthrough only — `info["detailed_reward"] = {"total": env_rew}`). Proceed to step 5, but **surface a one-line note to the user** so they're not surprised when W&B shows only `reward/total/...` and no per-term curves. The task is still trainable.
-   - **rc=1** → reward logger missing for this task. Dispatch `Skill('add-reward-log')` (passing the task ID), wait for it to finish, then re-run the check. If `add-reward-log` exits non-zero or the user cancels the AskUserQuestion inside it, abort with a clear message and do NOT start training.
-   - **rc=2** → `task_overview.md` missing or stale. Tell the user to run benchmark-generator (or `/harbor:benchmark` to verify the entry) and stop.
+   - **rc=1** → reward logger missing for this task. Dispatch `Skill('reward-add-log')` (passing the task ID), wait for it to finish, then re-run the check. If `reward-add-log` exits non-zero or the user cancels the AskUserQuestion inside it, abort with a clear message and do NOT start training.
+   - **rc=2** → `task_overview.md` missing or stale. Tell the user to run benchmark-generator and stop.
 
-   If `harbor/task_overview.md` does not exist at all, treat as `rc=2`. Do NOT silently proceed — the file is a contract surface for `/rl-run` and its absence means benchmark-generator hasn't been run on this repo.
+   If `harbor/benchmark-generator/task_overview.md` does not exist at all, treat as `rc=2`. Do NOT silently proceed — the file is a contract surface for `/rl-run` and its absence means benchmark-generator hasn't been run on this repo.
 
 5. **Resolve run prefix**:
    - Require `<repo>/.venv/bin/python` to exist → prefix = `<repo>/.venv/bin/python`.
-   - If missing, error out with "`.venv/` not found — run `/harbor:env-generator` first".
+   - If missing, error out with "`.venv/` not found — run `/harbor:env-install-uv` first".
 
 6. **Build + run the training command**:
    ```bash

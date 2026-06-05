@@ -93,7 +93,7 @@ def _algo_kwargs(cfg: DictConfig, algo: str) -> dict:
 
 # Whitelist remap: SB3 raw key → (canonical key, sign_flip). Anything NOT in this
 # table is dropped, so SB3 trainers emit exactly the same key set as the
-# custom_torch trainers (per skills/rl-metrics-logging/SKILL.md).
+# custom_torch trainers (per commands/rl-add-log.md).
 #
 # SB3's `entropy_loss` is the negative entropy (used as a loss term); we
 # negate it to recover the true entropy as `train/entropy`.

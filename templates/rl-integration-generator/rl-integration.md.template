@@ -107,15 +107,15 @@ For changes you want to keep, edit `harbor/configs/rl/<algo>.local.yaml` (create
 | `harbor/scripts/rl/{{ALGORITHM_SLUG}}/env_wrapper.py` | rl-integration-generator | per-impl env factory (gpu_sim branch) |
 | `harbor/configs/rl/<algo>.yaml` + `<algo>.parallel.yaml` | rl-integration-generator (overwritten) | unified algo configs |
 | `harbor/configs/rl/<algo>.local.yaml` | **user** (preserved) | overrides; Hydra overlays |
-| `harbor/rl-suite-spec.json` | rl-integration-generator | spec consumed by `/harbor:rl-run`, `/harbor:rl-tune`, `rl-tuning-agent` |
-| `harbor/benchmark-spec.json` | benchmark-generator (read here) | per-task `max_episode_steps`, `success_metric`, `gpu_sim`, etc. |
+| `harbor/rl-integration-generator/rl-suite-spec.json` | rl-integration-generator | spec consumed by `/harbor:rl-run`, `/harbor:rl-tune`, `rl-tuning-agent` |
+| `harbor/benchmark-generator/benchmark-spec.json` | benchmark-generator (read here) | per-task `max_episode_steps`, `success_metric`, `gpu_sim`, etc. |
 | `harbor/utils/data_logger.py` | rl-integration-generator (only if missing) | TB + W&B uniform logger |
 | `outputs/<algo>_<task>_<ts>/` | runtime | per-trial checkpoints, TB events, metrics.jsonl, curves/*.png, render.mp4 |
 | `rl-integration.md` | this file | what you're reading now |
 
 ## Troubleshooting
 
-- `ImportError` from `harbor/scripts/rl/{{ALGORITHM_SLUG}}/train.py` → the algorithm package isn't installed in the venv. Re-run `/harbor:env-generator` to repair the venv, or `uv pip install --python .venv/bin/python <pkg>` directly.
+- `ImportError` from `harbor/scripts/rl/{{ALGORITHM_SLUG}}/train.py` → the algorithm package isn't installed in the venv. Re-run `/harbor:env-install-uv` to repair the venv, or `uv pip install --python .venv/bin/python <pkg>` directly.
 - `wandb: ERROR It appears that you do not have permission to access the requested resource.` → run `wandb login` on the host first; the netrc passes through via the bind mount.
 - Trained checkpoint won't load with `eval.py` — algorithm mismatch (e.g. SAC checkpoint loaded with `--config-name=ppo`). The `algo=` flag must match the algorithm that produced the checkpoint.
 - `gpu_sim=true` but train fails with `NotImplementedError` from `env_wrapper.create_env` → edit `harbor/scripts/rl/{{ALGORITHM_SLUG}}/env_wrapper.py` and wire your benchmark's GPU-batched factory (IsaacGym / IsaacLab / ManiSkill 3 example snippets are in the same function).

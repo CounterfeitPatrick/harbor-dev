@@ -83,4 +83,4 @@ python scripts/render_random.py \
 
 ### How this file is regenerated
 
-Re-run `benchmark-generator` against the repo (usually dispatched automatically by `env-generator` when the classification is `benchmark`). The skill overwrites both `history.md` and `benchmark.md`. To diff before overwriting, rename the old copies to `history.previous.md` / `benchmark.previous.md` first.
+Re-run `benchmark-generator` against the repo (usually dispatched automatically after `env-generator` sets up the env). The skill overwrites both `history.md` and `benchmark.md`. To diff before overwriting, rename the old copies to `history.previous.md` / `benchmark.previous.md` first.

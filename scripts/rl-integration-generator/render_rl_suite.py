@@ -3,7 +3,7 @@ Render the RL suite scaffold into a target benchmark repo.
 
 Inputs:
   --repo                <abs path>        target repo (must already have .venv/
-                                          and harbor/benchmark-spec.json)
+                                          and harbor/benchmark-generator/benchmark-spec.json)
   --algorithm-source    custom_torch | stable_baseline3 | local_implementation
                         (legacy aliases custom-torch / stable-baselines3 also accepted)
   --algorithm-package   for local_implementation: filesystem path OR github URL
@@ -22,10 +22,10 @@ Outputs (written into <repo>):
        + algo/, replay/, models/, utils/ subdirs (custom_torch / custom_jax only)
   harbor/configs/rl/{suite,ppo,sac,td3}.yaml + .parallel siblings   (shared across all sources)
   docker/docker-compose.rl.yaml                                       (best-effort; unused in uv mode)
-  harbor/rl-suite-spec.json
+  harbor/rl-integration-generator/rl-suite-spec.json
   harbor/rl_experiments/{runs,best}/  + history.jsonl
   harbor/utils/data_logger.py (only if missing)
-  harbor/rl-integration.md (Layer 6b user receipt)
+  harbor/rl-integration-generator/rl-integration.md (Layer 6b user receipt)
 
 Convention: all writes are idempotent (overwrite). User edits should go into
 harbor/configs/rl/<algo>.local.yaml (Hydra overlays it on top of the canonical config).
@@ -124,7 +124,7 @@ def render_template(src: Path, dst: Path, mapping: dict[str, str]) -> None:
 
 
 def read_gpu_sim(repo: Path) -> bool:
-    spec_path = repo / "harbor" / "benchmark-spec.json"
+    spec_path = repo / "harbor" / "benchmark-generator" / "benchmark-spec.json"
     if not spec_path.exists():
         print(f"[warn] {spec_path} not found — defaulting gpu_sim=false", file=sys.stderr)
         return False
@@ -138,10 +138,10 @@ def read_gpu_sim(repo: Path) -> bool:
 def main():
     args = parse_args()
     repo: Path = args.repo.resolve()
-    # env-generator must have produced <repo>/.venv + harbor/setup_uv.sh.
-    has_uv = (repo / ".venv" / "bin" / "python").exists() and (repo / "harbor" / "setup_uv.sh").exists()
+    # env-generator must have produced <repo>/.venv + harbor/env-generator/setup_uv.sh.
+    has_uv = (repo / ".venv" / "bin" / "python").exists() and (repo / "harbor" / "env-generator" / "setup_uv.sh").exists()
     if not has_uv:
-        print(f"[error] {repo} is missing .venv or harbor/setup_uv.sh — "
+        print(f"[error] {repo} is missing .venv or harbor/env-generator/setup_uv.sh — "
               "run env-generator + benchmark-generator first.", file=sys.stderr)
         sys.exit(2)
 
@@ -235,7 +235,7 @@ def main():
     if tune_src.exists():
         render_template(tune_src, repo / "harbor" / "scripts" / "rl" / "tune.py", common_map)
 
-    # ---- harbor/rl-suite-spec.json ----
+    # ---- harbor/rl-integration-generator/rl-suite-spec.json ----
     spec_map = {
         "BENCHMARK_NAME": project_name,
         "REPO_PATH": str(repo),
@@ -258,8 +258,8 @@ def main():
     except json.JSONDecodeError as e:
         print(f"[error] rendered spec is not valid JSON: {e}\n--- text ---\n{spec_text}", file=sys.stderr)
         sys.exit(3)
-    (repo / "harbor").mkdir(parents=True, exist_ok=True)
-    (repo / "harbor" / "rl-suite-spec.json").write_text(spec_text)
+    (repo / "harbor" / "rl-integration-generator").mkdir(parents=True, exist_ok=True)
+    (repo / "harbor" / "rl-integration-generator" / "rl-suite-spec.json").write_text(spec_text)
 
     # ---- experiments dir scaffolding ----
     (repo / "harbor" / "rl_experiments" / "runs").mkdir(parents=True, exist_ok=True)
@@ -268,7 +268,7 @@ def main():
     if not history.exists():
         history.write_text("")
 
-    # ---- <repo>/harbor/rl-integration.md (Layer 6b receipt) ----
+    # ---- <repo>/harbor/rl-integration-generator/rl-integration.md (Layer 6b receipt) ----
     integration_map = dict(common_map)
     integration_map.update({
         "ALGORITHM_SOURCE": source,
@@ -291,13 +291,13 @@ def main():
         "WANDB_MODE": args.wandb_mode,
     })
     render_template(TEMPLATES / "rl-integration.md.template",
-                    repo / "harbor" / "rl-integration.md", integration_map)
+                    repo / "harbor" / "rl-integration-generator" / "rl-integration.md", integration_map)
 
     # ---- ensure DataLogger exists at <repo>/harbor/utils/data_logger.py ----
     dl_path = repo / "harbor" / "utils" / "data_logger.py"
     if not dl_path.exists():
         dl_path.parent.mkdir(parents=True, exist_ok=True)
-        renderer = PLUGIN_ROOT / "skills" / "add-data-logger" / "scripts" / "render_data_logger.py"
+        renderer = PLUGIN_ROOT / "scripts" / "rl-integration-generator" / "render_data_logger.py"
         if renderer.exists():
             subprocess.check_call([
                 sys.executable, str(renderer),
@@ -305,7 +305,7 @@ def main():
                 "--output", str(dl_path),
             ])
         else:
-            print("[warn] harbor/utils/data_logger.py missing AND add-data-logger renderer not found.",
+            print("[warn] harbor/utils/data_logger.py missing AND render_data_logger.py not found.",
                   file=sys.stderr)
 
     print(json.dumps({
@@ -314,11 +314,11 @@ def main():
         "algorithm_slug": algorithm_slug,
         "gpu_sim": gpu_sim,
         "parallel": parallel,
-        "spec": str(repo / "harbor" / "rl-suite-spec.json"),
+        "spec": str(repo / "harbor" / "rl-integration-generator" / "rl-suite-spec.json"),
         "scripts_dir": str(repo / "harbor" / "scripts" / "rl" / algorithm_slug),
         "configs": [str(repo / "harbor" / "configs" / "rl" / c) for c in
                     ["suite.yaml"] + [f"{a}.yaml" for a in algos] + [f"{a}.parallel.yaml" for a in algos]],
-        "rl_integration_md": str(repo / "harbor" / "rl-integration.md"),
+        "rl_integration_md": str(repo / "harbor" / "rl-integration-generator" / "rl-integration.md"),
     }, indent=2))
 
 

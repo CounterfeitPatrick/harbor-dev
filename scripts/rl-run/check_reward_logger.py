@@ -2,7 +2,7 @@
 """
 Pre-flight check for /harbor:rl-run: verify that the chosen task has the
 per-term reward wrapper wired (column "reward logger added" in
-``<repo>/harbor/task_overview.md``).
+``<repo>/harbor/benchmark-generator/task_overview.md``).
 
 Exit codes:
   0 = "yes"        — full per-term decomposition; proceed with training.
@@ -10,7 +10,7 @@ Exit codes:
                      proceed but warn that per-term curves won't appear in
                      W&B (only `reward/total/...`).
   1 = "no"         — wrapper not applied; caller should dispatch
-                     /add-reward-log and then retry.
+                     /harbor:reward-add-log and then retry.
   2 = task not found in task_overview.md, or task_overview.md missing —
       caller should surface a clean error to the user.
 
@@ -74,7 +74,7 @@ def main() -> int:
     p.add_argument("--task", required=True)
     args = p.parse_args()
 
-    overview = args.repo.resolve() / "harbor" / "task_overview.md"
+    overview = args.repo.resolve() / "harbor" / "benchmark-generator" / "task_overview.md"
     if not overview.is_file():
         print(f"[check] task_overview.md not found at {overview}. "
               f"Run benchmark-generator first.", file=sys.stderr)
@@ -104,7 +104,7 @@ def main() -> int:
               f"available without a RewardManager. Proceeding.")
         return 3
     print(f"[check] {args.task}: reward logger MISSING — caller should "
-          f"dispatch /add-reward-log before training.")
+          f"dispatch /harbor:reward-add-log before training.")
     return 1
 
 

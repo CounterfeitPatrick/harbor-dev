@@ -40,7 +40,7 @@ Append-only ledger of heuristics that have generalized across tunes. Read at Pha
 ## Failure-mode signatures
 
 19. **NaN in actor_loss within 1k steps** — learning_rate too high OR un-clipped grads. First fix: halve LR, enable grad-norm clip.
-20. **eval return ≈ 0 forever** — reward not reaching the agent (env wrapper mis-wired, `/add-reward-log` shows 0). First fix: smoke-test env_wrapper outside the algo.
+20. **eval return ≈ 0 forever** — reward not reaching the agent (env wrapper mis-wired, `/harbor:reward-add-log` shows 0). First fix: smoke-test env_wrapper outside the algo.
 21. **train_loss decreasing but eval_return flat** — overfitting rollout buffer (too few env steps per update). First fix: bump `num_envs` or shrink `n_epochs`.
 22. **steps/sec drops mid-run** — leak (replay buffer growing without cap) OR JIT recompile loop. First fix: check buffer size; pin shapes; print shape on every fresh trace.
 23. **value_loss explodes (PPO)** — un-normalized returns + many epochs. First fix: apply `value_clip_torch` or `value_norm_torch`.

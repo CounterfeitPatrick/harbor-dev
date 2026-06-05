@@ -28,7 +28,7 @@ def parse_args():
 
 
 def load_spec(repo: Path) -> dict:
-    spec = repo / "harbor" / "rl-suite-spec.json"
+    spec = repo / "harbor" / "rl-integration-generator" / "rl-suite-spec.json"
     if not spec.exists():
         raise SystemExit(f"{spec} not found — dispatch the rl-integration-generator subagent first.")
     return json.loads(spec.read_text())

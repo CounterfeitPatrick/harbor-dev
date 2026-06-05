@@ -94,9 +94,9 @@ If the task list is datasheet-style (hundreds of entries), group them first and 
 |------|------|--------|
 | `scripts/run_random.py` | Random-action rollout — env + reward sanity check | created |
 | `scripts/render_random.py` | Random-action rollout that writes an MP4 — render pipeline check | created |
-| `harbor/benchmark-spec.json` | RL suite spec for rl-integration-generator + the RL training/tuning commands | created |
-| `harbor/history.md` | This file | created |
-| `harbor/benchmark.md` | Static benchmark guide | created |
+| `harbor/benchmark-generator/benchmark-spec.json` | RL suite spec for rl-integration-generator + the RL training/tuning commands | created |
+| `harbor/benchmark-generator/history.md` | This file | created |
+| `harbor/benchmark-generator/benchmark.md` | Static benchmark guide | created |
 ```
 
 Prefer `created` / `edited` / `unchanged` in the status column; it makes re-runs easy to diff.
@@ -143,7 +143,7 @@ Step 5 is executed by the agent, not a separate generator script. Steps:
 1. Capture `date -Iseconds` at Step 5 start.
 2. Collect the cumulative outputs from Steps 1–4 (smoke tiers' last-5 lines, capability probe stdout).
 3. Substitute each `{{PLACEHOLDER}}` in both templates. For multi-line placeholders (`{{GENERATED_FILES_TABLE}}`, `{{SMOKE_TAIL_CAPTURES}}`), build the markdown string in Python and splice it rather than using `sed`.
-4. Write the result to `<target_repo>/harbor/history.md` and `<target_repo>/harbor/benchmark.md`.
+4. Write the result to `<target_repo>/harbor/benchmark-generator/history.md` and `<target_repo>/harbor/benchmark-generator/benchmark.md`.
 5. Echo both paths to stdout:
    `history.md generated (N KB)`
    `benchmark.md generated (N KB)`

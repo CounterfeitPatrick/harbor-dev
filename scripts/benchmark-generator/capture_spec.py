@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Capture an RL benchmark spec into <repo>/harbor/benchmark-spec.json.
+Capture an RL benchmark spec into <repo>/harbor/benchmark-generator/benchmark-spec.json.
 
 Captures the surface that rl-integration-generator + the RL training commands
 (/harbor:rl-run, /harbor:rl-tune) need to set up training:
@@ -8,7 +8,7 @@ Captures the surface that rl-integration-generator + the RL training commands
   - tasks list (id + max_episode_steps + reward_implemented + success_metric)
   - language: pytorch | jax
   - gpu_sim: bool (does this benchmark expose massively-parallel GPU envs?)
-  - category: always "rl" (every classification reaching this script is treated
+  - category: always "rl" (every repo reaching this script is treated
     as an RL benchmark; the field is kept for downstream consumers that still
     read it)
 
@@ -115,7 +115,7 @@ def main() -> int:
         print(json.dumps(record, indent=2))
         return 0
 
-    out = repo / "harbor" / "benchmark-spec.json"
+    out = repo / "harbor" / "benchmark-generator" / "benchmark-spec.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     # Merge with existing spec if any (preserve unrelated fields like obs_spec).
     existing = {}

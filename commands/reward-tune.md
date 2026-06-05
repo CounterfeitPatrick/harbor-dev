@@ -70,14 +70,14 @@ There is **NO** per-iter `reward-history.md` / `handoff-reward-generator.md` / `
 ```bash
 cd "$(pwd)"
 test -x .venv/bin/python                                                || exit 1
-test -f harbor/benchmark-spec.json                                    || exit 1
-test -f harbor/rl-suite-spec.json                                     || exit 1
+test -f harbor/benchmark-generator/benchmark-spec.json                                    || exit 1
+test -f harbor/rl-integration-generator/rl-suite-spec.json                                     || exit 1
 test -f harbor/create-task/task-implementation.md                   || exit 1
 .venv/bin/python -c "import gymnasium as gym; gym.make('<task>'); print('build ok')" || exit 1
 command -v ffmpeg >/dev/null                                            || exit 1
 ```
 
-Resolve `task_dir = harbor/create-task/<slug>` (slug derived from task name). The dir MUST already exist (`create-task` or earlier `reward-tune` runs have used it).
+Resolve `task_dir = harbor/create-task/<slug>` (slug derived from task name). The dir MUST already exist (`create-task` or earlier `tune-reward` runs have used it).
 
 If `mode=cluster`, log "cluster not implemented; using local" and continue.
 
@@ -112,6 +112,8 @@ If `<task_dir>/reward-history.md` does NOT exist, render it from the template (h
 
 If `<task_dir>/memories.jsonl` does NOT exist, `touch` it.
 
+**Task-library search (CREATE branch, once per tune).** Before the first iteration, run the protocol in `${CLAUDE_PLUGIN_ROOT}/references/task-library-search.md`: classify the task's embodiment, grep `experiences/task-library/<folder>/` for the 1–3 most relevant prior specs, and stash their abs paths as `library_refs` in `tune-state.json`. These seed every iteration's reward-generator with proven §6 reward designs (term ladder / composer / gating) from similar tasks. On RESUME, reuse the stored `library_refs` (don't re-search). `library_refs = []` when the library has no match — never block.
+
 ### Step 2 — Iteration loop
 
 For `iter` in `current_iter..∞` (no hard cap):
@@ -138,6 +140,7 @@ Agent(reward-generator, prompt={
   task_id:             "<task>",
   description:         "<from spec.json>",
   iter:                <N>,
+  library_refs:        <library_refs from tune-state>,                    # task-library specs to mirror (§6); strongest on iter 0
   recent_findings:     <findings>,                                        # JSONL-derived, distilled
   prior_handoff:       <prior_handoff>,                                   # LATEST reward state (latest iter)
   prior_analyses:      <prior_analyses>,                                  # FULL analysis.md from last 3 iters
@@ -163,7 +166,7 @@ If `status: fail`, abort the tune and report.
 #### 2c. TRAIN — at default num_envs
 
 ```bash
-slug=$(jq -r '.algorithm_source.slug' harbor/rl-suite-spec.json)
+slug=$(jq -r '.algorithm_source.slug' harbor/rl-integration-generator/rl-suite-spec.json)
 config_name="<algo>.parallel"
 out_log="<task_dir>/iter_<NNN>/train.log"
 
@@ -259,7 +262,7 @@ When the loop ends (success or user abort):
 - Update `tune-state.json:status`, `finished_at`.
 - Print to user:
   ```
-  reward-tune : <task_id>  (status: converged|aborted)
+  tune-reward : <task_id>  (status: converged|aborted)
   iters       : <N>  best=<best_iter>  best_total=<v>  best_success=<v>
   task_dir    : <task_dir>
   reward-history (shared): <task_dir>/reward-history.md

@@ -1,13 +1,13 @@
 ---
-description: Probe an already-set-up benchmark repo and author <repo>/harbor/create-task/task-implementation.md — the per-family task-authoring guide consumed by /harbor:create-task. Use when the user types /harbor:probe-benchmark [repo=<path>] [canonical_task=<id>] or asks "probe this benchmark", "author task-implementation.md", "scaffold the create-task guide for this repo".
+description: Probe an already-set-up benchmark repo and author <repo>/harbor/create-task/task-implementation.md — the per-family task-authoring guide consumed by /harbor:task-create. Use when the user types /harbor:probe-benchmark [repo=<path>] [canonical_task=<id>] or asks "probe this benchmark", "author task-implementation.md", "scaffold the create-task guide for this repo".
 argument-hint: [repo=<path>] [canonical_task=<id>]
 ---
 
 # /harbor:probe-benchmark — Author `task-implementation.md`
 
-Inspect an already-set-up benchmark repo (env-generator + benchmark-generator Step 3.5/3.6 have run), detect its family, pick a canonical example task, and render `<repo>/harbor/create-task/task-implementation.md` from the template — the single shared file `/harbor:create-task` reads.
+Inspect an already-set-up benchmark repo (env-generator + benchmark-generator Step 3.5/3.6 have run), detect its family, pick a canonical example task, and render `<repo>/harbor/create-task/task-implementation.md` from the template — the single shared file `/harbor:task-create` reads.
 
-`/harbor:create-task` boots three agents (`task-generator` → `reward-generator` → `dr-generator`) that **do not re-scan the upstream repo** — they trust this doc, so getting it right is part of the probe contract.
+`/harbor:task-create` boots three agents (`task-generator` → `reward-generator` → `dr-generator`) that **do not re-scan the upstream repo** — they trust this doc, so getting it right is part of the probe contract.
 
 ## Optional arguments
 
@@ -19,10 +19,10 @@ Inspect an already-set-up benchmark repo (env-generator + benchmark-generator St
 ## Pre-flight
 
 ```bash
-test -f "<repo>/harbor/benchmark-spec.json"   || { echo "benchmark-spec.json missing — run benchmark-generator Step 3.5 first"; exit 1; }
-test -f "<repo>/harbor/task_overview.md"      || { echo "task_overview.md missing — run benchmark-generator Step 3.6 first"; exit 1; }
-test -f "<repo>/harbor/probe.json"            || { echo "probe.json missing — run env-generator first"; exit 1; }
-test -x "<repo>/.venv/bin/python"               || { echo ".venv/ missing — run /harbor:env-generator first"; exit 1; }
+test -f "<repo>/harbor/benchmark-generator/benchmark-spec.json"   || { echo "benchmark-spec.json missing — run benchmark-generator Step 3.5 first"; exit 1; }
+test -f "<repo>/harbor/benchmark-generator/task_overview.md"      || { echo "task_overview.md missing — run benchmark-generator Step 3.6 first"; exit 1; }
+test -f "<repo>/harbor/env-generator/probe.json"            || { echo "probe.json missing — run env-generator first"; exit 1; }
+test -x "<repo>/.venv/bin/python"               || { echo ".venv/ missing — run /harbor:env-install-uv first"; exit 1; }
 ```
 
 ## Action
@@ -64,7 +64,7 @@ test -x "<repo>/.venv/bin/python"               || { echo ".venv/ missing — ru
    ```
    Then `Write` the rendered content to `<repo>/harbor/create-task/task-implementation.md`.
 
-8. Surface a one-line note: `task-implementation.md authored — /harbor:create-task can now run.`
+8. Surface a one-line note: `task-implementation.md authored — /harbor:task-create can now run.`
 
 ## Hard rules
 
@@ -78,11 +78,11 @@ test -x "<repo>/.venv/bin/python"               || { echo ".venv/ missing — ru
 ## On failure
 
 - Cannot detect family → ask user (one `AskUserQuestion`).
-- No canonical example smoke-passed → emit a stub doc with `BENCHMARK_FAMILY: <unknown>` and report `task-implementation: skipped (no smoke-passing canonical example)`; future `/harbor:create-task` will refuse to run.
+- No canonical example smoke-passed → emit a stub doc with `BENCHMARK_FAMILY: <unknown>` and report `task-implementation: skipped (no smoke-passing canonical example)`; future `/harbor:task-create` will refuse to run.
 - §1 smoke fails on the canonical example → that means env-generator / benchmark-generator already had a problem; surface up rather than fabricating expected output.
 
 ## Constraints
 
 - **Do NOT** edit `benchmark-spec.json` / `task_overview.md` / `probe.json` — read-only inputs.
-- **Do NOT** invoke other generator subagents — this command authors the guide; downstream agents are dispatched by `/harbor:create-task`.
+- **Do NOT** invoke other generator subagents — this command authors the guide; downstream agents are dispatched by `/harbor:task-create`.
 - **Do NOT** widen the seven-section schema — additions belong in the contract, not in individual probes.

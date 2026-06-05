@@ -17,7 +17,7 @@ The agent fills:
                                    When using `write_root_pose_to_sim`, broadcast to all envs:
                                        pose = torch.tensor([px, py, pz, qw, qx, qy, qz], device=unw.device)
                                        unw.scene[<obj>].write_root_pose_to_sim(pose.expand(unw.num_envs, -1).contiguous())
-                                   (smokes run at num_envs=128, so a (1, 7) tensor will be rejected)
+                                   (smokes run at num_envs={{NUM_ENVS}}; broadcast any (1,7) pose to (num_envs,7))
 """
 import argparse
 import torch
@@ -35,7 +35,7 @@ import isaaclab_tasks    # noqa: F401, E402
 from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
 
 TASK_ID = "{{TASK_ID}}"
-cfg = parse_env_cfg(TASK_ID, device="cuda:0", num_envs=128, use_fabric=True)
+cfg = parse_env_cfg(TASK_ID, device="cuda:0", num_envs={{NUM_ENVS}}, use_fabric=True)
 
 # Pin goal sampler to a known value
 {{GOAL_OVERRIDES_BLOCK}}

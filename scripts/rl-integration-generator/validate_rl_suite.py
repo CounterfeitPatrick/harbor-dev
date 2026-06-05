@@ -2,10 +2,10 @@
 Smoke-test the RL suite that render_rl_suite.py just dropped into a target repo.
 
 Validation tiers (each returns ok|fail):
-  T1 — files exist           — harbor/scripts/rl/<slug>/*.py + harbor/configs/rl/*.yaml + harbor/rl-suite-spec.json
+  T1 — files exist           — harbor/scripts/rl/<slug>/*.py + harbor/configs/rl/*.yaml + harbor/rl-integration-generator/rl-suite-spec.json
   T2 — py_compile             — every harbor/scripts/rl/<slug>/**/*.py compiles
   T3 — yaml parse             — every harbor/configs/rl/*.yaml parses
-  T4 — spec parse + schema    — harbor/rl-suite-spec.json has the required keys
+  T4 — spec parse + schema    — harbor/rl-integration-generator/rl-suite-spec.json has the required keys
 
 The per-impl directory `harbor/scripts/rl/<slug>/` is read from the spec's
 `scripts_dir` field. Four sources currently:
@@ -38,7 +38,7 @@ def parse_args():
 
 def _scripts_dir(repo: Path) -> Path | None:
     """Read scripts_dir from rl-suite-spec.json; fall back to legacy scripts/rl."""
-    spec = repo / "harbor" / "rl-suite-spec.json"
+    spec = repo / "harbor" / "rl-integration-generator" / "rl-suite-spec.json"
     if not spec.exists():
         return None
     try:
@@ -52,7 +52,7 @@ def _scripts_dir(repo: Path) -> Path | None:
 def t1_files(repo: Path, algos: list[str]) -> tuple[bool, list[str]]:
     sdir = _scripts_dir(repo)
     if sdir is None:
-        return (False, ["harbor/rl-suite-spec.json missing or invalid"])
+        return (False, ["harbor/rl-integration-generator/rl-suite-spec.json missing or invalid"])
     sdir_rel = sdir.relative_to(repo)
     expected = [
         f"{sdir_rel}/train.py",
@@ -60,7 +60,7 @@ def t1_files(repo: Path, algos: list[str]) -> tuple[bool, list[str]]:
         f"{sdir_rel}/render.py",
         f"{sdir_rel}/env_wrapper.py",
         "harbor/configs/rl/suite.yaml",
-        "harbor/rl-suite-spec.json",
+        "harbor/rl-integration-generator/rl-suite-spec.json",
     ]
     for a in algos:
         expected.append(f"harbor/configs/rl/{a}.yaml")
@@ -97,7 +97,7 @@ def t3_yaml(repo: Path) -> tuple[bool, list[str]]:
 
 
 def t4_spec(repo: Path) -> tuple[bool, list[str]]:
-    spec = repo / "harbor" / "rl-suite-spec.json"
+    spec = repo / "harbor" / "rl-integration-generator" / "rl-suite-spec.json"
     if not spec.exists():
         return (False, ["spec not found"])
     try:

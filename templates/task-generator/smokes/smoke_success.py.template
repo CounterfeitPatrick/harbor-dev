@@ -20,7 +20,7 @@ Substitutions:
                               root pose, compute the target pose for each other
                               entity from it, then `write_root_pose_to_sim` +
                               `write_root_velocity_to_sim` to apply. With
-                              num_envs=128 the pose tensors must be (128, 7).
+                              num_envs=N the pose tensors must be (N, 7).
 """
 import argparse
 import os
@@ -42,9 +42,9 @@ from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
 
 TASK_ID      = "{{TASK_ID}}"
 SUCCESS_TERM = "{{SUCCESS_TERM_NAME}}"
-# Default 128 envs for CI / smoke regression; override via `NUM_ENVS=N` env var
+# Default 2 envs (gpu-sim) for CI / smoke regression; override via `NUM_ENVS=N` env var
 # (e.g. `NUM_ENVS=2 HEADLESS=0 ...` for a small headed sanity check).
-NUM_ENVS     = int(os.environ.get("NUM_ENVS", "128"))
+NUM_ENVS     = int(os.environ.get("NUM_ENVS", "2"))
 
 cfg = parse_env_cfg(TASK_ID, device="cuda:0", num_envs=NUM_ENVS, use_fabric=True)
 env = gym.make(TASK_ID, cfg=cfg)

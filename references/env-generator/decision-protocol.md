@@ -1,6 +1,6 @@
 # Decision protocol (env-generator)
 
-Common pattern used in `agents/env-generator.md` Steps 4 (InstallationPlan confirmation) and 7 (classification confirmation). All uses follow the same three-tier resolution order.
+Common pattern used in `agents/env-generator.md` Step 4 (InstallationPlan confirmation). It follows a three-tier resolution order.
 
 ## The three tiers
 
@@ -22,19 +22,9 @@ Each step that uses this protocol must specify:
 - **default branch** — which option to apply when no response arrives
 - **receipt field** — JSON field name where the chosen path is recorded
 
-### Step 7 — classification confirmation
+### Step 4 — InstallationPlan confirmation
 
-| Binding | Value |
-|---------|-------|
-| pre-elect keywords | `classification = <benchmark\|policy\|robot\|plain>` or equivalent prose ("this is a policy repo" / "treat as benchmark") in the dispatch prompt → use the pre-elected value |
-| question | "I read README + N markdown files. My read is: \<classification\>. Reason: \<one-sentence rationale quoting README\>. Confirm or override?" |
-| options | (A) benchmark — provides simulation environments / tasks **(Recommended if my read is benchmark)**<br>(B) policy — provides a model + inference recipe<br>(C) robot — integrates with real hardware (ROS / Franka / Realsense)<br>(D) plain — none of the above<br>The agent's own pick is tagged `(Recommended)` and listed first. |
-| default branch | `plain` — safe fallback that terminates the pipeline cleanly without misrouting |
-| receipt field | `classification_confidence` (values: `"high_user_confirmed"`, `"high_user_corrected"`, `"high_pre_elected"`, `"default_no_user_response"`) |
-
-### (Optional) Step 4 — InstallationPlan confirmation
-
-This step **also** uses the protocol. Bindings:
+Bindings:
 
 | Binding | Value |
 |---------|-------|
@@ -47,5 +37,5 @@ This step **also** uses the protocol. Bindings:
 ## Implementation notes
 
 - The protocol is a **prompt convention**, not code. There is no shared library function; each step in the agent's prompt references this file for the pattern and lists its bindings inline.
-- `receipt field` values become part of the JSON returned to the main thread (Step 4 → `install_plan_confidence`, Step 7 → `classification_confidence`). The operator inspects these to detect when interactive prompts didn't reach the user.
+- `receipt field` values become part of the JSON returned to the main thread (Step 4 → `install_plan_confidence`). The operator inspects these to detect when interactive prompts didn't reach the user.
 - When adding a new step that needs three-tier resolution, add a new sub-table here and reference it from the step.

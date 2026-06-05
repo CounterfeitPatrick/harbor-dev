@@ -13,7 +13,7 @@ this registry. See README.md "How to graduate to verified" for the curation
 flow.
 
 Tools (all return JSON, never multi-page text; the only long-text field allowed
-is `formatted_table`, used by thin slash skill `/benchmark`).
+is `formatted_table`, used by the /harbor:help registry listing).
 """
 from __future__ import annotations
 

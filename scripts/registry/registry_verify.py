@@ -3,7 +3,7 @@
 Promote a benchmark registry entry from status=unverified to status=verified,
 and fill image_id + size from `docker image inspect`.
 
-Used by the /benchmark verify <name> skill flow. Pure line-replacement within
+Used by the registry verify flow (run this script directly). Pure line-replacement within
 the targeted entry's range — no YAML round-trip, so the rest of the file is
 untouched byte-for-byte.
 
@@ -138,7 +138,7 @@ def main(argv: list[str] | None = None) -> int:
     rng = _find_entry_range(text, args.name)
     if rng is None:
         print(f"[error] no entry named '{args.name}' in {yaml_path.name}.\n"
-              f"        try /benchmark list all to see candidates.", file=sys.stderr)
+              f"        try list_benchmarks(status=None) to see candidates.", file=sys.stderr)
         return 2
     start, end = rng
 

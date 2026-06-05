@@ -20,27 +20,35 @@ The user wants a tour of everything this plugin offers. **Print the static block
 
 ## Slash commands
 
+Grouped by prefix: `env-*` · task (`task-*`/`probe-*`) · `reward-*` · `rl-*` · utilities.
+
 | Command | What it does |
 |---|---|
 | `/harbor:help` | This overview. |
-| `/harbor:benchmark` | Browse the benchmark registry (default lists verified). |
-| `/harbor:benchmark list [verified\|unverified\|all]` | Filter listing by status. |
-| `/harbor:benchmark submit` | Interactively register a new benchmark with `status: unverified`. Writes yaml + prints git commands; you push and open the PR yourself. |
-| `/harbor:benchmark verify <name>` | Maintainer: flip status to `verified`, auto-fill `image_id` + `size` from `docker image inspect`. |
+| **env** | |
+| `/harbor:env-install-uv [path]` | Set up an isolated `.venv/` for a GPU repo via uv; renders `harbor/env-generator/setup_uv.sh`, runs the import smoke, then dispatches `benchmark-generator`. |
+| **task** | |
+| `/harbor:probe-benchmark [repo=<path>]` | Author the family-level `create-task/task-implementation.md` guide for a benchmark repo. |
+| `/harbor:probe-task task=<id> [output=<path>]` | Emit a portable per-task spec (verbatim §1–§7 code). Runs in a subagent to save context. |
+| `/harbor:task-create name=<TaskID> (description=… \| from=<spec.md>)` | Author a NEW task, or reproduce one from a probe-task spec. Dispatches task-generator → reward-generator → dr-generator. |
+| `/harbor:task-list [<task-id>]` | List / inspect tasks in the cwd-local benchmark (falls back to the registry via `list_tasks`). |
+| **reward** | |
+| `/harbor:reward-tune task=<id> [algorithm=<algo>]` | Iteratively tune the §6 reward of an existing task (train → render → analyze → repeat until success). |
+| `/harbor:reward-add-log` | Wire per-reward-term decomposition into a benchmark repo without changing the env's native reward — asserts `composer(terms) == reward` every step. |
+| **rl** | |
 | `/harbor:rl-run task=<id> algorithm=<algo> [k=v ...]` | Train one trial. Wraps `harbor/scripts/rl/<impl>/train.py` with the repo's `<repo>/.venv/bin/python` and Hydra overrides. |
-| `/harbor:rl-eval checkpoint=<path> [k=v ...]` | Evaluate a single trained checkpoint (unbiased steady-state aggregate). Auto-infers task and algorithm from saved config. Writes `metrics.json` next to checkpoint. |
-| `/harbor:rl-visualize checkpoint=<path> [k=v ...]` | Open a HEADED GLFW viewer (CPU MuJoCo backend, custom_jax only) for a trained agent. Requires `$DISPLAY`. |
-| `/harbor:rl-sweep task=<list> algorithm=<list> [k=v1,v2,...]` | Cartesian-product sweep — each combination dispatches a sub-agent that runs `/harbor:rl-run`. Per-trial dirs under `harbor/rl_experiments/sweeps/<sweep_id>/`. |
-| `/harbor:rl-tune task=<list> algorithm=<list> [mode=local\|cluster]` | Cartesian-product grid TUNING. One `rl-tuning-agent` subagent per cell (open-ended hyperparameter loop). Tune-level history.md + final cross-cell summary under `harbor/rl-experiment/<tune_id>/`; each cell's per-cell state at `<tune_id>/<wandb_project>/`. |
-| `/harbor:wandb-setup` | Inspect / re-login / logout the host's Weights & Biases credentials (`~/.netrc`). Used to switch accounts before / between rl-integration runs. |
-
-## Skills (description auto-load)
-
-| Skill | When |
-|---|---|
-| `karpathy-guidelines` | Code-writing rules; auto-loaded whenever you write or review code. |
-| `add-data-logger` | Drop a parameterized `data_logger.py` (TensorBoard / W&B) into a target Python project. |
-| `rl-metrics-logging` | Canonical metric-key contract (PPO / SAC / TD3 + per-reward-term + SB3 callback remap) for every algorithm under `harbor/scripts/rl/<impl>/`. Auto-loaded by `rl-integration-generator`. |
+| `/harbor:rl-eval checkpoint=<path> [k=v ...]` | Evaluate a single trained checkpoint. Auto-infers task and algorithm from saved config. Writes `metrics.json` next to checkpoint. |
+| `/harbor:rl-render checkpoint=<path> [k=v ...]` | Render a checkpoint to MP4 with inference-moved + frame-difference sanity checks. |
+| `/harbor:rl-visualize checkpoint=<path> [k=v ...]` | Open a HEADED GLFW viewer for a trained agent. Requires `$DISPLAY`. |
+| `/harbor:rl-sweep task=<list> algorithm=<list> [k=v1,v2,...]` | Cartesian-product sweep — each combination dispatches a sub-agent that runs `/harbor:rl-run`. |
+| `/harbor:rl-tune task=<list> algorithm=<list> [mode=local\|cluster]` | Cartesian-product grid TUNING. One `rl-tuning-agent` subagent per cell (open-ended hyperparameter loop). |
+| `/harbor:rl-add-trick <trick> [algorithm=<algo>]` | Apply an RL training trick to a chosen algorithm config in-place. |
+| `/harbor:rl-list-tricks` | List available RL training tricks with descriptions + applicability (read-only). |
+| `/harbor:rl-add-log` | Print the canonical metric-key contract every algorithm under `harbor/scripts/rl/<impl>/` must emit. |
+| **utilities** | |
+| `/harbor:plot spec=<yaml>` | Multi-panel mean±std W&B learning curves grouped by task × baseline. |
+| `/harbor:wandb-setup` | Inspect / re-login / logout the host's Weights & Biases credentials (`~/.netrc`). |
+| `/harbor:update-experience target=<name> (experience="…" \| file=<path>)` | Append a numbered bullet to an agent experience ledger (≤5-line hand-written bullets), or file a probe-task spec into the right `task-library/` embodiment folder. |
 
 ## Subagents (heavy, multi-step work; main thread dispatches)
 
@@ -48,9 +56,9 @@ Invoke via `Task('<agent-name>')`. Subagents do not nest-dispatch — main threa
 
 | Agent | Purpose |
 |---|---|
-| `env-generator` | **Entry point** for any "set up env for \<repo\>" task. Probes the repo, renders `harbor/setup_uv.sh`, creates `<repo>/.venv/`, runs import smoke test, classifies as `benchmark` / `plain`, returns to main. |
-| `benchmark-generator` | After env-generator returns `benchmark`. Renders `scripts/{run_random,render_random}.py`, runs 2-tier smoke (L1 random / L2 render), captures suite spec into `harbor/benchmark-spec.json`. Training scaffolding is owned by `rl-integration-generator` (dispatched directly as a subagent once the spec is written). |
-| `rl-integration-generator` | After benchmark-generator finishes. Renders `harbor/scripts/rl/<impl>/{train,eval,render,env_wrapper}.py`, `harbor/configs/rl/{ppo,sac,td3}{,.parallel}.yaml`, and `harbor/rl-suite-spec.json`. Smokes each algorithm. |
+| `env-generator` | **Entry point** for any "set up env for \<repo\>" task. Probes the repo, renders `harbor/env-generator/setup_uv.sh`, creates `<repo>/.venv/`, runs import smoke test, returns to main. |
+| `benchmark-generator` | After env-generator finishes. Renders `scripts/{run_random,render_random}.py`, runs 2-tier smoke (L1 random / L2 render), captures suite spec into `harbor/benchmark-generator/benchmark-spec.json`. Training scaffolding is owned by `rl-integration-generator` (dispatched directly as a subagent once the spec is written). |
+| `rl-integration-generator` | After benchmark-generator finishes. Renders `harbor/scripts/rl/<impl>/{train,eval,render,env_wrapper}.py`, `harbor/configs/rl/{ppo,sac,td3}{,.parallel}.yaml`, and `harbor/rl-integration-generator/rl-suite-spec.json`. Smokes each algorithm. |
 | `rl-tuning-agent` | Per-algorithm hyperparameter tuning loop: train → eval → render → analyze metrics + behavior → suggest next config. Writes per-trial records under `harbor/rl_experiments/runs/<trial_id>/` and best-config picks under `harbor/rl_experiments/best/<algo>/`. |
 
 ## MCP tools (read-only registry access)

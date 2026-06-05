@@ -28,7 +28,7 @@ Loads a checkpoint, runs unbiased eval (steady-state aggregate over `eval_total_
 
 1. **Pre-flight**:
    ```bash
-   test -f harbor/rl-suite-spec.json || { echo "no rl-suite-spec.json"; exit 1; }
+   test -f harbor/rl-integration-generator/rl-suite-spec.json || { echo "no rl-suite-spec.json"; exit 1; }
    test -e <resolved_checkpoint_path>   || { echo "checkpoint not found"; exit 1; }
    ```
 

@@ -7,7 +7,7 @@
 # Idempotent: re-running consumes nothing (find no longer matches once
 # replaced; the post-trick text is detected and reported as `[noop]`).
 #
-# `{slug}` resolves to algorithm_source.slug from harbor/rl-suite-spec.json
+# `{slug}` resolves to algorithm_source.slug from harbor/rl-integration-generator/rl-suite-spec.json
 # (e.g. `custom_jax`).
 # `{algo}` cycles per algorithm in the manifest's `algorithms` list for
 # config_patches.

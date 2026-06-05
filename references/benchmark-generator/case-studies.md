@@ -1,6 +1,6 @@
 # Case Studies
 
-Annotated env-build / action / frame-extract snippets per reference benchmark. The setup recipes are owned by env-generator (rendered into `harbor/setup_uv.sh`); benchmark-generator only picks the smoke patterns below.
+Annotated env-build / action / frame-extract snippets per reference benchmark. The setup recipes are owned by env-generator (rendered into `harbor/env-generator/setup_uv.sh`); benchmark-generator only picks the smoke patterns below.
 
 When generating against a new benchmark, pick the closest match and copy its **unique** snippets for the smoke scripts.
 

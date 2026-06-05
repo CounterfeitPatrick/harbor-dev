@@ -19,6 +19,6 @@ caveats:
     features, hand-normalized joints)."
 
 # The actual code/config patches live in patches.yaml — applied by
-# scripts/rl-trick/apply_trick.py. The default custom_jax template is
+# scripts/rl-tricks/apply_trick.py. The default custom_jax template is
 # trick-free; this trick injects the implementation.
 patches: patches.yaml

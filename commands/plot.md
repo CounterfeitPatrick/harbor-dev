@@ -9,11 +9,28 @@ Wraps `scripts/plot/render_plot.py`: fetches wandb runs, groups by (task, baseli
 
 ## Action
 
-### Step 0 — Resolve the spec
+### Step 0 — Resolve the spec + output dir
 
-Two paths:
+Every invocation writes spec + plot artifacts under a fresh, timestamped folder so
+results never overwrite each other:
 
-1. **`spec=<path>` provided** → use that file directly. Skip to Step 1.
+```
+<cwd>/plot_output/<YYYYMMDD-HHMMSS>/
+   ├── harbor-plot-spec.yaml   (the spec used for this run)
+   └── harbor-plot.<ext>       (the rendered figure)
+```
+
+Add `plot_output/` to `.gitignore` (it's data, not source). Before doing anything
+else, compute the run directory:
+
+```bash
+RUN_DIR="$(pwd)/plot_output/$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$RUN_DIR"
+```
+
+Two paths to populate the spec:
+
+1. **`spec=<path>` provided** → copy that file to `$RUN_DIR/harbor-plot-spec.yaml`, rewrite its `output` field to `$RUN_DIR/harbor-plot.<ext>` (preserve the user's chosen extension), and proceed.
 2. **No spec arg** → walk the user through building one. Ask via `AskUserQuestion`:
    - **Source**: `explicit run IDs (paste a list)` | `wandb project URL (auto-group by config keys)`
    - **Tasks**: comma-separated names (used as subplot titles)
@@ -24,14 +41,15 @@ Two paths:
    - **Y axis key** (default `eval/success_rate`)
    - **Layout**: `rows`, `cols` (must satisfy `rows*cols >= len(tasks)`)
    - **xlim, ylim** (optional; xlim may be a single number or per-figure list)
-   - **Output path** (`.pdf` / `.png` / `.svg` / `.html`)
-   Then write the spec to `<cwd>/harbor-plot-spec.yaml` and continue.
+   - **Output format** (`.pdf` / `.png` / `.svg` / `.html`) — the file always lives at `$RUN_DIR/harbor-plot.<ext>`.
+   Write the spec to `$RUN_DIR/harbor-plot-spec.yaml` with `output: $RUN_DIR/harbor-plot.<ext>` and continue.
 
 A reference spec lives at `${CLAUDE_PLUGIN_ROOT}/templates/plot/spec.example.yaml` — copy + edit if the user prefers to hand-write.
 
 ### Step 1 — Pre-flight
 
 ```bash
+spec_path="$RUN_DIR/harbor-plot-spec.yaml"
 test -f "${spec_path}" || { echo "spec not found: ${spec_path}"; exit 1; }
 command -v uv >/dev/null || { echo "uv not on PATH — run install_prerequisites.sh"; exit 1; }
 ```
@@ -50,7 +68,7 @@ uv run --no-project \
 
 ### Step 3 — Report
 
-Print the output path verbatim from the script's `[ok] wrote <path>` line. If any run fetch logged a `[warn]`, surface it so the user knows which run was skipped (transient API errors, missing keys, all-NaN history).
+Print BOTH the spec path (`$RUN_DIR/harbor-plot-spec.yaml`) and the rendered output path (verbatim from the script's `[ok] wrote <path>` line). If any run fetch logged a `[warn]`, surface it so the user knows which run was skipped (transient API errors, missing keys, all-NaN history).
 
 ## Spec schema (summary — see `templates/plot/spec.example.yaml` for the full version)
 

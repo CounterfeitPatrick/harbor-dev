@@ -27,14 +27,14 @@ Loads a trained checkpoint and opens a live MuJoCo GLFW window showing the polic
    ```bash
    test -n "${DISPLAY:-}" || echo "[warn] DISPLAY unset — the GLFW window won't open. Use ssh -X or run on a display host."
    test -e <resolved_checkpoint_path> || { echo "checkpoint not found"; exit 1; }
-   test -f harbor/rl-suite-spec.json || { echo "no rl-suite-spec.json"; exit 1; }
+   test -f harbor/rl-integration-generator/rl-suite-spec.json || { echo "no rl-suite-spec.json"; exit 1; }
    ```
 
 2. **Resolve checkpoint to absolute path.** Auto-infer `algorithm` and `task` from `<checkpoint_dir>/resolved_config.yaml` (same as `/harbor:rl-eval`).
 
 3. **Confirm visualize.py exists**:
    ```bash
-   slug=$(jq -r '.algorithm_source.algorithm_slug' harbor/rl-suite-spec.json)
+   slug=$(jq -r '.algorithm_source.algorithm_slug' harbor/rl-integration-generator/rl-suite-spec.json)
    test -f "harbor/scripts/rl/${slug}/visualize.py" || { \
      echo "no visualize.py in harbor/scripts/rl/${slug}/. Available only for algorithm_source=custom_jax."; \
      exit 1; }

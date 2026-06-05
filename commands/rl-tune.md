@@ -18,8 +18,8 @@ Two execution modes:
 
 | Arg | Notes |
 |---|---|
-| `task` | Comma-separated task IDs (or single id). Each must appear in `harbor/benchmark-spec.json:tasks[].id`. |
-| `algorithm` | Comma-separated list (`ppo`, `sac`, `td3`). Each must appear in `harbor/rl-suite-spec.json:algorithms[]`. |
+| `task` | Comma-separated task IDs (or single id). Each must appear in `harbor/benchmark-generator/benchmark-spec.json:tasks[].id`. |
+| `algorithm` | Comma-separated list (`ppo`, `sac`, `td3`). Each must appear in `harbor/rl-integration-generator/rl-suite-spec.json:algorithms[]`. |
 
 ## Optional arguments
 
@@ -31,7 +31,7 @@ Two execution modes:
 | `max_iterations` | `10` | Hard cap on per-cell iterations (including iter_000 baseline). Whichever of `stuck_threshold` / `max_iterations` fires first ends the cell. |
 | `smoke` | `true` | Pre-dispatch fast train per (algo, task); abort the whole tune on any failure. Set `smoke=false` only when the matrix is already verified. |
 
-**W&B is always on.** Each cell auto-derives its project name as `tuning-<benchmark>-<task>-<algorithm>` (read `benchmark_name` from `harbor/benchmark-spec.json`). Run names within a cell's project are sequential `v1`, `v2`, ... (one per tuning iteration). Verify `wandb login` is set on the host before dispatching — the orchestrator checks once in Step 0 and surfaces `/harbor:wandb-setup` if missing.
+**W&B is always on.** Each cell auto-derives its project name as `tuning-<benchmark>-<task>-<algorithm>` (read `benchmark_name` from `harbor/benchmark-generator/benchmark-spec.json`). Run names within a cell's project are sequential `v1`, `v2`, ... (one per tuning iteration). Verify `wandb login` is set on the host before dispatching — the orchestrator checks once in Step 0 and surfaces `/harbor:wandb-setup` if missing.
 
 ## Action
 
@@ -39,10 +39,10 @@ Two execution modes:
 
 1. Split `task` and `algorithm` on commas. Compute Cartesian product → cell list. If either list is empty, error out.
 2. Verify scaffolding (in `$(pwd)`):
-   - `.venv/bin/python` exists → else: tell the user to run `/harbor:env-generator` and stop.
-   - `harbor/rl-suite-spec.json` exists → else: tell the user to dispatch `rl-integration-generator` and stop.
-   - Every requested task ID is in `harbor/benchmark-spec.json:tasks[].id`.
-   - Every requested algorithm is in `harbor/rl-suite-spec.json:algorithms[]`.
+   - `.venv/bin/python` exists → else: tell the user to run `/harbor:env-install-uv` and stop.
+   - `harbor/rl-integration-generator/rl-suite-spec.json` exists → else: tell the user to dispatch `rl-integration-generator` and stop.
+   - Every requested task ID is in `harbor/benchmark-generator/benchmark-spec.json:tasks[].id`.
+   - Every requested algorithm is in `harbor/rl-integration-generator/rl-suite-spec.json:algorithms[]`.
 3. If `mode=cluster`, additionally verify `command -v sbatch` is on PATH; if not, surface the error and stop.
 4. Verify W&B credentials present (e.g. `grep -q "machine api.wandb.ai" ~/.netrc`). If missing, surface `/harbor:wandb-setup` and stop — every cell will write to W&B.
 
@@ -54,7 +54,7 @@ tune_dir="harbor/rl-experiment/${tune_id}"
 mkdir -p "${tune_dir}"
 ```
 
-Each cell will live at `<tune_dir>/<wandb_project>/`, where `<wandb_project> = tuning-<benchmark_name>-<task>-<algorithm>` is derived deterministically (read `benchmark_name` from `harbor/benchmark-spec.json`). The orchestrator pre-creates each cell's folder so the subagent can drop files into a known path:
+Each cell will live at `<tune_dir>/<wandb_project>/`, where `<wandb_project> = tuning-<benchmark_name>-<task>-<algorithm>` is derived deterministically (read `benchmark_name` from `harbor/benchmark-generator/benchmark-spec.json`). The orchestrator pre-creates each cell's folder so the subagent can drop files into a known path:
 
 ```bash
 for algo in "${ALGOS[@]}"; do
@@ -275,7 +275,7 @@ The cross-algorithm comparison sweep + plot was previously Steps 5–6 of this c
 ## Constraints
 
 - **Do NOT recurse.** A subagent must NOT invoke `/harbor:rl-tune` from within itself. CLAUDE.md hard constraint #4.
-- **Do NOT mutate `harbor/configs/rl/<algo>.parallel.yaml` from this command body.** Only the rl-tuning-agent (via `/harbor:rl-trick`) may edit it.
+- **Do NOT mutate `harbor/configs/rl/<algo>.parallel.yaml` from this command body.** Only the rl-tuning-agent (via `/harbor:rl-add-trick`) may edit it.
 - **State is FILE-BASED.** Every subagent writes its own `tuning-history.md` and `result.json`; the orchestrator reads them post-hoc. This survives interruptions — re-running with the same `tune_id` (resume mode, future work) would skip cells whose `result.json` already exists.
 - **Cluster-mode parallelism is per-cell, not per-iteration.** Inside one cell's tuning loop, iterations remain sequential — the next candidate depends on the running best.
 - **Mode applies uniformly** to all cells. Mixed-mode tunes are not supported.

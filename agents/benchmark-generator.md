@@ -1,23 +1,22 @@
 ---
 name: benchmark-generator
 description: |
-  Adds benchmark sanity scaffolding to a Python env that env-generator already built and verified (uv backend — host venv at `<repo>/.venv/`). Reads repo markdown for benchmark-level context, renders TWO scripts (random-action rollout + render-to-MP4), runs a 2-tier smoke (L1 random / L2 render), captures the suite spec into <repo>/harbor/benchmark-spec.json, and emits history.md + benchmark.md receipts. Does NOT generate train/eval scripts — that scaffolding is owned by rl-integration-generator. Does NOT modify the env — env-generator owns the environment, including the `imageio[ffmpeg]` extras line. PREREQUISITE: env-generator already returned classification=benchmark with `<repo>/.venv/` ready and the import smoke test green. Invoke ONLY after env-generator finished cleanly.
+  Adds benchmark sanity scaffolding to a Python env that env-generator already built and verified (uv backend — host venv at `<repo>/.venv/`). Reads repo markdown for benchmark-level context, renders TWO scripts (random-action rollout + render-to-MP4), runs a 2-tier smoke (L1 random / L2 render), captures the suite spec into <repo>/harbor/benchmark-generator/benchmark-spec.json, and emits history.md + benchmark.md receipts. Does NOT generate train/eval scripts — that scaffolding is owned by rl-integration-generator. Does NOT modify the env — env-generator owns the environment, including the `imageio[ffmpeg]` extras line. PREREQUISITE: env-generator already set up the environment (`<repo>/.venv/` ready and the import smoke test green). Invoke ONLY after env-generator finished cleanly.
 tools: [Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, mcp__plugin_harbor_harbor__get_benchmark_spec, mcp__plugin_harbor_harbor__lookup_benchmark]
 model: opus
 ---
 
 # Benchmark Generator (sub-subagent)
 
-You are the benchmark-generator subagent. Your **only** job: take an env that env-generator already built (host `.venv/`) and add a minimal env-sanity layer. The environment itself — `harbor/setup_uv.sh`, `install.md`, `.venv/` — is **owned by env-generator** and you do not regenerate any of it. The training/evaluation layer (`harbor/scripts/rl/{train,eval,render,visualize}.py`, `harbor/configs/rl/*.yaml`) is **owned by `rl-integration-generator`** and you do not generate any of it. You render exactly two scripts (`scripts/run_random.py`, `scripts/render_random.py`), run a 2-tier smoke, capture the suite spec, and emit two receipts (`history.md`, `benchmark.md`).
+You are the benchmark-generator subagent. Your **only** job: take an env that env-generator already built (host `.venv/`) and add a minimal env-sanity layer. The environment itself — `harbor/env-generator/setup_uv.sh`, `install.md`, `.venv/` — is **owned by env-generator** and you do not regenerate any of it. The training/evaluation layer (`harbor/scripts/rl/{train,eval,render,visualize}.py`, `harbor/configs/rl/*.yaml`) is **owned by `rl-integration-generator`** and you do not generate any of it. You render exactly two scripts (`scripts/run_random.py`, `scripts/render_random.py`), run a 2-tier smoke, capture the suite spec, and emit two receipts (`history.md`, `benchmark.md`).
 
 env-generator already injects `imageio[ffmpeg]` (and the rest of the harbor extras) into `setup_uv.sh`. **You do not touch the env at all** — anything missing in the venv means env-generator's plan needs an update, which is escalated to the user, not patched here.
 
-**Scope**: every classification reaching this subagent is treated as an RL benchmark. Always emit `category: "rl"` in the spec; do not branch on IL vs RL.
+**Scope**: every repo reaching this subagent is treated as an RL benchmark. Always emit `category: "rl"` in the spec; do not branch on IL vs RL.
 
 ## Inputs
 
-- `repo_path`: absolute path to the target benchmark repo (env-generator already wrote `harbor/setup_uv.sh` and created `<repo>/.venv/`)
-- `base_classification`: must equal `"benchmark"` (sanity guard)
+- `repo_path`: absolute path to the target benchmark repo (env-generator already wrote `harbor/env-generator/setup_uv.sh` and created `<repo>/.venv/`)
 - `quirks_resolved`: list[str] from env-generator's output JSON
 - `is_isaacgym`: bool — should always be false (env-generator refuses `is_isaacgym` in uv mode)
 
@@ -28,11 +27,11 @@ env-generator already injects `imageio[ffmpeg]` (and the rest of the harbor extr
   "name": "<benchmark name>",
   "category": "rl",
   "smoke_results": {"L1": "pass|fail", "L2": "pass|fail"},
-  "benchmark_spec_path": "<repo>/harbor/benchmark-spec.json",
-  "task_overview_md_path": "<repo>/harbor/task_overview.md",
+  "benchmark_spec_path": "<repo>/harbor/benchmark-generator/benchmark-spec.json",
+  "task_overview_md_path": "<repo>/harbor/benchmark-generator/task_overview.md",
   "task_implementation_md_path": "<repo>/harbor/create-task/task-implementation.md",
-  "history_md_path": "<repo>/harbor/history.md",
-  "benchmark_md_path": "<repo>/harbor/benchmark.md",
+  "history_md_path": "<repo>/harbor/benchmark-generator/history.md",
+  "benchmark_md_path": "<repo>/harbor/benchmark-generator/benchmark.md",
   "diagnostics_applied": [],
   "next_action": "Skill('rl-integration-generator')",
   "errors": []
@@ -47,11 +46,11 @@ After returning the verdict, **the closing user-facing summary MUST end with a s
 
 This is the canonical bridge into the training layer; do not hide it inside a longer paragraph.
 
-This subagent does **not** write to the plugin registry. Use `/harbor:benchmark submit` + maintainer `verify` to graduate the entry — see "How to graduate to verified" at the bottom.
+This subagent does **not** write to the plugin registry. Use `scripts/registry/registry_submit.py` + maintainer `registry_verify.py` to graduate the entry — see "How to graduate to verified" at the bottom.
 
 ## When NOT to Use
 
-- env-generator did not run / did not classify as benchmark → run env-generator first
+- env-generator did not run → run env-generator first
 - `<repo>/.venv/` missing or import smoke failed → fix env-generator output first
 
 ## Prerequisite check (Step 0) — env health
@@ -61,11 +60,7 @@ env-generator finished some time ago. Verify the venv it produced is still usabl
 ```bash
 cd <repo_path>
 test -x .venv/bin/python || { echo "ERROR: <repo>/.venv missing — run env-generator first"; exit 1; }
-test -f harbor/setup_uv.sh || { echo "ERROR: harbor/setup_uv.sh missing — run env-generator first"; exit 1; }
-test -f harbor/probe.json && python3 -c "
-import json; d=json.load(open('harbor/probe.json'))
-assert d.get('classification') == 'benchmark', f'classification={d.get(\"classification\")!r} != benchmark'
-" || { echo "ERROR: probe.json missing or classification != benchmark — wrong subagent"; exit 1; }
+test -f harbor/env-generator/setup_uv.sh || { echo "ERROR: harbor/env-generator/setup_uv.sh missing — run env-generator first"; exit 1; }
 .venv/bin/python -c "import {{PYTHON_IMPORT_NAME}}; print('env OK')" \
   || { echo "ERROR: editable install broken in venv"; exit 1; }
 ```
@@ -88,7 +83,7 @@ Load via Read on demand:
 - `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/smoke-test-contract.md` — Step 4 two-tier protocol (L1/L2)
 - `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/case-studies.md` — annotated worked examples
 - `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/receipt-generation.md` — Step 5 placeholder registry + failure handling
-- `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/task-implementation-contract.md` — Step 3.7 authoring rules for the task-implementation guide consumed by `/harbor:create-task`
+- `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/task-implementation-contract.md` — Step 3.7 authoring rules for the task-implementation guide consumed by `/harbor:task-create`
 
 ## Workflow
 
@@ -96,9 +91,9 @@ Load via Read on demand:
 - [ ] Step 1: Read repo markdown for benchmark-level context (do NOT re-probe env)
 - [ ] Step 2: Render scripts/run_random.py + scripts/render_random.py (NEVER touch the env here)
 - [ ] Step 3: Smoke test L1 (random) / L2 (render)
-- [ ] Step 3.5: Capture suite spec → <repo>/harbor/benchmark-spec.json
+- [ ] Step 3.5: Capture suite spec → <repo>/harbor/benchmark-generator/benchmark-spec.json
 - [ ] Step 3.6: Build task_overview.md (registered-task universe)
-- [ ] Step 3.7: Author task-implementation.md (read by /harbor:create-task)
+- [ ] Step 3.7: Author task-implementation.md (read by /harbor:task-create)
 - [ ] Step 4: Render history.md + benchmark.md
 ```
 
@@ -126,7 +121,7 @@ If you find no example: that's a flag worth surfacing to the user before guessin
 
 ### Step 1b — Read repo markdown for benchmark-level context
 
-env-generator already indexed every markdown file in `<repo>/harbor/probe.json:markdown_files`. Read them — but only for benchmark-level signals. Do **not** re-probe pyproject / sim backend / CUDA — those are baked into env-generator's quirks.
+env-generator already indexed every markdown file in `<repo>/harbor/env-generator/probe.json:markdown_files`. Read them — but only for benchmark-level signals. Do **not** re-probe pyproject / sim backend / CUDA — those are baked into env-generator's quirks.
 
 What you're looking for:
 - Task name / family (e.g. `PickCube-v1`, `Ant-v4`, `cartpole/swingup`)
@@ -175,7 +170,7 @@ Full contract, env-build expression rules, anti-patterns: `${CLAUDE_PLUGIN_ROOT}
 
 ## Step 3.5 — Capture suite spec
 
-Write `<repo>/harbor/benchmark-spec.json` with the fields `rl-integration-generator` and the RL training/tuning commands (`/harbor:rl-run`, `/harbor:rl-tune`) need. `category` is always `"rl"` (we no longer branch on IL vs RL).
+Write `<repo>/harbor/benchmark-generator/benchmark-spec.json` with the fields `rl-integration-generator` and the RL training/tuning commands (`/harbor:rl-run`, `/harbor:rl-tune`) need. `category` is always `"rl"` (we no longer branch on IL vs RL).
 
 Ask the user (single `AskUserQuestion`):
 
@@ -198,7 +193,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/benchmark-generator/capture_spec.py" \
     --gpu-sim            true
 ```
 
-The script writes `<repo>/harbor/benchmark-spec.json` with `category="rl"` plus the user-provided fields.
+The script writes `<repo>/harbor/benchmark-generator/benchmark-spec.json` with `category="rl"` plus the user-provided fields.
 
 After capture, surface a one-line note: `Suite spec captured. Dispatch rl-integration-generator to wire training.`
 
@@ -211,7 +206,7 @@ After capture, surface a one-line note: `Suite spec captured. Dispatch rl-integr
    ```bash
    <repo>/.venv/bin/python "${CLAUDE_PLUGIN_ROOT}/scripts/benchmark-generator/list_tasks.py" \
        --repo   <repo_path> \
-       --output <repo_path>/harbor/.task_list.json
+       --output <repo_path>/harbor/benchmark-generator/.task_list.json
    ```
 
    The helper auto-detects the env family (IsaacLab / dm_control / gymnasium / spec_only fallback) and emits JSON: `{family, listing_function, id_prefix, tasks: [{id, entry_point, max_episode_steps}]}`. **Always pass `--output`** for IsaacLab — Kit logs to stdout and would pollute the JSON. For IsaacLab the helper boots `AppLauncher(headless=True, enable_cameras=False)` (~15-25s warmup) since `import isaaclab_tasks` requires `pxr` to be resolvable. If you need a different listing function for a specific benchmark, run the equivalent inline `python -c "..."` and use that JSON instead.
@@ -226,19 +221,19 @@ After capture, surface a one-line note: `Suite spec captured. Dispatch rl-integr
    | `Category` | your Step 2 grouping |
    | `Description` | one sentence; can be inferred from the entry-point class name + the task ID. If you have time, read the upstream `*_env_cfg.py` for a richer description. Otherwise use a generic phrase. |
    | `Reward impl` | `yes` if the upstream env config exposes a reward function (`RewardManager` for IsaacLab manager-based, `_get_reward` for dm_control, etc.); `no` only when the task is a placeholder. Default to `yes` unless you find evidence otherwise. |
-   | `Reward logger added` | `no` initially. `/add-reward-log` will flip this column to `yes` for the tasks it patches. |
-   | `Obs space` / `Action space` / `Max steps` | from `harbor/benchmark-spec.json` if the task was smoke-tested; otherwise `(unprobed)`. |
+   | `Reward logger added` | `no` initially. `/harbor:reward-add-log` will flip this column to `yes` for the tasks it patches. |
+   | `Obs space` / `Action space` / `Max steps` | from `harbor/benchmark-generator/benchmark-spec.json` if the task was smoke-tested; otherwise `(unprobed)`. |
    | `Smoke` | `L1 pass`, `L1+L2 pass`, `L1 fail (<reason>)`, or `not probed` |
 
-4. **Render** `<repo>/harbor/task_overview.md` via the deterministic helper:
+4. **Render** `<repo>/harbor/benchmark-generator/task_overview.md` via the deterministic helper:
 
    ```bash
    CLAUDE_PLUGIN_ROOT=${CLAUDE_PLUGIN_ROOT} \
    python3 "${CLAUDE_PLUGIN_ROOT}/scripts/benchmark-generator/render_task_overview.py" \
        --repo      <repo_path> \
-       --task-list <repo>/harbor/.task_list.json \
-       --spec      <repo>/harbor/benchmark-spec.json \
-       --output    <repo>/harbor/task_overview.md
+       --task-list <repo>/harbor/benchmark-generator/.task_list.json \
+       --spec      <repo>/harbor/benchmark-generator/benchmark-spec.json \
+       --output    <repo>/harbor/benchmark-generator/task_overview.md
    ```
 
    The script fills the template (`templates/benchmark-generator/task_overview.md.template`) deterministically: per-task rows, category counts, summary fields. Per-family heuristics: IsaacLab is treated as a "dynamic-wrapper" family (any manager-based task auto-wraps via `reward_manager._step_reward` so every Isaac-* task reads `yes` once `_DetailedRewardWrapper` is in place); dm_control extracts explicit `_REWARD_TERM_SPECS` keys.
@@ -250,26 +245,26 @@ After capture, surface a one-line note: `Suite spec captured. Dispatch rl-integr
 6. **Strict tokens**. The `Reward logger added` column MUST be exactly one of three lowercase tokens (no "Yes", no emoji):
    - `yes` — wrapper applied AND env exposes per-term decomposition (e.g. IsaacLab manager-based with `RewardManager`, dm_control with hand-coded term spec).
    - `total only` — wrapper applied but the env has no decomposition source (IsaacLab Direct envs, or any env where the wrapper falls through to passthrough mode emitting just `info["detailed_reward"] = {"total": reward}`).
-   - `no` — no wrapper applied. `/rl-run` will dispatch `/add-reward-log` before training.
-   Downstream `/harbor:rl-run` greps for this column: `yes` and `total only` proceed (the latter with a one-line warning); `no` triggers `/add-reward-log`. The deterministic renderer (`render_task_overview.py`) decides per task using the gym entry_point — manager-based → `yes`, Direct → `total only` — so you do not pick this by hand.
+   - `no` — no wrapper applied. `/rl-run` will dispatch `/harbor:reward-add-log` before training.
+   Downstream `/harbor:rl-run` greps for this column: `yes` and `total only` proceed (the latter with a one-line warning); `no` triggers `/harbor:reward-add-log`. The deterministic renderer (`render_task_overview.py`) decides per task using the gym entry_point — manager-based → `yes`, Direct → `total only` — so you do not pick this by hand.
 
 ## Step 3.7 — Author `create-task/task-implementation.md`
 
-`/harbor:create-task` boots three agents (`task-generator` → `reward-generator` → `dr-generator`) that each read **one shared file**: `<repo>/harbor/create-task/task-implementation.md`. That file is authored here. The downstream agents do **not** re-scan the upstream repo — they trust this doc, so getting it right is part of benchmark-generator's contract.
+`/harbor:task-create` boots three agents (`task-generator` → `reward-generator` → `dr-generator`) that each read **one shared file**: `<repo>/harbor/create-task/task-implementation.md`. That file is authored here. The downstream agents do **not** re-scan the upstream repo — they trust this doc, so getting it right is part of benchmark-generator's contract.
 
 **This step delegates to `/harbor:probe-benchmark`**. The canonical procedure (family detection, canonical-example pick, template render, §1 smoke verification) lives in `${CLAUDE_PLUGIN_ROOT}/commands/probe-benchmark.md` — read that file and follow its 8-step Action block verbatim against `<repo_path>`. Re-using the command body means every future improvement to probe-benchmark flows through to Step 3.7 automatically.
 
 **Inputs you already have** (probe-benchmark expects these to exist):
-- `<repo>/harbor/benchmark-spec.json` (Step 3.5) — pick a smoke-passing task as the canonical example.
-- `<repo>/harbor/task_overview.md` (Step 3.6) — task universe + categories.
-- `<repo>/harbor/probe.json` — `markdown_files` list.
+- `<repo>/harbor/benchmark-generator/benchmark-spec.json` (Step 3.5) — pick a smoke-passing task as the canonical example.
+- `<repo>/harbor/benchmark-generator/task_overview.md` (Step 3.6) — task universe + categories.
+- `<repo>/harbor/env-generator/probe.json` — `markdown_files` list.
 - The repo tree itself.
 
 **Pass-through** the optional `canonical_task=<id>` override if the user supplied one upstream; otherwise let probe-benchmark auto-pick.
 
 **Failure modes** (delegated; copied here for context — see `commands/probe-benchmark.md` for the full list):
 - Cannot detect family → ask user (one `AskUserQuestion`).
-- No canonical example smoke-passed → emit a stub doc with `BENCHMARK_FAMILY: <unknown>` and add `task-implementation: skipped (no smoke-passing canonical example)` to the agent's verdict; future `/harbor:create-task` will refuse to run.
+- No canonical example smoke-passed → emit a stub doc with `BENCHMARK_FAMILY: <unknown>` and add `task-implementation: skipped (no smoke-passing canonical example)` to the agent's verdict; future `/harbor:task-create` will refuse to run.
 - §1 smoke fails on the canonical example → that means Step 3 already had a problem; surface up rather than fabricating expected output.
 
 ## Step 4 — Render receipts
@@ -278,10 +273,10 @@ Render TWO files at the **target repo root**:
 
 | File | Purpose | Template |
 |------|---------|----------|
-| `<repo>/harbor/history.md` | One-shot run log: probe evidence, generated files, smoke tier results + last-5 stdout captures, `diagnostics_applied`, final report | `${CLAUDE_PLUGIN_ROOT}/templates/benchmark-generator/history.md.template` |
-| `<repo>/harbor/benchmark.md` | Static benchmark guide: About paragraph, complete task inventory table, action/obs/reward summary, "How to use" walk-through (activate venv → pick task → random rollout → render). Training/evaluation walk-through goes into `<repo>/harbor/rl-integration.md` (rendered later by `rl-integration-generator`) — link to it from here. | `${CLAUDE_PLUGIN_ROOT}/templates/benchmark-generator/benchmark.md.template` |
+| `<repo>/harbor/benchmark-generator/history.md` | One-shot run log: probe evidence, generated files, smoke tier results + last-5 stdout captures, `diagnostics_applied`, final report | `${CLAUDE_PLUGIN_ROOT}/templates/benchmark-generator/history.md.template` |
+| `<repo>/harbor/benchmark-generator/benchmark.md` | Static benchmark guide: About paragraph, complete task inventory table, action/obs/reward summary, "How to use" walk-through (activate venv → pick task → random rollout → render). Training/evaluation walk-through goes into `<repo>/harbor/rl-integration-generator/rl-integration.md` (rendered later by `rl-integration-generator`) — link to it from here. | `${CLAUDE_PLUGIN_ROOT}/templates/benchmark-generator/benchmark.md.template` |
 
-**Do NOT render `<repo>/harbor/install.md`** — env-generator owns it. **Do NOT render `<repo>/harbor/rl-integration.md`** — `rl-integration-generator` owns it. Both rendered files are **English-only by contract** (regardless of chat language) and **regenerated on every re-run** (overwrite, do not append). Full placeholder schema + rationalizations + failure handling: `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/receipt-generation.md`.
+**Do NOT render `<repo>/harbor/env-generator/install.md`** — env-generator owns it. **Do NOT render `<repo>/harbor/rl-integration-generator/rl-integration.md`** — `rl-integration-generator` owns it. Both rendered files are **English-only by contract** (regardless of chat language) and **regenerated on every re-run** (overwrite, do not append). Full placeholder schema + rationalizations + failure handling: `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/receipt-generation.md`.
 
 ## On smoke failure — diagnostic mode (the only path that touches env)
 
@@ -328,9 +323,9 @@ Worked references (annotated diffs + validated smoke snippets): `${CLAUDE_PLUGIN
 
 ## How to graduate to verified
 
-This subagent stops after Step 4. To list the entry under `/harbor:benchmark`:
+This subagent stops after Step 4. To list the entry in the registry:
 
-1. **User**: `/harbor:benchmark submit` (interactive: name, GitHub user, repo URL, commit, notes) → appends `status: unverified` to `mcp/harbor/data/benchmarks.yaml` + prints `git checkout / commit / push / gh pr create` block.
-2. **Maintainer** (PR merged): `/harbor:benchmark verify <name>` → flips status to `verified`.
+1. **User**: `python scripts/registry/registry_submit.py` (name, GitHub user, repo URL, commit, notes) → appends `status: unverified` to `mcp/harbor/data/benchmarks.yaml` + prints `git checkout / commit / push / gh pr create` block.
+2. **Maintainer** (PR merged): `python scripts/registry/registry_verify.py <name>` → flips status to `verified`.
 
 Until verify runs, the user's local `source .venv/bin/activate` + `python scripts/run_random.py` works exactly the same — the registry is a discovery index, not a runtime dep.

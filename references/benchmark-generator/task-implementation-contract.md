@@ -1,10 +1,10 @@
 # Task Implementation Doc — Authoring Contract
 
-Read by `benchmark-generator` when filling `templates/benchmark-generator/task-implementation.md.template` into `<repo>/harbor/create-task/task-implementation.md`. The output of that step is the **input** to three future agents (`task-generator`, `reward-generator`, `dr-generator`) dispatched by `/harbor:create-task` — so the rules here exist to keep downstream behaviour stable.
+Read by `benchmark-generator` when filling `templates/benchmark-generator/task-implementation.md.template` into `<repo>/harbor/create-task/task-implementation.md`. The output of that step is the **input** to three future agents (`task-generator`, `reward-generator`, `dr-generator`) dispatched by `/harbor:task-create` — so the rules here exist to keep downstream behaviour stable.
 
 ## What the doc is for
 
-Each future invocation of `/harbor:create-task` boots three agents in sequence. None of them re-scan the upstream repo from scratch — they all read this single doc. So the doc has to be:
+Each future invocation of `/harbor:task-create` boots three agents in sequence. None of them re-scan the upstream repo from scratch — they all read this single doc. So the doc has to be:
 
 1. **Self-sufficient** — the agents must be able to write a working task using only this doc + the user's task description, without re-discovering the repo's layout.
 2. **Family-faithful** — the patterns in the code templates must compile against the venv at `<repo>/.venv/`. If the family uses `mdp.JointPositionActionCfg`, do not invent `mdp.JointPositionActionConfig`.
@@ -16,7 +16,7 @@ If you cannot anchor a section to a smoke-passing example, the section's "File p
 
 `<repo>/harbor/create-task/task-implementation.md`
 
-The folder is `create-task/` (not `task_creation/`) to match the slash command's name. Future per-task scaffolding may also drop artefacts here — keep the folder; never delete it.
+The folder is `create-task/` — the stable workspace root for the task-authoring flow (the `/harbor:task-create` command and friends write here). Future per-task scaffolding may also drop artefacts here — keep the folder; never delete it.
 
 ## Hard rules
 
@@ -29,7 +29,7 @@ The folder is `create-task/` (not `task_creation/`) to match the slash command's
 
 ## The seven sections (fixed schema)
 
-| § | Section | Owner agent at /create-task | Smoke verifies |
+| § | Section | Owner agent at /task-create | Smoke verifies |
 |---|---------|-------------------------------|----------------|
 | 1 | Register task + setup scene | task-generator | `gym.make` (or family equivalent) returns a working env |
 | 2 | Action types | task-generator | action_space matches the chosen mode; one step does not error |
@@ -56,7 +56,7 @@ Detect: `source/isaaclab_tasks/manager_based/` exists; canonical task imports `M
 | §3 | `EventCfg` with `mode="reset"` terms in `<task>_env_cfg.py`. Common reset funcs: `mdp.reset_root_state_uniform`, `mdp.reset_joints_by_offset` |
 | §4 | `TerminationsCfg` (`mdp.time_out`, `mdp.illegal_contact`), `CommandsCfg` for goal sampling (`UniformPoseCommandCfg`, `UniformVelocityCommandCfg`) |
 | §5 | `ObservationsCfg` with `@configclass class PolicyCfg(ObsGroup): ...`. Cite the example task's policy group. |
-| §6 | `RewardsCfg` with `@configclass` of `RewTerm(func=mdp.<reward_func>, weight=...)`. Composer is **sum** (RewardManager sums weighted terms). Cross-link `/add-reward-log` — manager-based gets per-term decomposition for free. |
+| §6 | `RewardsCfg` with `@configclass` of `RewTerm(func=mdp.<reward_func>, weight=...)`. Composer is **sum** (RewardManager sums weighted terms). Cross-link `/harbor:reward-add-log` — manager-based gets per-term decomposition for free. |
 | §7 | `EventCfg` with `mode="startup" / "interval"` terms. Common: `mdp.randomize_rigid_body_mass`, `mdp.randomize_rigid_body_material` |
 
 **Gotchas — propagate verbatim into the §1 smoke command**:
@@ -81,7 +81,7 @@ Detect: `source/isaaclab_tasks/direct/` exists; canonical task imports `DirectRL
 | §3 | `_reset_idx(env_ids)` body |
 | §4 | `_get_dones()` returning `(terminated, truncated)` |
 | §5 | `_get_observations()` returning a `dict` |
-| §6 | `_get_rewards()` returning a 1D tensor. Composer typically **sum** of in-line term tensors. No RewardManager — `/add-reward-log` adds passthrough wrapper (`detailed_reward = {"total": reward}`). |
+| §6 | `_get_rewards()` returning a 1D tensor. Composer typically **sum** of in-line term tensors. No RewardManager — `/harbor:reward-add-log` adds passthrough wrapper (`detailed_reward = {"total": reward}`). |
 | §7 | DR is hand-coded inside `_setup_scene()` / `_reset_idx()`. There is no EventCfg surface. |
 
 ### dexteroushands
@@ -150,7 +150,7 @@ Detect: env registers via plain `gym.register` and inherits `gymnasium.Env`; no 
 
 ## Authoring loop
 
-1. Fill `BENCHMARK_FAMILY` and `CANONICAL_EXAMPLE_TASK_ID` first — both must come from `<repo>/harbor/benchmark-spec.json` and the example must be a smoke-passing task. If neither is true, escalate to the user.
+1. Fill `BENCHMARK_FAMILY` and `CANONICAL_EXAMPLE_TASK_ID` first — both must come from `<repo>/harbor/benchmark-generator/benchmark-spec.json` and the example must be a smoke-passing task. If neither is true, escalate to the user.
 2. For each of §1..§7, in order:
    - Locate the canonical example's section (open the example file, find the registration / scene / actions / reset / etc.).
    - Fill **File pointers** with repo-relative paths that exist on disk (verify with `Read`).

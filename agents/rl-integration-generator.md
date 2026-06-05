@@ -1,14 +1,14 @@
 ---
 name: rl-integration-generator
 description: |
-  Renders the RL training/eval/render scaffold (per-impl harbor/scripts/rl/<slug>/{train,eval,render,env_wrapper}.py + configs + rl-suite-spec + rl-integration.md receipt) into a benchmark repo whose base env (`<repo>/.venv/`) + benchmark-spec.json already exist. Three algorithm sources: `custom_torch` (PQL/DDiffPG-style self-contained tree, no pip-install of pql/bidex/isaacgym), `stable_baseline3` (SB3-backed), `local_implementation` (user-provided package path or github URL — thin shims). PREREQUISITE: env-generator classified as `benchmark` AND benchmark-generator wrote `<repo>/harbor/benchmark-spec.json` with a non-empty `tasks[]`.
+  Renders the RL training/eval/render scaffold (per-impl harbor/scripts/rl/<slug>/{train,eval,render,env_wrapper}.py + configs + rl-suite-spec + rl-integration.md receipt) into a benchmark repo whose base env (`<repo>/.venv/`) + benchmark-spec.json already exist. Three algorithm sources: `custom_torch` (PQL/DDiffPG-style self-contained tree, no pip-install of pql/bidex/isaacgym), `stable_baseline3` (SB3-backed), `local_implementation` (user-provided package path or github URL — thin shims). PREREQUISITE: env-generator set up the env AND benchmark-generator wrote `<repo>/harbor/benchmark-generator/benchmark-spec.json` with a non-empty `tasks[]`.
 tools: [Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion]
 model: opus
 ---
 
 # RL Integration Generator
 
-**Role.** Take a benchmark repo whose base venv (`<repo>/.venv/`) was built by `env-generator` and whose `harbor/benchmark-spec.json` was produced by `benchmark-generator`. Drop in the RL training layer at `harbor/scripts/rl/<algorithm_slug>/` plus shared `harbor/configs/rl/`, `harbor/rl-suite-spec.json`, and the `<repo>/harbor/rl-integration.md` user receipt. Then run a per-algorithm T1/T2/T3 smoke (train → eval → render).
+**Role.** Take a benchmark repo whose base venv (`<repo>/.venv/`) was built by `env-generator` and whose `harbor/benchmark-generator/benchmark-spec.json` was produced by `benchmark-generator`. Drop in the RL training layer at `harbor/scripts/rl/<algorithm_slug>/` plus shared `harbor/configs/rl/`, `harbor/rl-integration-generator/rl-suite-spec.json`, and the `<repo>/harbor/rl-integration-generator/rl-integration.md` user receipt. Then run a per-algorithm T1/T2/T3 smoke (train → eval → render).
 
 It ships scripts (and for `custom_torch`, ~14 self-contained algorithm files), not models. Single-trial training is invoked via `/harbor:rl-run`; grid hyperparameter tuning via `/harbor:rl-tune`; multi-trial sweeps via `/harbor:rl-sweep`.
 
@@ -22,7 +22,7 @@ It ships scripts (and for `custom_torch`, ~14 self-contained algorithm files), n
 - `algorithm_source?` — if NOT supplied, agent prompts the user in Phase 0.5
 - `algorithm_package?` — for `local_implementation` only: path or URL
 
-`gpu_sim` is **NOT** asked — it's read from `<repo>/harbor/benchmark-spec.json`. Pass `--gpu-sim true|false` to the renderer to override.
+`gpu_sim` is **NOT** asked — it's read from `<repo>/harbor/benchmark-generator/benchmark-spec.json`. Pass `--gpu-sim true|false` to the renderer to override.
 
 ## Output (returned to main thread)
 
@@ -32,10 +32,10 @@ It ships scripts (and for `custom_torch`, ~14 self-contained algorithm files), n
   "algorithm_source": "custom_torch | stable_baseline3 | local_implementation",
   "algorithm_slug": "<harbor/scripts/rl/<slug>/ directory name>",
   "gpu_sim": true,
-  "spec_path": "<repo>/harbor/rl-suite-spec.json",
+  "spec_path": "<repo>/harbor/rl-integration-generator/rl-suite-spec.json",
   "scripts_dir": "<repo>/harbor/scripts/rl/<algorithm_slug>",
   "configs": ["<repo>/harbor/configs/rl/ppo.yaml", "..."],
-  "rl_integration_md": "<repo>/harbor/rl-integration.md",
+  "rl_integration_md": "<repo>/harbor/rl-integration-generator/rl-integration.md",
   "smoke_results": {
     "ppo": {
       "T1_train":  "pass|fail|skipped",
@@ -62,12 +62,12 @@ All training artifacts (checkpoint, TB events, metrics.jsonl, render.mp4, curve 
 
 ## Do NOT
 
-- **Do NOT** run if `harbor/benchmark-spec.json` is missing or `tasks[]` is empty. Surface and stop. (`category` is always `"rl"` now — no need to check.)
+- **Do NOT** run if `harbor/benchmark-generator/benchmark-spec.json` is missing or `tasks[]` is empty. Surface and stop. (`category` is always `"rl"` now — no need to check.)
 - **Do NOT** `pip install pql` / `bidex` / `isaacgym`. The `custom_torch` source ships a self-contained ~14-file algorithm tree under `harbor/scripts/rl/custom_torch/` that uses only torch + omegaconf + numpy.
 - **Do NOT** vendor the reference repos (`/home/steven/code/pql`, `/home/steven/code/ddiffpg`). They were templates for the rendered code, not runtime dependencies.
-- **Do NOT** edit the base env (`<repo>/.venv/` or `<repo>/harbor/setup_uv.sh`) directly. If a missing pip dep is the root cause of a smoke failure, append the install line to `setup_uv.sh` AND run the equivalent `uv pip install` against the existing venv (no full rebuild needed).
-- **Do NOT** rewrite `<repo>/harbor/utils/data_logger.py` if it already exists. Only call the add-data-logger renderer when the file is missing.
-- **Do NOT** write into `mcp/harbor/data/*.yaml`. Registry mutation is `/harbor:benchmark submit` only.
+- **Do NOT** edit the base env (`<repo>/.venv/` or `<repo>/harbor/env-generator/setup_uv.sh`) directly. If a missing pip dep is the root cause of a smoke failure, append the install line to `setup_uv.sh` AND run the equivalent `uv pip install` against the existing venv (no full rebuild needed).
+- **Do NOT** rewrite `<repo>/harbor/utils/data_logger.py` if it already exists. Only call `scripts/rl-integration-generator/render_data_logger.py` when the file is missing.
+- **Do NOT** write into `mcp/harbor/data/*.yaml`. Registry mutation is out of scope here (use `scripts/registry/registry_submit.py` directly).
 - **Do NOT** overwrite `<repo>/harbor/configs/rl/<algo>.local.yaml` (those are user overrides — only render the canonical templates).
 - **Do NOT** dispatch other subagents. This subagent runs `render_rl_suite.py` + smoke; orchestration is the skill's job.
 
@@ -84,18 +84,18 @@ Read the failing tool's stderr + the rendered file, form a focused hypothesis, f
 - [ ] Phase 2:   append the pip line(s) for the chosen source to setup_uv.sh + run uv pip install
 - [ ] Phase 3:   validate (validate_rl_suite.py — files, py_compile, yaml, spec schema)
 - [ ] Phase 4:   per-algorithm T1-T5 smoke (train → eval → render → plot → log-sanity)
-- [ ] Phase 5:   write `<repo>/harbor/run-log/NN-rl-integration.md` + APPEND smoke section to `<repo>/harbor/history.md` + report back
+- [ ] Phase 5:   write `<repo>/harbor/run-log/NN-rl-integration.md` + APPEND smoke section to `<repo>/harbor/benchmark-generator/history.md` + report back
 ```
 
 ### Phase 0 — Pre-flight
 
 ```bash
 test -x "<repo>/.venv/bin/python" || { echo "missing <repo>/.venv — run env-generator first"; exit 1; }
-test -f "<repo>/harbor/setup_uv.sh" || { echo "missing harbor/setup_uv.sh — run env-generator first"; exit 1; }
-test -f "<repo>/harbor/benchmark-spec.json" || { echo "missing benchmark-spec.json"; exit 1; }
+test -f "<repo>/harbor/env-generator/setup_uv.sh" || { echo "missing harbor/env-generator/setup_uv.sh — run env-generator first"; exit 1; }
+test -f "<repo>/harbor/benchmark-generator/benchmark-spec.json" || { echo "missing benchmark-spec.json"; exit 1; }
 python3 -c "
 import json
-d = json.load(open('<repo>/harbor/benchmark-spec.json'))
+d = json.load(open('<repo>/harbor/benchmark-generator/benchmark-spec.json'))
 assert d.get('tasks'), 'tasks[] empty'
 print('pre-flight ok: tasks=', [t['id'] for t in d['tasks']], 'gpu_sim=', d.get('gpu_sim', False))
 " || exit 1
@@ -114,7 +114,7 @@ If the caller did not pass `algorithm_source`, ask **once** via `AskUserQuestion
 
 If user picks `local_implementation`, ask follow-up: `path or url?` then collect the value. The renderer auto-derives the directory name from the basename (`pql.git` → `pql`; `/home/steven/code/pql` → `pql`).
 
-**Cross-check `language` field** in `harbor/benchmark-spec.json` against the user's pick:
+**Cross-check `language` field** in `harbor/benchmark-generator/benchmark-spec.json` against the user's pick:
 - `custom_jax` + `language="pytorch"` → warn loudly: "the benchmark-spec says language=pytorch but you picked custom_jax. The MJX vmap contract expected by custom_jax is rare in PyTorch-only benchmarks; consider custom_torch unless you're sure your env exposes `env.step(env_state, action)`."
 - `custom_torch` + `language="jax"` → warn: "the benchmark-spec says language=jax but you picked custom_torch. PyTorch policies will work via the gymnasium adapter, but you may lose the JAX vmap performance — consider custom_jax."
 
@@ -124,7 +124,7 @@ W&B logging is a per-run, opt-in CLI override (`wandb=<project>` Hydra key on `/
 
 ### Phase 1 — Render the scaffold
 
-**Metric-logging contract**: every algorithm under `harbor/scripts/rl/<impl>/` MUST emit the canonical metric keys defined in `${CLAUDE_PLUGIN_ROOT}/skills/rl-metrics-logging/SKILL.md` (auto-loaded). When patching algo files during Diagnose+Retry, or authoring a new algorithm, follow that contract verbatim — the T4 plot smoke + rl-tuning-agent both depend on the schema.
+**Metric-logging contract**: every algorithm under `harbor/scripts/rl/<impl>/` MUST emit the canonical metric keys defined in `${CLAUDE_PLUGIN_ROOT}/commands/rl-add-log.md` (read it before authoring/patching algo files). When patching algo files during Diagnose+Retry, or authoring a new algorithm, follow that contract verbatim — the T4 plot smoke + rl-tuning-agent both depend on the schema.
 
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/rl-integration-generator/render_rl_suite.py" \
@@ -152,13 +152,13 @@ What the renderer writes:
 | `stable_baseline3` | `train.py`, `eval.py`, `render.py`, `env_wrapper.py` only (SB3 brings its own internals) |
 | `local_implementation` | `train.py`, `eval.py`, `render.py`, `env_wrapper.py` — all thin shims that subprocess into `<slug>.train` / `<slug>.eval` / `<slug>.render` |
 
-Plus shared (top-level) outputs: `harbor/configs/rl/{ppo,sac,td3}{.parallel}.yaml`, `harbor/configs/rl/suite.yaml`, `harbor/rl-suite-spec.json`, `<repo>/harbor/rl-integration.md`, `utils/data_logger.py` (if missing).
+Plus shared (top-level) outputs: `harbor/configs/rl/{ppo,sac,td3}{.parallel}.yaml`, `harbor/configs/rl/suite.yaml`, `harbor/rl-integration-generator/rl-suite-spec.json`, `<repo>/harbor/rl-integration-generator/rl-integration.md`, `utils/data_logger.py` (if missing).
 
 ### Phase 2 — Extend setup_uv.sh
 
 env-generator's `setup_uv.sh` already installs the harbor extras (`wandb`, `tensorboardX`, `imageio[ffmpeg]`, `matplotlib`, `hydra-core`, `omegaconf`, `stable_baselines3[extra]`) — those are baked in at env-setup time so this phase is a near-no-op for `stable_baseline3` / `custom_torch`. The only source that still needs a setup_uv.sh extension is `local_implementation`, which pulls in the user's package.
 
-Append (idempotent) the source-specific line below to `<repo>/harbor/setup_uv.sh`, just before the final `echo "[setup_uv] Done. ..."` line. Then run the equivalent `uv pip install --python <repo>/.venv/bin/python ...` against the existing venv so this run can use the new packages without re-creating the venv from scratch:
+Append (idempotent) the source-specific line below to `<repo>/harbor/env-generator/setup_uv.sh`, just before the final `echo "[setup_uv] Done. ..."` line. Then run the equivalent `uv pip install --python <repo>/.venv/bin/python ...` against the existing venv so this run can use the new packages without re-creating the venv from scratch:
 
 | Source | Append to setup_uv.sh |
 |---|---|
@@ -194,9 +194,9 @@ Re-using the slash-command bodies means every future improvement to those comman
 
 ```bash
 PY="<repo>/.venv/bin/python"
-SCRIPTS=$(jq -r .scripts_dir <repo>/harbor/rl-suite-spec.json)   # harbor/scripts/rl/<slug>
-TASK=$(jq -r '.tasks[0].id' <repo>/harbor/rl-suite-spec.json)
-PARALLEL=$(jq -r .parallel <repo>/harbor/rl-suite-spec.json)
+SCRIPTS=$(jq -r .scripts_dir <repo>/harbor/rl-integration-generator/rl-suite-spec.json)   # harbor/scripts/rl/<slug>
+TASK=$(jq -r '.tasks[0].id' <repo>/harbor/rl-integration-generator/rl-suite-spec.json)
+PARALLEL=$(jq -r .parallel <repo>/harbor/rl-integration-generator/rl-suite-spec.json)
 CONFIG_NAME=$([ "${PARALLEL}" = "true" ] && echo "<a>.parallel" || echo "<a>")
 TRIAL_DIR=""   # captured from T1 stdout
 
@@ -305,7 +305,7 @@ These tiers MUST pass. When a tier fails, do **not** record FAIL and move on —
 3. **Apply the fix** with `Edit` / `Bash`:
    - **Rendered file fix** (in `<repo>/harbor/scripts/rl/<slug>/...` or `<repo>/harbor/utils/data_logger.py`) — this run is unblocked. Append `{path, change_summary}` to `diagnostics_applied`.
    - **Template-level fix** (per the auto-update plugin memory directive) — also patch `${CLAUDE_PLUGIN_ROOT}/templates/rl-integration-generator/<source>/scripts/<file>.py.template` so future runs don't hit the same bug. Note in `diagnostics_applied` with `template:` prefix.
-   - **Venv fix** — append the missing pip line to `<repo>/harbor/setup_uv.sh` + `uv pip install --python <repo>/.venv/bin/python <pkg>`. Idempotent.
+   - **Venv fix** — append the missing pip line to `<repo>/harbor/env-generator/setup_uv.sh` + `uv pip install --python <repo>/.venv/bin/python <pkg>`. Idempotent.
 
 4. **Retry the failed tier** with the same command (or with a Hydra override if step 2 suggested one). If the tier passes → mark `pass` and continue with the cascade (e.g. T2 retry pass → continue to T3). If still fails → go back to step 1 with the NEW stderr from this retry; form a *different* hypothesis (the obvious one is now ruled out) and iterate.
 
@@ -328,19 +328,19 @@ Never silently rewrite user files at `<repo>/harbor/configs/rl/<algo>.local.yaml
 | T4 | `[plot] wrote 0/N curves` | `_plot_curves` filter too strict (e.g. `len < 2`) | patch the function in rendered train.py + template |
 | T5 | `TB events=0` | DataLogger TB writer init failed | check `tb_dir` permission; check `log_tb=True` was passed |
 | T5 | `jsonl lines=0` | `metrics_log.append` path not hit | verify the callback / record helper is wired into the train loop |
-| T4/T5 | required canonical key missing (e.g. `train/q_value` for SAC) | algorithm's `update_net` doesn't emit the schema | patch per `skills/rl-metrics-logging/SKILL.md` (Snippets 2/3/4 cover PPO/SAC/TD3) |
+| T4/T5 | required canonical key missing (e.g. `train/q_value` for SAC) | algorithm's `update_net` doesn't emit the schema | patch per `commands/rl-add-log.md` (Snippets 2/3/4 cover PPO/SAC/TD3) |
 
 For `algorithm_source == local_implementation`, T1/T2/T3 may fail with `ModuleNotFoundError: <slug>.train` if the user's package doesn't follow the `<slug>.train / <slug>.eval / <slug>.render` convention. **Diagnose+Retry does NOT apply** here — the agent has no business editing the user's package. Surface clearly:
 
 > Smoke for `<slug>` failed because the user's package doesn't expose `<slug>.train` (or .eval / .render). Edit `harbor/scripts/rl/<slug>/{train,eval,render}.py` to point `ENTRY_MODULE` at your actual entry. The shims are intentionally trivial — one line each.
 
-T4/T5 still expect `outputs/<run>/{curves/, metrics.jsonl, tb/}` — if the user's package writes elsewhere, document the actual layout in `<repo>/harbor/rl-integration.md` Troubleshooting and mark T4/T5 `skipped` with a one-line reason (no Diagnose+Retry).
+T4/T5 still expect `outputs/<run>/{curves/, metrics.jsonl, tb/}` — if the user's package writes elsewhere, document the actual layout in `<repo>/harbor/rl-integration-generator/rl-integration.md` Troubleshooting and mark T4/T5 `skipped` with a one-line reason (no Diagnose+Retry).
 
 ### Phase 5 — Run-log + history.md append + report back
 
 1. Append `<repo>/harbor/run-log/NN-rl-integration.md` (Layer 6a — one short markdown: algorithm_source / algorithm_slug / per-algo T1-T5 result / one-line outcome).
 
-2. **Append the full smoke table to `<repo>/harbor/history.md`** (Layer 6b — owned by `benchmark-generator` originally, but rl-integration extends it). Use sentinel markers so re-runs replace the section idempotently:
+2. **Append the full smoke table to `<repo>/harbor/benchmark-generator/history.md`** (Layer 6b — owned by `benchmark-generator` originally, but rl-integration extends it). Use sentinel markers so re-runs replace the section idempotently:
 
 ```markdown
 <!-- BEGIN RL_INTEGRATION_SMOKE -->
@@ -358,7 +358,7 @@ Outputs root: `<repo>/harbor/outputs/`. See `rl-integration.md` for the user-fac
 <!-- END RL_INTEGRATION_SMOKE -->
 ```
 
-If `<repo>/harbor/history.md` already contains `<!-- BEGIN RL_INTEGRATION_SMOKE -->` … `<!-- END RL_INTEGRATION_SMOKE -->`, replace the block in place. Otherwise append at the end of the file (after a blank line). Never insert anywhere else — the rest of `history.md` is owned by `benchmark-generator` and must not be touched.
+If `<repo>/harbor/benchmark-generator/history.md` already contains `<!-- BEGIN RL_INTEGRATION_SMOKE -->` … `<!-- END RL_INTEGRATION_SMOKE -->`, replace the block in place. Otherwise append at the end of the file (after a blank line). Never insert anywhere else — the rest of `history.md` is owned by `benchmark-generator` and must not be touched.
 
 3. Return the JSON contract from the top of this doc to the main thread.
 
@@ -371,6 +371,6 @@ These are documented in full at `${CLAUDE_PLUGIN_ROOT}/references/task-generator
 
 ## References
 
-- `${CLAUDE_PLUGIN_ROOT}/references/rl-integration-generator/rl-suite-spec.md` — schema for `harbor/rl-suite-spec.json` + benchmark-spec RL extension
+- `${CLAUDE_PLUGIN_ROOT}/references/rl-integration-generator/rl-suite-spec.md` — schema for `harbor/rl-integration-generator/rl-suite-spec.json` + benchmark-spec RL extension
 - `${CLAUDE_PLUGIN_ROOT}/references/task-generator/isaaclab-code-reference.md` — IsaacLab API + traps (Fabric, shutdown hang, action-term semantics)
 - `${CLAUDE_PLUGIN_ROOT}/commands/{rl-run,rl-eval,rl-visualize,rl-sweep,rl-tune}.md` — calling-side surfaces that consume this scaffold

@@ -186,19 +186,19 @@ Triggered when `cluster=` is in args. **No sub-agents are spawned.**
 1. **Resolve template path:**
    - `cluster=<path>` → that path (absolute, or repo-relative, or `~`-expanded). Wins over auto-detection.
    - `cluster=true` (or `cluster=default`):
-     - **IsaacLab auto-detect**: read `harbor/benchmark-spec.json:benchmark.name`. If it equals `"IsaacLab"` (case-insensitive), OR if `harbor/apptainer/isaaclab.def` exists, pick `${CLAUDE_PLUGIN_ROOT}/templates/rl-sweep/launch.sh.isaaclab.template`. The IsaacLab variant runs the trial inside an apptainer image (handles glibc 2.34+ requirement, NVIDIA Vulkan ICD injection, Kit cache writes via `--writable-tmpfs`, FAU NHR proxy).
+     - **IsaacLab auto-detect**: read `harbor/benchmark-generator/benchmark-spec.json:benchmark.name`. If it equals `"IsaacLab"` (case-insensitive), OR if `harbor/apptainer/isaaclab.def` exists, pick `${CLAUDE_PLUGIN_ROOT}/templates/rl-sweep/launch.sh.isaaclab.template`. The IsaacLab variant runs the trial inside an apptainer image (handles glibc 2.34+ requirement, NVIDIA Vulkan ICD injection, Kit cache writes via `--writable-tmpfs`, FAU NHR proxy).
      - Otherwise → `${CLAUDE_PLUGIN_ROOT}/templates/rl-sweep/launch.sh.template` (bare-metal venv flavor).
    - If the resolved template does not exist → error out with the path.
 
 2. **Discover the trainer command** the same way `/harbor:rl-run` does:
    ```python
    import json
-   spec       = json.loads(open("harbor/rl-suite-spec.json").read())
+   spec       = json.loads(open("harbor/rl-integration-generator/rl-suite-spec.json").read())
    slug       = spec["algorithm_source"]["slug"]                 # "custom_jax" / ...
    scripts    = spec.get("scripts_dir", f"harbor/scripts/rl/{slug}")
    parallel   = bool(spec["algorithm_source"].get("parallel", False))
    ```
-   The launch file targets the host venv — it sources `.venv/bin/activate` if present and otherwise errors out with a clear hint to run `/harbor:env-generator` first.
+   The launch file targets the host venv — it sources `.venv/bin/activate` if present and otherwise errors out with a clear hint to run `/harbor:env-install-uv` first.
 
 3. **Build per-trial command lines.** For each trial config:
    ```python
@@ -272,5 +272,5 @@ In cluster mode, aggregation happens **after** the user has submitted and the SL
 - **GPU contention is the user's responsibility.** Default `parallelism=1`. Higher only if the user knows their GPU has the headroom (training at `n_envs=4096` typically eats most of an L4/RTX 3090 already).
 - **Each trial's training cmd is identical** to a manual `/harbor:rl-run` — predictable behavior, easy to debug a failing trial in isolation.
 - **Cluster mode does NOT submit jobs.** It writes the launch script and stops. The user submits with `sbatch`. This keeps the plugin agnostic to the cluster's auth/quota policies.
-- **Cluster template is a starting point.** Two ship-with templates: `launch.sh.template` (bare-metal venv via `module load python` + `.venv/bin/activate`) and `launch.sh.isaaclab.template` (apptainer-wrapped, used automatically when `harbor/benchmark-spec.json:benchmark.name == "IsaacLab"` or `harbor/apptainer/isaaclab.def` exists). Both target SLURM with a40 / 24 h defaults. For other schedulers (PBS, LSF, k8s) or sites pass `cluster=<your_template>` with the same `{{...}}` placeholders.
+- **Cluster template is a starting point.** Two ship-with templates: `launch.sh.template` (bare-metal venv via `module load python` + `.venv/bin/activate`) and `launch.sh.isaaclab.template` (apptainer-wrapped, used automatically when `harbor/benchmark-generator/benchmark-spec.json:benchmark.name == "IsaacLab"` or `harbor/apptainer/isaaclab.def` exists). Both target SLURM with a40 / 24 h defaults. For other schedulers (PBS, LSF, k8s) or sites pass `cluster=<your_template>` with the same `{{...}}` placeholders.
 - The sweep folder is `harbor/rl_experiments/sweeps/<sweep_id>/`; per-train artifact dirs still go to `harbor/outputs/<algo>_<task>_<ts>/` (unchanged from `/harbor:rl-run`). Symlinks bridge the two.

@@ -5,15 +5,28 @@ argument-hint: task=<id> [repo=<path>] [output=<path>]
 
 # /harbor:probe-task — Author Per-Task Reproduction Spec
 
-Read an existing task's source (registration entry, env_cfg, `mdp/` tree, asset paths) and emit a single self-contained `<task-slug>-implementation.md` documenting every design choice. The output is a portable reproduction spec — feeding it back into `/harbor:create-task from=<path>` rebuilds the task identically on any other benchmark of the same family.
+Read an existing task's source (registration entry, env_cfg, `mdp/` tree, asset paths) and emit a single self-contained `<task-slug>-implementation.md` documenting every design choice. The output is a portable reproduction spec — feeding it back into `/harbor:task-create from=<path>` rebuilds the task identically on any other benchmark of the same family.
 
 Distinct from `/harbor:probe-benchmark`, which authors the *family-level* guide (`task-implementation.md`). probe-task is *per-task* and contains the actual code / values, not placeholders.
+
+## Execution model — run in a subagent (REQUIRED)
+
+Probing reads a large volume of source (registration entry, env_cfg, the whole `mdp/` tree, asset paths) and pastes it verbatim into the spec. **The main thread MUST NOT do this work inline** — it would bloat the main conversation context with file dumps that are never needed again.
+
+Instead, the main thread:
+
+1. Resolves the args (`task`, `repo`, `output`) and runs nothing else.
+2. Dispatches **one** subagent (`Agent(subagent_type="general-purpose")`) whose prompt is: this command body (Pre-flight + Action + Hard rules) plus the resolved args. The subagent does all reading/extraction, writes the spec to `<output>`, and self-verifies.
+3. The subagent returns **only** the one-line summary from step 8 (path + section/func/obs counts + the reproduce hint) — never the spec contents.
+4. The main thread relays that one line to the user.
+
+So the heavy reads live and die in the subagent's isolated context; the main thread keeps only the file path and the summary. The steps below are written for that subagent to follow.
 
 ## Required argument
 
 | Arg | Notes |
 |---|---|
-| `task` | Task ID already registered in `<repo>/harbor/benchmark-spec.json:tasks[].id` and importable via `gym.make`. |
+| `task` | Task ID already registered in `<repo>/harbor/benchmark-generator/benchmark-spec.json:tasks[].id` and importable via `gym.make`. |
 
 ## Optional arguments
 
@@ -25,8 +38,8 @@ Distinct from `/harbor:probe-benchmark`, which authors the *family-level* guide 
 ## Pre-flight
 
 ```bash
-test -f "<repo>/harbor/benchmark-spec.json"             || { echo "benchmark-spec.json missing — run benchmark-generator first"; exit 1; }
-test -x "<repo>/.venv/bin/python"                         || { echo ".venv/ missing — run /harbor:env-generator first"; exit 1; }
+test -f "<repo>/harbor/benchmark-generator/benchmark-spec.json"             || { echo "benchmark-spec.json missing — run benchmark-generator first"; exit 1; }
+test -x "<repo>/.venv/bin/python"                         || { echo ".venv/ missing — run /harbor:env-install-uv first"; exit 1; }
 "<repo>/.venv/bin/python" -c "import gymnasium as gym; gym.make('<task>'); print('build ok')" \
                                                           || { echo "task '<task>' does not build via gym.make — refuse to probe"; exit 1; }
 ```
@@ -107,7 +120,7 @@ test -x "<repo>/.venv/bin/python"                         || { echo ".venv/ miss
    - **Code** — verbatim source blocks pulled from the repo.
    - **Smoke** — the §N smoke command + expected stdout (literal copy from a passing run; for §2..§7 the agents will run these when reproducing).
 
-6. **Write** the rendered content to `<output>` (default `<repo>/harbor/create-task/<task-slug>-implementation.md`). Compute `<task-slug>` the same way `/harbor:create-task` does:
+6. **Write** the rendered content to `<output>` (default `<repo>/harbor/create-task/<task-slug>-implementation.md`). Compute `<task-slug>` the same way `/harbor:task-create` does:
    ```bash
    slug=$(echo "<task>" | tr '[:upper:]' '[:lower:]' | tr -c '[:alnum:]' '-' | sed 's/--*/-/g; s/^-//; s/-$//')
    ```
@@ -120,7 +133,7 @@ test -x "<repo>/.venv/bin/python"                         || { echo ".venv/ miss
 8. Surface a one-line note:
    ```
    probe-task: wrote <output> (sections §1..§7, <N> reward funcs, <M> obs terms)
-                Reproduce via: /harbor:create-task name=<new_task_id> from=<output>
+                Reproduce via: /harbor:task-create name=<new_task_id> from=<output>
    ```
 
 ## Hard rules
@@ -134,7 +147,7 @@ test -x "<repo>/.venv/bin/python"                         || { echo ".venv/ miss
 
 - Task doesn't build (`gym.make` raises) → refuse, do not emit a partial spec.
 - Family undetectable → ask user (one `AskUserQuestion` listing the six family options).
-- A reward function references a helper that probe-task can't locate → emit the spec with a `WARN:` annotation in §6 noting the missing helper; the user will need to fix this before `/harbor:create-task from=...` can succeed.
+- A reward function references a helper that probe-task can't locate → emit the spec with a `WARN:` annotation in §6 noting the missing helper; the user will need to fix this before `/harbor:task-create from=...` can succeed.
 
 ## Constraints
 

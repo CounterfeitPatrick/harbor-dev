@@ -16,7 +16,7 @@ Recognized families (auto-detect via importability):
   - **dm_control**: `dm_control` importable. Uses `dm_control.suite.ALL_TASKS`.
   - **gymnasium / gym**: any other repo with gymnasium installed. Lists every
                          registered ID (no filter).
-  - **fallback**: nothing recognized → reads `harbor/benchmark-spec.json` and
+  - **fallback**: nothing recognized → reads `harbor/benchmark-generator/benchmark-spec.json` and
                   reports only the tasks captured there (so the agent still
                   has *something* to template against).
 
@@ -43,14 +43,14 @@ from pathlib import Path
 
 
 def _spec_only_fallback(repo: Path) -> dict:
-    spec = repo / "harbor" / "benchmark-spec.json"
+    spec = repo / "harbor" / "benchmark-generator" / "benchmark-spec.json"
     if not spec.is_file():
         return {"family": "spec_only", "listing_function": "(none)", "id_prefix": "",
                 "tasks": []}
     data = json.loads(spec.read_text())
     return {
         "family": "spec_only",
-        "listing_function": "harbor/benchmark-spec.json (no live env registry detected)",
+        "listing_function": "harbor/benchmark-generator/benchmark-spec.json (no live env registry detected)",
         "id_prefix": "",
         "tasks": [{"id": t["id"],
                    "entry_point": t.get("make", "gymnasium.make"),

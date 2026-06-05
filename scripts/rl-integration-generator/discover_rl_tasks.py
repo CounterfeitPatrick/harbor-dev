@@ -1,7 +1,7 @@
 """
 Discover or validate RL task IDs for a benchmark repo.
 
-Reads <repo>/harbor/benchmark-spec.json (written by benchmark-generator).
+Reads <repo>/harbor/benchmark-generator/benchmark-spec.json (written by benchmark-generator).
 If the spec already has tasks[], echo them as JSON. Otherwise, try a few
 auto-discovery heuristics:
 
@@ -27,7 +27,7 @@ def parse_args():
 
 
 def from_spec(repo: Path) -> list[dict]:
-    spec = repo / "harbor" / "benchmark-spec.json"
+    spec = repo / "harbor" / "benchmark-generator" / "benchmark-spec.json"
     if not spec.exists():
         return []
     try:

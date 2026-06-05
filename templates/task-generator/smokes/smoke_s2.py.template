@@ -29,7 +29,7 @@ TASK_ID   = "{{TASK_ID}}"
 TERM_NAME = "{{ACTION_TERM_NAME}}"
 MODE      = "{{ACTION_MODE}}"
 
-cfg = parse_env_cfg(TASK_ID, device="cuda:0", num_envs=128, use_fabric=True)
+cfg = parse_env_cfg(TASK_ID, device="cuda:0", num_envs={{NUM_ENVS}}, use_fabric=True)
 env = gym.make(TASK_ID, cfg=cfg)
 unw = env.unwrapped
 obs, _ = env.reset(seed=0)

@@ -25,7 +25,7 @@ import isaaclab_tasks    # noqa: F401, E402
 from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
 
 TASK_ID = "{{TASK_ID}}"
-cfg = parse_env_cfg(TASK_ID, device="cuda:0", num_envs=128, use_fabric=True)
+cfg = parse_env_cfg(TASK_ID, device="cuda:0", num_envs={{NUM_ENVS}}, use_fabric=True)
 
 # Pin reset ranges to point intervals (DR-aware-but-noop check)
 {{INIT_OVERRIDES_BLOCK}}

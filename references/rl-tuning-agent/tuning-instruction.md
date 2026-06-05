@@ -7,7 +7,7 @@ Read once at Phase 0 (the first `submit` for a cell). The 4 hard constraints bel
 ### Phase 0 — Bootstrap (first `submit` only)
 
 1. Read this file + `tuning-experience.md` ONCE. Reference both from memory thereafter.
-2. Derive `wandb_project = f"tuning-{benchmark_name}-{task}-{algorithm}"` (read `benchmark_name` from `<repo>/harbor/benchmark-spec.json`). Verify W&B creds (`grep -q machine.api.wandb.ai ~/.netrc`); else surface `/harbor:wandb-setup` and stop.
+2. Derive `wandb_project = f"tuning-{benchmark_name}-{task}-{algorithm}"` (read `benchmark_name` from `<repo>/harbor/benchmark-generator/benchmark-spec.json`). Verify W&B creds (`grep -q machine.api.wandb.ai ~/.netrc`); else surface `/harbor:wandb-setup` and stop.
 3. Mint per-cell directory `<tune_dir>/<wandb_project>/`. Standalone fallback: `<repo>/harbor/rl-experiment/standalone_<UTC-ts>/<wandb_project>/`.
 4. Render `<cell_dir>/tuning-history.md` from `${CLAUDE_PLUGIN_ROOT}/templates/rl-tuning-agent/tuning-history.md.template`.
 
@@ -17,9 +17,9 @@ Train with the unmodified suite config. Run name `v1_baseline`. Record final_ret
 
 ### Phase 1 — Tricks (iter 1..N_tricks)
 
-For each available trick (`python3 ${CLAUDE_PLUGIN_ROOT}/scripts/rl-trick/list_tricks.py --algo <algo>`, filter by `backend == algorithm_slug`):
+For each available trick (`python3 ${CLAUDE_PLUGIN_ROOT}/scripts/rl-tricks/list_tricks.py --algo <algo>`, filter by `backend == algorithm_slug`):
 
-- Snapshot the suite yaml. Apply `${CLAUDE_PLUGIN_ROOT}/scripts/rl-trick/apply_trick.py --trick <name> --algorithm <algo> --repo <repo>`.
+- Snapshot the suite yaml. Apply `${CLAUDE_PLUGIN_ROOT}/scripts/rl-tricks/apply_trick.py --trick <name> --algorithm <algo> --repo <repo>`.
 - Run one trial under the same `total_timesteps` as baseline.
 - Improved → keep, update running best. Regressed → revert, log, next trick.
 
@@ -144,11 +144,11 @@ For canonical wording, read each `commands/<name>.md`. Bash equivalents:
     task=<t> wandb=<wandb_project> wandb_run_name=v<N>_<slug> \
     <hydra k=v ...>
 ```
-`algorithm_slug` and `parallel` flag come from `harbor/rl-suite-spec.json`. The `wandb` and `wandb_run_name` overrides are mandatory.
+`algorithm_slug` and `parallel` flag come from `harbor/rl-integration-generator/rl-suite-spec.json`. The `wandb` and `wandb_run_name` overrides are mandatory.
 
-### `/harbor:rl-trick`
+### `/harbor:rl-add-trick`
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/rl-trick/apply_trick.py" \
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/rl-tricks/apply_trick.py" \
     --trick <name> --algorithm <algo> --repo "<repo>"
 [ -f "${CLAUDE_PLUGIN_ROOT}/templates/rl-tricks/<name>/smoke.py" ] && \
     "<repo>/.venv/bin/python" "${CLAUDE_PLUGIN_ROOT}/templates/rl-tricks/<name>/smoke.py" --repo "<repo>"

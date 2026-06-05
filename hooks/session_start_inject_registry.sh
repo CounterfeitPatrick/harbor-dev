@@ -28,7 +28,7 @@ cat <<EOF
 {
   "hookSpecificOutput": {
     "hookEventName": "SessionStart",
-    "additionalContext": "[harbor] benchmarks=$BENCH_COUNT verified | last update=$LAST_UPDATE\nTools: /harbor (full surface), /benchmark. Heavy work via Skill('env-generator')."
+    "additionalContext": "[harbor] benchmarks=$BENCH_COUNT verified | last update=$LAST_UPDATE\nTools: /harbor (full surface). Heavy work via Skill('env-install-uv')."
   }
 }
 EOF

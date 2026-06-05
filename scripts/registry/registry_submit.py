@@ -2,7 +2,7 @@
 """
 Append an unverified entry to mcp/harbor/data/benchmarks.yaml.
 
-Used by the /benchmark submit skill flow. Pure text append: no YAML round-trip
+Used by the registry submit flow (run this script directly). Pure text append: no YAML round-trip
 is performed, so the existing file's formatting is preserved exactly. The new
 block is written with the project's flush-left sequence style (`- name:`
 aligned with `benchmarks:`, two-space sub-keys).
@@ -100,7 +100,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if _name_exists(text, args.name):
         print(f"[error] entry '{args.name}' already exists in {yaml_path.name}.\n"
-              f"        run /benchmark verify {args.name} to graduate it, or pick"
+              f"        run registry_verify.py {args.name} to graduate it, or pick"
               f" a different --name.", file=sys.stderr)
         return 2
 

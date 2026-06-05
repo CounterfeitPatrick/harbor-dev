@@ -17,7 +17,7 @@ import gymnasium as gym  # noqa: E402
 import isaaclab_tasks    # noqa: F401, E402  — registers all tasks
 from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
 
-cfg = parse_env_cfg("{{TASK_ID}}", device="cuda:0", num_envs=128, use_fabric=True)
+cfg = parse_env_cfg("{{TASK_ID}}", device="cuda:0", num_envs={{NUM_ENVS}}, use_fabric=True)
 env = gym.make("{{TASK_ID}}", cfg=cfg)
 unw = env.unwrapped
 
@@ -32,7 +32,7 @@ print(f"command_terms      = {list(unw.command_manager.active_terms) if unw.comm
 
 assert env.action_space is not None and env.observation_space is not None
 assert unw.max_episode_length > 0
-assert unw.num_envs == 128
+assert unw.num_envs == {{NUM_ENVS}}
 
 print("S1 OK: env instantiated with valid action/obs/episode-length info")
 env.close()

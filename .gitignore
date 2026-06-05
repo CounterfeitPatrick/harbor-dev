@@ -14,3 +14,7 @@ COMPONENTS.md
 
 
 output/
+outputs/
+plot_output/
+*.mp4
+*.pdf

@@ -30,7 +30,7 @@ Loads a checkpoint, runs the rendered `render.py` (which captures frames and wri
 1. **Pre-flight**:
    ```bash
    cd "$(pwd)"
-   test -f harbor/rl-suite-spec.json   || { echo "no rl-suite-spec.json — run rl-integration-generator first"; exit 1; }
+   test -f harbor/rl-integration-generator/rl-suite-spec.json   || { echo "no rl-suite-spec.json — run rl-integration-generator first"; exit 1; }
    test -e "<resolved_checkpoint_path>"  || { echo "checkpoint not found"; exit 1; }
    ```
 
@@ -41,7 +41,7 @@ Loads a checkpoint, runs the rendered `render.py` (which captures frames and wri
 4. **Load suite spec** to find `algorithm_slug` + `scripts_dir`:
    ```python
    import json
-   spec     = json.loads(open("harbor/rl-suite-spec.json").read())
+   spec     = json.loads(open("harbor/rl-integration-generator/rl-suite-spec.json").read())
    slug     = spec["algorithm_source"]["algorithm_slug"]
    scripts  = spec.get("scripts_dir", f"harbor/scripts/rl/{slug}")
    parallel = bool(spec.get("parallel", False))
