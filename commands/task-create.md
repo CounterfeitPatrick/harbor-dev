@@ -1,11 +1,11 @@
 ---
-description: Author a NEW task or surgically edit an EXISTING task in a benchmark repo. Pre-flight verifies the dependency-generator → benchmark-generator → rl-integration-generator chain in sequence and dispatches any missing stage first (rl-integration defaults to the custom_torch algorithm source unless the user specifies one). Then reads <repo>/harbor/create-task/task-implementation.md and dispatches up to three subagents (task-generator → reward-generator → dr-generator) based on the requested sections, each running its own smoke. Also supports REPRODUCE mode via `from=<path>` (a per-task spec emitted by /harbor:probe-task) — rebuilds the task identically including reward / DR / observation / action code. Use when the user types /harbor:task-create name=<TaskID> description="..." [sections=<list>] [assets=<paths>] | /harbor:task-create name=<TaskID> from=<path>, or asks "create a new task", "scaffold a task called X", "reproduce task Y from this spec", "edit only the action/reward/observation of task X".
-argument-hint: name=<TaskID> (description="<spec>" | from=<spec.md>) [sections=<comma-list of 1..7>] [assets=<path1,path2,...>]
+description: Author a NEW task or surgically edit an EXISTING task in a benchmark repo. Pre-flight verifies the dependency-generator → benchmark-generator → rl-integration-generator chain in sequence and dispatches any missing stage first (rl-integration defaults to the custom_torch algorithm source unless the user specifies one). Then reads <repo>/harbor/create-task/task-implementation.md and orchestrates: task-generator (§1–§5, per-section smokes) → the /harbor:reward-tune training loop for §6 (reward-generator iterations validated by ACTUAL training until success_rate ≥ threshold) → dr-generator (§7) ONLY when the user explicitly requests DR — the default is to skip DR. Also supports REPRODUCE mode via `from=<path>` (a per-task spec emitted by /harbor:probe-task) — rebuilds the task identically including reward / DR / observation / action code (reproduce §6 is pasted verbatim + smoked, not re-tuned). Use when the user types /harbor:task-create name=<TaskID> description="..." [sections=<list>] [assets=<paths>] | /harbor:task-create name=<TaskID> from=<path>, or asks "create a new task", "scaffold a task called X", "reproduce task Y from this spec", "edit only the action/reward/observation of task X".
+argument-hint: name=<TaskID> (description="<spec>" | from=<spec.md>) [sections=<comma-list of 1..7>] [assets=<path1,path2,...>] [algorithm=<ppo|sac|td3>] [timesteps_per_iter=N] [success_threshold=0.5]
 ---
 
 # /harbor:task-create — Author or Edit a Task
 
-The user wants to either (a) add a NEW task to the current benchmark repo, or (b) surgically edit a subset of an EXISTING task. The shape, file pointers, code templates, and per-phase smoke commands all live in `<repo>/harbor/create-task/task-implementation.md` — written by `benchmark-generator`. This command body parses the user's spec, bootstraps any missing prerequisite stage (dependency-generator → benchmark-generator → rl-integration-generator, checked in that order), and orchestrates the relevant subagents.
+The user wants to either (a) add a NEW task to the current benchmark repo, or (b) surgically edit a subset of an EXISTING task. The shape, file pointers, code templates, and per-phase smoke commands all live in `<repo>/harbor/create-task/task-implementation.md` — written by `benchmark-generator`. This command body parses the user's spec, bootstraps any missing prerequisite stage (dependency-generator → benchmark-generator → rl-integration-generator, checked in that order), and orchestrates the chain: `task-generator` (§1–§5) → the `/harbor:reward-tune` loop (§6, validated by actual training) → `dr-generator` (§7, **opt-in only** — skipped unless the user explicitly asks for DR).
 
 ## Required arguments
 
@@ -18,8 +18,13 @@ The user wants to either (a) add a NEW task to the current benchmark repo, or (b
 
 | Arg | Default | Effect |
 |---|---|---|
-| `sections` | (all) | Comma-separated list of section numbers from 1..7. Omitted ⇒ create mode (full §1..§7 chain). Provided ⇒ edit mode (partial chain, task must already exist). Section→agent mapping: §1 register/scene · §2 actions · §3 reset · §4 goal+termination · §5 observation → `task-generator`. §6 reward → `reward-generator`. §7 DR → `dr-generator`. |
+| `sections` | (1..6) | Comma-separated list of section numbers from 1..7. Omitted ⇒ create mode (§1..§6 chain; §7 DR is **opt-in** — see the DR gate below). Provided ⇒ edit mode (partial chain, task must already exist). Section→owner mapping: §1 register/scene · §2 actions · §3 reset · §4 goal+termination · §5 observation → `task-generator`. §6 reward → `/harbor:reward-tune` loop (reproduce mode: direct `reward-generator` dispatch). §7 DR → `dr-generator`. |
 | `assets` | (none) | Comma-separated repo-relative paths or asset URLs. If set, `task-generator` §1 prefers these over Nucleus / library defaults. Ignored when §1 is not in the requested sections. In reproduce mode (`from=...`) `assets` overrides paths the spec resolved against the source repo — use when the destination repo's assets live at different locations. |
+| `algorithm` | `ppo` | Forwarded to `/harbor:reward-tune` for the §6 training loop. |
+| `timesteps_per_iter` | (reward-tune default) | Forwarded to `/harbor:reward-tune` — per-iteration training budget. |
+| `success_threshold` | `0.5` | Forwarded to `/harbor:reward-tune` — the tune loop stops when `success_rate ≥` this. |
+
+**DR gate (§7)**: `dr-generator` runs ONLY when the user explicitly asked for DR — either `7 ∈ sections` (edit mode) or the `description` explicitly requests domain randomization (e.g. "add domain randomization", "randomize mass/friction", "DR for sim-to-real"). A bare task description never implies DR — the default is **skip**. (Reproduce mode is the exception: the spec's §7 block is part of the ground truth, so it is applied as-is unless it reads `<no DR>`.)
 
 `/create-task` does NOT take a `repo_path` — it always operates on `$(pwd)`. Run it from inside the benchmark repo.
 
@@ -65,10 +70,13 @@ The spec is treated as **ground truth** — subagents don't re-derive design cho
    - Exactly one of `description` / `from`:
      - `description` → trim; require non-empty. Sets mode = create (no sections) or edit (sections).
      - `from` → resolve to absolute path; verify the file exists and parses as a probe-task spec (top-level `# <task_id> — Implementation Spec` header + `## §1..§7` anchors). Sets mode = reproduce.
-   - `sections` → split on commas; validate each element is one of `{1,2,3,4,5,6,7}`. Empty/missing → all seven (create / reproduce mode). Compute the partition:
+   - `sections` → split on commas; validate each element is one of `{1,2,3,4,5,6,7}`. Empty/missing → `{1..6}` in create mode (DR is opt-in), all seven in reproduce mode (the spec is ground truth). Compute the partition:
      - `task_sections = sections ∩ {1,2,3,4,5}`
      - `do_reward     = 6 ∈ sections`
-     - `do_dr         = 7 ∈ sections`
+     - `do_dr         = (7 ∈ sections)                                  # explicit sections arg (edit mode)`
+       `             OR (create mode AND description explicitly requests DR)`
+       `             OR (reproduce mode AND spec §7 != "<no DR>")`
+       — **default is false**: a create-mode description that doesn't mention domain randomization means `dr-generator` is skipped.
    - `assets` → split on commas; verify each entry exists on disk OR is a fully-qualified URL. Drop missing entries with a one-line warning.
 
 3. Mode-specific check:
@@ -98,26 +106,26 @@ Write `${task_dir}/spec.json` (overwriting any prior run for this slug):
   "description": "<description verbatim>",
   "assets": ["<path1>", "<path2>"],
   "mode": "create|edit",
-  "sections": [1,2,3,4,5,6,7],
+  "sections": [1,2,3,4,5,6],
   "created_at": "<iso8601>",
   "phases": {
-    "task_generator":   {"status": "pending|skipped", "smoke": {}},
-    "reward_generator": {"status": "pending|skipped", "smoke": {}},
-    "dr_generator":     {"status": "pending|skipped", "smoke": {}}
+    "task_generator": {"status": "pending|skipped", "smoke": {}},
+    "reward_tune":    {"status": "pending|skipped", "smoke": {}},
+    "dr_generator":   {"status": "pending|skipped", "smoke": {}}
   }
 }
 ```
 
-`status: skipped` is set up-front for any agent whose sections aren't requested (e.g. if `sections=2,5`, `reward_generator` and `dr_generator` start as `skipped`).
+`status: skipped` is set up-front for any phase whose sections aren't requested (e.g. if `sections=2,5`, `reward_tune` and `dr_generator` start as `skipped`). `dr_generator` starts as `skipped` by default — it flips to `pending` only when the DR gate fired (explicit request).
 
-Each subagent updates its own `phases.<role>` slot with the final status. The orchestrator reads the slot post-dispatch to decide whether to continue.
+Each phase's slot gets its final status when the phase ends — `task_generator` / `dr_generator` are updated by their subagents; `reward_tune` is persisted by the orchestrator from the tune outcome (or, in reproduce mode, from the direct reward-generator verdict). The orchestrator reads the slot post-phase to decide whether to continue.
 
-Each subagent also writes a per-role process log inside the same directory:
+Each phase also writes a process log inside the same directory:
 
-| Agent | Log file | Contents |
+| Phase | Log file | Contents |
 |---|---|---|
-| `task-generator`   | `<task_dir>/task-history.md`   | Per-section block for each section in `task_sections`: decisions resolved (with source — user / canonical / repo-scan / batched-ask), files written, smoke command, smoke output (last 50 lines), per-attempt diagnosis, verdict |
-| `reward-generator` | `<task_dir>/reward-history.md` | Decisions resolved, files modified, composer chosen, per-term-logging token, smoke command + output, iteration notes |
+| `task-generator`   | `<task_dir>/task-history.md`   | **Adaptation delta** block (base library spec or "pure creation mode"; kept-as-is; enumerated changes + why), then per-section block for each section in `task_sections`: decisions resolved (with source — user / canonical / library-base / repo-scan / batched-ask), files written, smoke command, smoke output (last 50 lines), per-attempt diagnosis, verdict |
+| `reward-tune` loop | `<task_dir>/reward-history.md` | Shared with `/harbor:reward-tune`: one `## Iter <N>` section per tune iteration (iter 0 opens with the **Adaptation delta** vs the base library spec; decisions, files modified, composer, smoke, training analysis). Plus `tune-state.json`, `memories.jsonl`, `iter_<NNN>/` per the reward-tune layout. |
 | `dr-generator`     | `<task_dir>/dr-history.md`     | Skip-or-wire rationale, decisions resolved, files modified, smoke command + output, iteration notes |
 
 These logs are **append-only within one agent's run**, written as work progresses. Each agent discovers state from the repo (env_cfg, mdp/ tree) on entry — there is no inter-agent handoff file.
@@ -131,7 +139,9 @@ Before dispatching the chain, run the protocol in `${CLAUDE_PLUGIN_ROOT}/referen
 3. If a match is **byte-identical** to what's wanted, recommend `/harbor:task-create from=<that spec>` (reproduce mode) and ask the user whether to switch before authoring from scratch.
 4. Record the matches (or "no match") in `spec.json` and the final summary.
 
-Skip in **reproduce** mode — the `from=<spec>` already IS the source design. Never block on an empty library; `library_refs = []` is fine. Pass `library_refs` into the task-generator and reward-generator dispatches so they don't each re-grep.
+**Adapt-first is binding** (protocol Step 4): when `library_refs` is non-empty, the downstream agents treat the best match as the BASE implementation and author by minimal modification — pure creation mode activates ONLY when the library has no relevant task. Each agent documents an **Adaptation delta** block (base spec, kept-as-is, enumerated changes + why) in its history file; surface the base + headline changes in the final summary too.
+
+Skip in **reproduce** mode — the `from=<spec>` already IS the source design. Never block on an empty library; `library_refs = []` is fine (pure creation mode). Pass `library_refs` into the task-generator and reward-generator dispatches so they don't each re-grep.
 
 ### Step 2 — Dispatch `task-generator` (sections from §1..§5)
 
@@ -145,7 +155,8 @@ Agent(task-generator, prompt={
   description:   <description>,                   // for create/edit; reproduce mode synthesizes from spec
   assets:        [<...>],
   sections:      <task_sections>,                 // e.g. [1,2,3,4,5] (create) or [2,5] (partial edit)
-  library_refs:  [<abs paths>],                   // Step 1.5 matches — relevant task-library specs to mirror (§1–§5)
+  library_refs:  [<abs paths>],                   // Step 1.5 matches — best match is the BASE for §1–§5
+                                                  // (adapt-first: minimal modification, not re-derivation)
   spec_sections: {"1": <code>, ...}               // ONLY in reproduce mode — per-section ground-truth Code blocks
                                                   // from the probe-task spec. Subagent prefers these over
                                                   // resolving from description/family-guide.
@@ -169,9 +180,25 @@ Smoke entries for sections NOT in `task_sections` read `skipped`.
 
 Persist into `${task_dir}/spec.json:phases.task_generator`. **Stop the chain if `status != pass`** — print the verdict and exit. Downstream agents have nothing to attach to.
 
-### Step 3 — Dispatch `reward-generator` (§6)
+### Step 3 — Tune the reward via `/harbor:reward-tune` (§6)
 
-Only when `do_reward` is true AND (task-generator was skipped OR returned pass):
+Only when `do_reward` is true AND (task-generator was skipped OR returned pass).
+
+**Create / edit mode** — do NOT dispatch `reward-generator` directly. The §6 smoke (finite + non-constant + composer) only proves the reward is well-formed, not that it trains the behavior. Instead, run the `/harbor:reward-tune` command flow (read `commands/reward-tune.md` and execute it inline) with:
+
+```
+/harbor:reward-tune task=<name> \
+    algorithm=<algorithm>                          # from args, default ppo \
+    [timesteps_per_iter=<N>] [success_threshold=<v>]  # forwarded when given
+```
+
+Notes for the inline execution:
+- The tune loop runs in `task_dir` (same slug ⇒ reward-tune co-locates there by design): `reward-history.md`, `handoff-reward-generator.md`, `memories.jsonl`, `tune-state.json`, `iter_<NNN>/`.
+- Seed `tune-state.json:library_refs` with the Step 1.5 matches — don't re-run the task-library search.
+- The loop's iteration 0 authors the reward from the placeholder `task-generator` left (a placeholder §6 is a valid reward-tune starting point), then each iteration trains a policy, renders, and analyzes per-term logs + frames until `success_rate ≥ success_threshold` (or the user aborts at a stuck-prompt).
+- This is the expensive phase (each iteration is a real training run). Tell the user the expected cost before starting the loop and stream per-iteration progress.
+
+**Reproduce mode** — skip the tune loop (the spec's §6 is a byte-for-byte copy of an already-proven reward; re-training to validate a verbatim paste is wasted compute). Dispatch `reward-generator` directly, exactly as before:
 
 ```
 Agent(reward-generator, prompt={
@@ -179,20 +206,19 @@ Agent(reward-generator, prompt={
   task_dir:      <task_dir>,
   task_id:       <name>,
   description:   <description>,
-  library_refs:  [<abs paths>],                   // Step 1.5 matches — relevant task-library specs to mirror (§6 reward)
-  spec_section:  <spec_sections["6"]>             // ONLY in reproduce mode — full §6 Code block (RewardsCfg
-                                                  // + all reward function source) from probe-task. Pasted
-                                                  // verbatim into mdp/rewards.py + env_cfg.
+  spec_section:  <spec_sections["6"]>             // full §6 Code block (RewardsCfg + all reward function
+                                                  // source) from probe-task. Pasted verbatim into
+                                                  // mdp/rewards.py + env_cfg.
 })
 ```
 
-The agent reads §6 of `task-implementation.md` and the existing reward (placeholder for create mode, real reward for edit mode), authors the new reward, runs the §6 smoke, iterates on failure. In **reproduce** mode, `spec_section` is ground truth — the agent pastes it, runs the smoke, and only iterates if the smoke fails (which would indicate a spec defect, not authoring ambiguity).
+The agent pastes `spec_section` verbatim, runs the §6 smoke, and only iterates if the smoke fails (a spec defect, not authoring ambiguity).
 
-Persist verdict into `${task_dir}/spec.json:phases.reward_generator`. Stop the chain if `status != pass`.
+Persist the outcome into `${task_dir}/spec.json:phases.reward_tune` — for the tune loop: `{"status": "pass", "via": "reward-tune", "iters": <N>, "best_success_rate": <v>}` on convergence, `fail` on abort/failure; for reproduce: the reward-generator verdict as before. Stop the chain if `status != pass`.
 
-### Step 4 — Dispatch `dr-generator` (§7)
+### Step 4 — Dispatch `dr-generator` (§7) — opt-in only
 
-Only when `do_dr` is true AND prior agents (whichever ran) returned pass:
+**Default is SKIP.** Dispatch only when `do_dr` is true (the user explicitly asked for DR — see the DR gate in Optional arguments) AND prior phases (whichever ran) returned pass. When skipped, record `phases.dr_generator = {"status": "skipped", "reason": "DR not requested"}` and move to Step 5 — do NOT dispatch the agent "just in case", and do NOT ask the user whether they want DR:
 
 ```
 Agent(dr-generator, prompt={
@@ -219,12 +245,13 @@ create-task : <task_id>  (mode: create|edit, sections: [...])
 slug          : <slug>
 spec          : <task_dir>/spec.json
 phases        :
-  task-generator   : pass — S1..S6 green       (log: <task_dir>/task-history.md)
-  reward-generator : pass — finite + composer  (log: <task_dir>/reward-history.md)
-  dr-generator     : skipped — no DR requested (log: <task_dir>/dr-history.md)
+  task-generator : pass — S1..S6 green                          (log: <task_dir>/task-history.md)
+  reward-tune    : pass — converged @ iter <N>, success_rate=<v> (log: <task_dir>/reward-history.md)
+  dr-generator   : skipped — DR not requested (opt-in)           (log: <task_dir>/dr-history.md)
 files written : <count>
-next step     : test the task end-to-end with
-                /harbor:rl-run task=<task_id> algorithm=ppo total_timesteps=20000
+next step     : the reward is already training-validated; run a full-budget trial with
+                /harbor:rl-run task=<task_id> algorithm=<algorithm>
+                (add DR later with /harbor:task-create name=<task_id> description="..." sections=7)
 ```
 
 Skipped phases (whose section was not in the request) read `skipped (not requested)`. If any phase failed, replace its row with a one-line error summary and add a final line: `chain stopped at <phase> — see ${task_dir}/spec.json for details`.
@@ -232,8 +259,10 @@ Skipped phases (whose section was not in the request) read `skipped (not request
 ## Constraints
 
 - **Do NOT regenerate `task-implementation.md` from this command.** Subagents may patch it surgically when they find a bug; full re-renders are owned by `benchmark-generator`.
-- **Sequential, not parallel.** Later agents may read files written by earlier ones; the chain is strict.
-- **Per-phase smoke is fatal.** A subagent that returns `status: fail` halts the chain. The subagent owns its own retry loop.
+- **Sequential, not parallel.** Later phases may read files written by earlier ones; the chain is strict.
+- **Per-phase gate is fatal.** A subagent that returns `status: fail` (or a reward-tune loop that ends aborted/failed) halts the chain. Each phase owns its own retry/iteration loop.
+- **§6 is validated by training, not just smoke** (create/edit mode). The reward-tune loop is the gate — a reward that passes the structural smoke but never trains toward success does not pass Step 3. Reproduce mode is exempt (verbatim paste of a proven reward; smoke only).
+- **§7 DR is opt-in.** Never wire DR speculatively; silence about DR in the user's request means skip.
 - **Ambiguity → user, not heuristic.** Any "Decisions" sub-block in `task-implementation.md` that the user's `description` doesn't fully resolve must trigger an `AskUserQuestion`. Subagents must batch all open questions for one section into a single ask.
 - **No editing of sibling tasks.** Refactoring nearby tasks is out-of-scope.
 - **Do not append to `harbor/benchmark-generator/benchmark-spec.json`.** That file is `benchmark-generator`'s output.
@@ -241,9 +270,13 @@ Skipped phases (whose section was not in the request) read `skipped (not request
 ## Examples
 
 ```text
-# Create mode (no sections arg) — full §1..§7 chain
+# Create mode (no sections arg) — §1..§5 + reward-tune training loop; DR skipped (not requested)
 /harbor:task-create name=Isaac-Push-Block-Franka-v0 \
   description="Franka panda pushes a small wooden block from the table center toward a target marker. Episode succeeds when block-to-marker distance < 5cm; horizon 200 steps."
+
+# Create mode WITH DR — the description explicitly asks for it, so dr-generator runs after the tune loop
+/harbor:task-create name=Isaac-Push-Block-Franka-v0 \
+  description="Franka panda pushes a small wooden block toward a target marker. Add domain randomization (mass, friction, observation noise) for sim-to-real."
 
 # Create mode with explicit asset override
 /harbor:task-create name=Isaac-Open-Drawer-Custom-v0 \
@@ -260,7 +293,7 @@ Skipped phases (whose section was not in the request) read `skipped (not request
   description="Use delta-EE-pose actions and add ee_pose_in_robot_root_frame to the obs." \
   sections=2,5
 
-# Edit mode — only swap reward
+# Edit mode — only re-work the reward (runs the reward-tune training loop, not a one-shot author)
 /harbor:task-create name=Isaac-Push-Block-Franka-v0 \
   description="Boost reaching weight to 5.0 and add a contact-bonus term." \
   sections=6

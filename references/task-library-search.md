@@ -44,17 +44,45 @@ Also read the caller's own append-only ledger (heuristics distilled across runs)
 | `reward-generator` / `/harbor:reward-tune` | `experiences/reward-generator/reward-experience.md` |
 | `dr-generator` | `experiences/dr-generator/dr-experience.md` |
 
-## Step 4 — Use it, but the destination family wins
+## Step 4 — Adapt-first (BINDING): minimal modification of the matched spec
 
-- **Reuse** the matched spec's structure and decisions (action mode, reset ranges, reward term ladder,
-  composer, gating, DR axes) as the starting point — adapt names/paths to the destination task.
+When a relevant match exists, **adapt-first is the rule, not a suggestion**: the best-matched spec is
+the BASE implementation, and authoring means computing the **minimal modification** that turns the
+proven base into the new task. Do NOT re-derive design choices from scratch that the base already
+settles — a worked task encodes dozens of validated decisions (action mode, reset ranges, obs layout,
+reward term ladder, weights, composer, gating, DR axes); every gratuitous deviation from it is an
+unforced risk.
+
+- **Start from the base**: take the matched spec's sections you own as the starting implementation.
+  Change only what the new task's description / scene actually requires (object count/size, poses,
+  robot placement, success geometry, stage predicates, asset paths, names).
 - **The in-repo canonical example + `task-implementation.md` remain ground truth** for the destination
   benchmark's API/idioms. When the library spec and the destination family disagree on *how* to express
-  something, follow the destination family; borrow only the *design intent* from the library.
+  something, follow the destination family; borrow the *design* from the library.
 - If a library spec is byte-identical to what you need, prefer `/harbor:task-create from=<that spec>`
   (reproduce mode) over re-authoring — surface this to the user.
 
+**Pure creation mode is the fallback of last resort** — it activates ONLY when the library has no
+relevant task at all (empty folder, or no spec sharing the verb/object-class/embodiment). "The match
+isn't perfect" is not a reason to go pure-create; it's a reason to adapt with a larger delta.
+
+## Step 5 — Document the adaptation delta in the history file
+
+Every caller MUST record in its history file (`task-history.md` / `reward-history.md` / the
+`## Iter <N>` section of a tune) an **Adaptation delta** block:
+
+```markdown
+### Adaptation delta
+- base: <abs path of the matched library spec>  (or "none — pure creation mode: no relevant task in <folder>")
+- kept as-is: <what was reused unchanged — e.g. action mode, composer, gating structure>
+- changed: <enumerated list — one bullet per deviation from the base, each with WHY the new task requires it>
+```
+
+This is what makes the next run's search useful: the delta shows which knobs actually had to move
+between two sibling tasks.
+
 ## When the library is empty / no match
 
-Note it in the process log ("task-library: no relevant prior task in `<folder>`") and proceed with the
-normal canonical-example-driven flow. Never block on an empty library.
+Only then does pure creation mode activate. Note it in the process log ("task-library: no relevant
+prior task in `<folder>` — pure creation mode") and proceed with the canonical-example-driven flow.
+Never block on an empty library.

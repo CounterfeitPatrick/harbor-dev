@@ -56,7 +56,7 @@ Grouped by filename prefix (the prefix is the group — Claude Code commands hav
 | **task — author / probe / inspect** | |
 | `probe-benchmark [repo=<p>] [canonical_task=<id>]` | Author the family-level `<repo>/harbor/create-task/task-implementation.md` guide (Step 3.7 of `benchmark-generator`, extracted to run standalone). |
 | `probe-task task=<id> [output=<p>]` | Emit a portable per-task spec `<task-slug>-implementation.md` with verbatim §1–§7 code. Runs in a subagent (context-saving). Feed back into `task-create from=<path>` to clone the task into another benchmark. |
-| `task-create name=<TaskID> (description=… \| from=<spec.md>)` | Author a NEW task (free-form via `description=`) OR reproduce one byte-identical from a `probe-task` spec (`from=`). Dispatches `task-generator` (§1–§5) → `reward-generator` (§6) → `dr-generator` (§7) with per-phase smoke gates. |
+| `task-create name=<TaskID> (description=… \| from=<spec.md>)` | Author a NEW task (free-form via `description=`) OR reproduce one byte-identical from a `probe-task` spec (`from=`). Runs `task-generator` (§1–§5, smoke gates) → the `reward-tune` training loop (§6 — reward validated by actual training; reproduce mode: verbatim paste + smoke) → `dr-generator` (§7, opt-in — skipped unless DR is explicitly requested). |
 | `task-list [<task-id>]` | List / inspect tasks in the cwd-local benchmark; falls back to the registry-side spec via the `list_tasks` MCP tool. |
 | **reward — reward engineering** | |
 | `reward-tune task=<id> [algorithm=<algo>] [success_threshold=0.5]` | Iterate on the §6 reward of an existing task — each iter the `reward-generator` edits, the orchestrator trains + renders + analyzes per-term log + visual frames vs the task description, loops until success_rate ≥ threshold. |
@@ -86,7 +86,7 @@ Grouped by filename prefix (the prefix is the group — Claude Code commands hav
 | `task-generator` | Authors §1–§5 of a new task (register/scene · actions · reset · goal+termination · observation) with per-section smokes plus an actuator-tracking check (S2.5) and a render-stability + visual check (S6); iterates up to 2× per smoke before escalating. |
 | `reward-generator` | Authors §6 (reward) — `RewardsCfg` + `mdp/rewards.py` functions. Required to write a planned per-stage magnitude budget into the docstring before setting weights (per `experiences/reward-generator/reward-experience.md` entry #2). |
 | `dr-generator` | Authors §7 (domain randomization) — `EventCfg` startup / interval terms. `skipped` is a valid success when DR isn't required. |
-| `rl-tuning-agent` | Per-cell tuning loop: train → eval → render → analyze metrics + behavior → suggest next config. Per-trial state under `harbor/rl_experiments/`. |
+| `rl-tuning-agent` | Per-cell tuning loop: train → eval → render → analyze metrics + behavior → suggest next config. Per-cell state under `harbor/rl_experiments/tunes/<tune_id>/`. |
 
 ### Experiences (numbered, append-only cross-run ledgers)
 
@@ -248,7 +248,7 @@ harbor/                                        ← plugin root
 
 Per-run workspace state lives inside the **target** repo, not the plugin:
 
-- `<repo>/harbor/run-log/NN-<task>.md` — append-only process log (Layer 6a).
+- `<repo>/harbor/<agent>/history.md` — append-only per-run process log (Layer 6a), inside each agent's own subdir (e.g. `rl-integration-generator/history.md`).
 - `<repo>/harbor/dependency-generator/install.md`, `<repo>/harbor/benchmark-generator/{history,benchmark}.md`, `<repo>/harbor/rl-integration-generator/rl-integration.md` — end-of-run user receipts (Layer 6b), each in its agent's dir.
 - `<repo>/harbor/create-task/{task-implementation.md, <task_slug>/, <task_slug>-implementation.md}` — task-authoring workspace.
 - `<repo>/harbor/outputs/<algo>_<task>_<ts>/` — per-trial checkpoints + metrics + curves + render.mp4.

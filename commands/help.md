@@ -30,7 +30,7 @@ Grouped by prefix: `env-*` · task (`task-*`/`probe-*`) · `reward-*` · `rl-*` 
 | **task** | |
 | `/harbor:probe-benchmark [repo=<path>]` | Author the family-level `create-task/task-implementation.md` guide for a benchmark repo. |
 | `/harbor:probe-task task=<id> [output=<path>]` | Emit a portable per-task spec (verbatim §1–§7 code). Runs in a subagent to save context. |
-| `/harbor:task-create name=<TaskID> (description=… \| from=<spec.md>)` | Author a NEW task, or reproduce one from a probe-task spec. Auto-bootstraps missing prerequisites (dependency-generator → benchmark-generator → rl-integration-generator, defaulting to custom_torch), then dispatches task-generator → reward-generator → dr-generator. |
+| `/harbor:task-create name=<TaskID> (description=… \| from=<spec.md>)` | Author a NEW task, or reproduce one from a probe-task spec. Auto-bootstraps missing prerequisites (dependency-generator → benchmark-generator → rl-integration-generator, defaulting to custom_torch), then runs task-generator (§1–§5) → the reward-tune training loop (§6) → dr-generator (§7, opt-in — skipped unless DR is explicitly requested). |
 | `/harbor:task-list [<task-id>]` | List / inspect tasks in the cwd-local benchmark (falls back to the registry via `list_tasks`). |
 | **reward** | |
 | `/harbor:reward-tune task=<id> [algorithm=<algo>]` | Iteratively tune the §6 reward of an existing task (train → render → analyze → repeat until success). |
@@ -59,7 +59,7 @@ Invoke via `Task('<agent-name>')`. Subagents do not nest-dispatch — main threa
 | `dependency-generator` | **Entry point** for any "set up env for \<repo\>" task. Probes the repo, renders `harbor/dependency-generator/setup_uv.sh`, creates `<repo>/.venv/`, runs import smoke test, returns to main. |
 | `benchmark-generator` | After dependency-generator finishes. Renders `scripts/{run_random,render_random}.py`, runs 2-tier smoke (L1 random / L2 render), captures suite spec into `harbor/benchmark-generator/benchmark-spec.json`. Training scaffolding is owned by `rl-integration-generator` (dispatched directly as a subagent once the spec is written). |
 | `rl-integration-generator` | After benchmark-generator finishes. Renders `harbor/scripts/rl/<impl>/{train,eval,render,env_wrapper}.py`, `harbor/configs/rl/{ppo,sac,td3}{,.parallel}.yaml`, and `harbor/rl-integration-generator/rl-suite-spec.json`. Smokes each algorithm. |
-| `rl-tuning-agent` | Per-algorithm hyperparameter tuning loop: train → eval → render → analyze metrics + behavior → suggest next config. Writes per-trial records under `harbor/rl_experiments/runs/<trial_id>/` and best-config picks under `harbor/rl_experiments/best/<algo>/`. |
+| `rl-tuning-agent` | Per-algorithm hyperparameter tuning loop: train → eval → render → analyze metrics + behavior → suggest next config. Per-cell tune state under `harbor/rl_experiments/tunes/<tune_id>/<wandb_project>/`. |
 
 ## MCP tools (read-only registry access)
 

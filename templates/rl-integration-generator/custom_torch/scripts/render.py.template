@@ -12,7 +12,7 @@ offscreen rendering. To open a live window, use the env's native viewer.
 
 Example:
     python harbor/scripts/rl/custom_torch/render.py algo=ppo task={{DEFAULT_TASK}} \\
-        checkpoint=harbor/rl_experiments/runs/<trial_id>/checkpoint.pth
+        checkpoint=harbor/outputs/<trial_id>/checkpoint.pth
 """
 from __future__ import annotations
 
@@ -131,8 +131,11 @@ def main(cfg: DictConfig):
 
     task = cfg.get("task")
     ckpt_path = cfg.get("checkpoint")
-    fps = int(cfg.get("fps", 30))
-    max_steps = int(cfg.get("max_steps", 1000))
+    # Read the keys the unified config declares (render_fps / render_max_steps);
+    # fall back to the legacy fps / max_steps names. Reading declared keys means a
+    # plain `render_max_steps=150` override works without Hydra's `+` append prefix.
+    fps = int(cfg.get("render_fps", cfg.get("fps", 30)))
+    max_steps = int(cfg.get("render_max_steps", cfg.get("max_steps", 1000)))
     if task is None:
         print("[error] task=<id> is required.", file=sys.stderr); sys.exit(2)
     if not ckpt_path:

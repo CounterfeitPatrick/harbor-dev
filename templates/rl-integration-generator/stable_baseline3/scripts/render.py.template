@@ -13,7 +13,7 @@ offscreen rendering. To open a live window instead, use the env's native viewer
 
 Example:
     python harbor/scripts/rl/stable_baseline3/render.py algo=ppo task={{DEFAULT_TASK}} \\
-        checkpoint=harbor/rl_experiments/runs/ppo-{{DEFAULT_TASK_SLUG}}-1234/checkpoint.zip
+        checkpoint=harbor/outputs/<trial_id>/checkpoint.zip
 """
 from __future__ import annotations
 

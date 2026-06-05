@@ -15,7 +15,7 @@ algo: ppo
 task: null                # required at CLI: task=<id>
 
 # ---- Logging ----
-log_dir: harbor/rl_experiments/runs/${algo}-${task}-${now:%Y%m%d_%H%M%S}
+log_dir: harbor/outputs/${algo}-${task}-${now:%Y%m%d_%H%M%S}
 checkpoint_dir: ${log_dir}
 wandb: null               # null = disabled; "<project>" = enabled
 wandb_entity: null

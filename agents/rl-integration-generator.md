@@ -84,7 +84,7 @@ Read the failing tool's stderr + the rendered file, form a focused hypothesis, f
 - [ ] Phase 2:   append the pip line(s) for the chosen source to setup_uv.sh + run uv pip install
 - [ ] Phase 3:   validate (validate_rl_suite.py — files, py_compile, yaml, spec schema)
 - [ ] Phase 4:   per-algorithm T1-T5 smoke (train → eval → render → plot → log-sanity)
-- [ ] Phase 5:   write `<repo>/harbor/run-log/NN-rl-integration.md` + APPEND smoke section to `<repo>/harbor/benchmark-generator/history.md` + report back
+- [ ] Phase 5:   write `<repo>/harbor/rl-integration-generator/history.md` + APPEND smoke section to `<repo>/harbor/benchmark-generator/history.md` + report back
 ```
 
 ### Phase 0 — Pre-flight
@@ -167,7 +167,7 @@ Append (idempotent) the source-specific line below to `<repo>/harbor/dependency-
 | `local_implementation` (url) | `uv pip install "git+<url>"` |
 | `local_implementation` (path) | `uv pip install -e <abs path>` |
 
-If the line is already present (e.g. previous run added it), skip the patch — note "setup_uv.sh already contains <foo>; no patch applied" in the run-log.
+If the line is already present (e.g. previous run added it), skip the patch — note "setup_uv.sh already contains <foo>; no patch applied" in `<repo>/harbor/rl-integration-generator/history.md`.
 
 ### Phase 3 — Validate
 
@@ -336,9 +336,9 @@ For `algorithm_source == local_implementation`, T1/T2/T3 may fail with `ModuleNo
 
 T4/T5 still expect `outputs/<run>/{curves/, metrics.jsonl, tb/}` — if the user's package writes elsewhere, document the actual layout in `<repo>/harbor/rl-integration-generator/rl-integration.md` Troubleshooting and mark T4/T5 `skipped` with a one-line reason (no Diagnose+Retry).
 
-### Phase 5 — Run-log + history.md append + report back
+### Phase 5 — History + benchmark-history append + report back
 
-1. Append `<repo>/harbor/run-log/NN-rl-integration.md` (Layer 6a — one short markdown: algorithm_source / algorithm_slug / per-algo T1-T5 result / one-line outcome).
+1. Append `<repo>/harbor/rl-integration-generator/history.md` (Layer 6a — one short markdown section per run: algorithm_source / algorithm_slug / per-algo T1-T5 result / one-line outcome).
 
 2. **Append the full smoke table to `<repo>/harbor/benchmark-generator/history.md`** (Layer 6b — owned by `benchmark-generator` originally, but rl-integration extends it). Use sentinel markers so re-runs replace the section idempotently:
 

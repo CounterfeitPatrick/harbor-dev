@@ -50,7 +50,7 @@ Two execution modes:
 
 ```bash
 tune_id="tune_$(date -u +%Y%m%d-%H%M%S)"
-tune_dir="harbor/rl-experiment/${tune_id}"
+tune_dir="harbor/rl_experiments/tunes/${tune_id}"
 mkdir -p "${tune_dir}"
 ```
 

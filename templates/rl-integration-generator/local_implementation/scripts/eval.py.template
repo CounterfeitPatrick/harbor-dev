@@ -8,7 +8,7 @@ Always headless; uses the vec/parallel env factory exposed by env_wrapper.create
 
 Example:
     python harbor/scripts/rl/{{LOCAL_IMPL_SLUG}}/eval.py algo=ppo task={{DEFAULT_TASK}} \\
-        checkpoint=harbor/rl_experiments/runs/<trial_id>/checkpoint.zip n_episodes=10
+        checkpoint=harbor/outputs/<trial_id>/checkpoint.zip n_episodes=10
 """
 from __future__ import annotations
 

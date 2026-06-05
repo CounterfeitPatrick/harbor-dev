@@ -9,7 +9,7 @@ Team-internal scope.
 2. The registry stores source URL + commit hash for verified benchmarks (no docker image tags). Reproduction is via `/harbor:env-install-uv` against the source repo.
 3. Registry access is via MCP tools (`mcp__plugin_harbor_harbor__*`). Never `cat registry.yaml` directly.
 4. Subagents do not nest-dispatch. Main thread orchestrates `dependency-generator` → `benchmark-generator`.
-5. **All plugin-generated files live under `<repo>/harbor/`** — except `scripts/_<family>_env.py` / `scripts/run_random.py` / `scripts/render_random.py` (user-facing smoke entry points). Each generator agent writes its receipts + metadata into **its own subdir**: `harbor/dependency-generator/{setup_uv.sh, probe.json, install_plan.json, install.md}`, `harbor/benchmark-generator/{benchmark-spec.json, task_overview.md, .task_list.json, history.md, benchmark.md}`, `harbor/rl-integration-generator/{rl-suite-spec.json, rl-integration.md}`. The shared RL training tree stays at the top level: training scripts at `<repo>/harbor/scripts/rl/`, configs at `<repo>/harbor/configs/rl/`, training output at `<repo>/harbor/outputs/`, the DataLogger at `<repo>/harbor/utils/data_logger.py`; run logs at `<repo>/harbor/run-log/*.md`; the create-task workspace at `<repo>/harbor/create-task/`. The folder name is `harbor/` (no dot) so it doubles as a valid Python package — imports like `from utils.data_logger import DataLogger` resolve against `<repo>/harbor/` after `sys.path.insert(0, HARBOR_ROOT)`.
+5. **All plugin-generated files live under `<repo>/harbor/`** — except `scripts/_<family>_env.py` / `scripts/run_random.py` / `scripts/render_random.py` (user-facing smoke entry points). Each generator agent writes its receipts + metadata into **its own subdir**: `harbor/dependency-generator/{setup_uv.sh, probe.json, install_plan.json, install.md}`, `harbor/benchmark-generator/{benchmark-spec.json, task_overview.md, .task_list.json, history.md, benchmark.md}`, `harbor/rl-integration-generator/{rl-suite-spec.json, rl-integration.md, history.md}`. The shared RL training tree stays at the top level: training scripts at `<repo>/harbor/scripts/rl/`, configs at `<repo>/harbor/configs/rl/`, training output at `<repo>/harbor/outputs/`, the DataLogger at `<repo>/harbor/utils/data_logger.py`; the create-task workspace at `<repo>/harbor/create-task/`. There is NO shared `run-log/` folder — each agent's per-run process log is the `history.md` inside its own subdir. The folder name is `harbor/` (no dot) so it doubles as a valid Python package — imports like `from utils.data_logger import DataLogger` resolve against `<repo>/harbor/` after `sys.path.insert(0, HARBOR_ROOT)`.
 6. Code style across main thread AND all subagents:
    - **Think before coding** — state assumptions explicitly; if uncertain, ask. Don't pick silently between alternatives.
    - **Simplicity first** — minimum code that solves the problem; no speculative features, abstractions, configurability, or error handling for impossible scenarios.
@@ -30,7 +30,7 @@ L2   ENTRY POINTS                 — User-facing surfaces. Two flavours:
 L3   SUBAGENTS (roles)            — agents/<name>.md   (fresh context, isolated agent loop)
 L4   TOOLS (deterministic)        — scripts/<owner>/*.py + MCP functions + Bash + Read/Write/Edit
 L5   SHARED KNOWLEDGE (read-only) — templates/, references/, mcp/data/
-L6a  WORKSPACE PROCESS LOGS       — <repo>/harbor/run-log/*.md   (per-run, append-only)
+L6a  WORKSPACE PROCESS LOGS       — <repo>/harbor/<agent>/history.md   (per-run, append-only, inside each agent's subdir)
 L6b  WORKSPACE RECEIPTS           — <repo>/harbor/<agent>/{install,history,benchmark,rl-integration}.md  (end-of-run user summary, in each agent's subdir)
 ```
 
@@ -67,7 +67,7 @@ Commands are grouped by area via filename prefix (Claude Code commands have no t
 **task — author / probe / inspect tasks**
 - `commands/probe-benchmark.md` — `/harbor:probe-benchmark [repo=<path>] [canonical_task=<id>]` — author `<repo>/harbor/create-task/task-implementation.md` (Step 3.7 of `benchmark-generator`, extracted so it can be re-run standalone or delegated from the agent)
 - `commands/probe-task.md` — `/harbor:probe-task task=<id> [repo=<path>] [output=<path>]` — emit a per-task `<task-slug>-implementation.md` capturing every design choice (scene / actions / reset / termination / observation / reward / DR) with verbatim code. **Runs in a subagent** (context-saving). Feed back into `/harbor:task-create from=<path>` to clone the task identically into another benchmark.
-- `commands/task-create.md` — `/harbor:task-create name=<TaskID> (description="..." | from=<spec.md>) [sections=<list>] [assets=<paths>]` — author a NEW task in the current benchmark repo, or reproduce one from a `/harbor:probe-task` spec. Pre-flight checks the `dependency-generator` → `benchmark-generator` → `rl-integration-generator` chain in sequence and dispatches any missing stage first (rl-integration defaults to `custom_torch` unless the user specifies an algorithm source). Then dispatches `task-generator` (§1–§5) → `reward-generator` (§6) → `dr-generator` (§7) sequentially with per-phase smoke gates.
+- `commands/task-create.md` — `/harbor:task-create name=<TaskID> (description="..." | from=<spec.md>) [sections=<list>] [assets=<paths>]` — author a NEW task in the current benchmark repo, or reproduce one from a `/harbor:probe-task` spec. Pre-flight checks the `dependency-generator` → `benchmark-generator` → `rl-integration-generator` chain in sequence and dispatches any missing stage first (rl-integration defaults to `custom_torch` unless the user specifies an algorithm source). Then runs `task-generator` (§1–§5, per-section smoke gates) → the `/harbor:reward-tune` loop (§6 — validated by actual training until success_rate ≥ threshold; reproduce mode pastes the spec's reward verbatim + smoke only) → `dr-generator` (§7, **opt-in**: skipped unless the user explicitly requests DR).
 - `commands/task-list.md` — `/harbor:task-list` — list/inspect tasks in a benchmark; defaults to cwd-local `harbor/benchmark-generator/benchmark-spec.json`, falls back to registry via `list_tasks` MCP tool
 
 **reward — reward engineering**
@@ -97,7 +97,7 @@ Commands are grouped by area via filename prefix (Claude Code commands have no t
 - `agents/rl-integration-generator.md` — RL experiment scaffold: configs, train/eval/render/visualize scripts, algorithm adapter, smoke per algorithm
 - `agents/rl-tuning-agent.md` — algorithm-by-algorithm hyperparameter tuning loop (train→eval→render→analyze→suggest)
 - `agents/task-generator.md` — authors §1–§5 of a new task (register/scene · actions · reset · goal+termination · observation) with per-section smokes plus an actuator-tracking check (S2.5) and a render-stability + visual check (S6); iterates up to 2× per smoke before escalating. Reads `<repo>/harbor/create-task/task-implementation.md`. Dispatched only by `/harbor:task-create`.
-- `agents/reward-generator.md` — authors §6 (reward) at the placeholder `task-generator` left. Runs the §6 smoke (finite + composer assertion). Dispatched only by `/harbor:task-create` after `task-generator` passes.
+- `agents/reward-generator.md` — authors §6 (reward) at the placeholder `task-generator` left. Runs the §6 smoke (finite + composer assertion). Dispatched per-iteration by the `/harbor:reward-tune` loop (which `/harbor:task-create` runs as its §6 phase), and directly by `/harbor:task-create` only in reproduce mode (verbatim spec paste).
 - `agents/dr-generator.md` — authors §7 (domain randomization) across 3 groups (robot · object · observation-noise) at the placeholder, once-per-episode-per-env (`mode="reset"`). Discovers available terms per group and wires EVERY available term by default (comprehensive, not minimal — hard constraint; un-wired terms need a logged reason) (modes: multiplicative/additive/direct for groups 1–2 default `(0.9,1.1)`; uniform/gaussian for obs noise default σ=0.01), runs the §7 smoke (exact value read-back at num_envs=16 + after-reset re-check), and writes a handoff at `harbor/create-task/<slug>/handoff-dr-generator.md`. Final agent in the `/create-task` chain; `skipped` is a valid success when no DR is requested and the canonical example has none.
 
 ### L4 — Tools (deterministic CLIs and MCP functions)
@@ -198,7 +198,7 @@ mcp/harbor/specs/      benchmarks/<name>.json
 
 ### L6a — Process logs (per-run engineering record)
 
-`<repo>/harbor/run-log/NN-<task>.md` — one short markdown per task: tool used / agent / command / one-line result. Append-only.
+Each agent's per-run process log lives **inside its own subdir** — `<repo>/harbor/rl-integration-generator/history.md`, `<repo>/harbor/benchmark-generator/history.md`, and the per-task `harbor/create-task/<slug>/{task,reward,dr}-history.md`. One short markdown section per run: tool used / agent / command / one-line result. Append-only. (There is no shared `run-log/` folder.)
 
 ### L6b — Receipts (end-of-run user summary)
 
@@ -216,9 +216,8 @@ mcp/harbor/specs/      benchmarks/<name>.json
 └── harbor/                          single root for plugin-generated artifacts
     ├── dependency-generator/{setup_uv.sh, probe.json, install_plan.json, install.md}   dependency-generator outputs
     ├── benchmark-generator/{benchmark-spec.json, task_overview.md, .task_list.json, history.md, benchmark.md}   benchmark-generator outputs
-    ├── rl-integration-generator/{rl-suite-spec.json, rl-integration.md}   rl-integration-generator outputs (receipts/metadata; the RL training tree stays at harbor/scripts/rl/ etc.)
-    ├── run-log/NN-<task>.md                                      L6a process logs
-    ├── rl_experiments/                                           rl-tuning-agent trial state
+    ├── rl-integration-generator/{rl-suite-spec.json, rl-integration.md, history.md}   rl-integration-generator outputs (receipts/metadata + L6a process log; the RL training tree stays at harbor/scripts/rl/ etc.)
+    ├── rl_experiments/{sweeps,tunes}/<id>/                       sweep + tune workspaces (canonical root)
     ├── create-task/                                            /harbor:task-create workspace
     │   ├── task-implementation.md                                family guide (benchmark-generator output)
     │   └── <slug>/                                               per-task workspace, one folder per /task-create run

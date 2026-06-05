@@ -112,7 +112,7 @@ If `<task_dir>/reward-history.md` does NOT exist, render it from the template (h
 
 If `<task_dir>/memories.jsonl` does NOT exist, `touch` it.
 
-**Task-library search (CREATE branch, once per tune).** Before the first iteration, run the protocol in `${CLAUDE_PLUGIN_ROOT}/references/task-library-search.md`: classify the task's embodiment, grep `experiences/task-library/<folder>/` for the 1–3 most relevant prior specs, and stash their abs paths as `library_refs` in `tune-state.json`. These seed every iteration's reward-generator with proven §6 reward designs (term ladder / composer / gating) from similar tasks. On RESUME, reuse the stored `library_refs` (don't re-search). `library_refs = []` when the library has no match — never block.
+**Task-library search (CREATE branch, once per tune).** Before the first iteration, run the protocol in `${CLAUDE_PLUGIN_ROOT}/references/task-library-search.md`: classify the task's embodiment, grep `experiences/task-library/<folder>/` for the 1–3 most relevant prior specs, and stash their abs paths as `library_refs` in `tune-state.json`. **Adapt-first is binding** (protocol Step 4): when a match exists, iteration 0's reward-generator takes the best match's §6 as the BASE reward and applies the minimal modification for the new task — pure de-novo reward design only when `library_refs = []` (no relevant task in the library). The iter-0 section of `reward-history.md` must open with the **Adaptation delta** block (base spec, kept-as-is, enumerated changes + why); later iterations document their deltas vs the previous iteration. On RESUME, reuse the stored `library_refs` (don't re-search). `library_refs = []` when the library has no match — never block.
 
 ### Step 2 — Iteration loop
 
@@ -140,7 +140,8 @@ Agent(reward-generator, prompt={
   task_id:             "<task>",
   description:         "<from spec.json>",
   iter:                <N>,
-  library_refs:        <library_refs from tune-state>,                    # task-library specs to mirror (§6); strongest on iter 0
+  library_refs:        <library_refs from tune-state>,                    # adapt-first BASE for §6 (minimal modification);
+                                                                          # binding on iter 0 when non-empty
   recent_findings:     <findings>,                                        # JSONL-derived, distilled
   prior_handoff:       <prior_handoff>,                                   # LATEST reward state (latest iter)
   prior_analyses:      <prior_analyses>,                                  # FULL analysis.md from last 3 iters

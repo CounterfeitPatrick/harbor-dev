@@ -127,4 +127,4 @@ For changes you want to keep, edit `harbor/configs/rl/<algo>.local.yaml` (create
 - `benchmark.md` — env sanity walk-through (random rollout + render); produced by `benchmark-generator`
 - `install.md` — minimum reproduction recipe; produced by `dependency-generator`
 - `history.md` — benchmark-generator run record
-- `harbor/run-log/NN-rl-integration.md` — rl-integration-generator per-run process log (Layer 6a)
+- `harbor/rl-integration-generator/history.md` — rl-integration-generator per-run process log (Layer 6a)

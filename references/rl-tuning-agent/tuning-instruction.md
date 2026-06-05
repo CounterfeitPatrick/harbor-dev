@@ -8,7 +8,7 @@ Read once at Phase 0 (the first `submit` for a cell). The 4 hard constraints bel
 
 1. Read this file + `tuning-experience.md` ONCE. Reference both from memory thereafter.
 2. Derive `wandb_project = f"tuning-{benchmark_name}-{task}-{algorithm}"` (read `benchmark_name` from `<repo>/harbor/benchmark-generator/benchmark-spec.json`). Verify W&B creds (`grep -q machine.api.wandb.ai ~/.netrc`); else surface `/harbor:wandb-setup` and stop.
-3. Mint per-cell directory `<tune_dir>/<wandb_project>/`. Standalone fallback: `<repo>/harbor/rl-experiment/standalone_<UTC-ts>/<wandb_project>/`.
+3. Mint per-cell directory `<tune_dir>/<wandb_project>/`. Standalone fallback: `<repo>/harbor/rl_experiments/tunes/standalone_<UTC-ts>/<wandb_project>/`.
 4. Render `<cell_dir>/tuning-history.md` from `${CLAUDE_PLUGIN_ROOT}/templates/rl-tuning-agent/tuning-history.md.template`.
 
 ### Phase 0.5 — Default-config baseline (iter 0)
@@ -123,7 +123,7 @@ score = w_se · normalized(sample_efficiency) + w_fr · normalized(final_return)
 ## Tune-directory layout
 
 ```
-<repo>/harbor/rl-experiment/<tune_id>/         ← orchestrator owns
+<repo>/harbor/rl_experiments/tunes/<tune_id>/  ← orchestrator owns
 ├── history.md, manifest.json, _findings.jsonl
 └── <wandb_project>/                             ← per-cell, name = wandb project
     ├── tuning-history.md, result.json, state.json

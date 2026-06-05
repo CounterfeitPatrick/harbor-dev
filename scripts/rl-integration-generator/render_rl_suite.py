@@ -23,7 +23,7 @@ Outputs (written into <repo>):
   harbor/configs/rl/{suite,ppo,sac,td3}.yaml + .parallel siblings   (shared across all sources)
   docker/docker-compose.rl.yaml                                       (best-effort; unused in uv mode)
   harbor/rl-integration-generator/rl-suite-spec.json
-  harbor/rl_experiments/{runs,best}/  + history.jsonl
+  harbor/rl_experiments/{sweeps,tunes}/
   harbor/utils/data_logger.py (only if missing)
   harbor/rl-integration-generator/rl-integration.md (Layer 6b user receipt)
 
@@ -262,11 +262,8 @@ def main():
     (repo / "harbor" / "rl-integration-generator" / "rl-suite-spec.json").write_text(spec_text)
 
     # ---- experiments dir scaffolding ----
-    (repo / "harbor" / "rl_experiments" / "runs").mkdir(parents=True, exist_ok=True)
-    (repo / "harbor" / "rl_experiments" / "best").mkdir(parents=True, exist_ok=True)
-    history = repo / "harbor" / "rl_experiments" / "history.jsonl"
-    if not history.exists():
-        history.write_text("")
+    (repo / "harbor" / "rl_experiments" / "sweeps").mkdir(parents=True, exist_ok=True)
+    (repo / "harbor" / "rl_experiments" / "tunes").mkdir(parents=True, exist_ok=True)
 
     # ---- <repo>/harbor/rl-integration-generator/rl-integration.md (Layer 6b receipt) ----
     integration_map = dict(common_map)

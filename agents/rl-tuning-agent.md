@@ -20,7 +20,7 @@ The procedural details (phases, slash-command mirroring) and the four hard const
 | `algorithm` | yes | One of `ppo`, `sac`, `td3` — must appear in `harbor/rl-integration-generator/rl-suite-spec.json:algorithms[]`. |
 | `task` | yes | One task ID — must appear in `harbor/benchmark-generator/benchmark-spec.json:tasks[].id`. |
 | `mode` | yes | `local` or `cluster`. |
-| `tune_dir` | no | Parent dir under which to mint the per-cell folder. When dispatched by `/harbor:rl-tune` it is `<repo>/harbor/rl-experiment/tune_<id>/`. Standalone fallback: `<repo>/harbor/rl-experiment/standalone_<UTC-ts>/`. |
+| `tune_dir` | no | Parent dir under which to mint the per-cell folder. When dispatched by `/harbor:rl-tune` it is `<repo>/harbor/rl_experiments/tunes/tune_<id>/`. Standalone fallback: `<repo>/harbor/rl_experiments/tunes/standalone_<UTC-ts>/`. |
 | `metric_weights` | no | Dict; default `{"sample_efficiency": 0.5, "final_return": 0.5}`. Both are min-max normalized to [0,1] across the iterations seen so far, then weighted. |
 | `stuck_threshold` | no | Int, default 3 — number of consecutive non-improving iterations that triggers stop. |
 | `max_iterations` | no | Int, default 10 — hard cap on total iterations (including iter_000 baseline). Whichever of `max_iterations` or `stuck_threshold` is hit first ends the loop. |
@@ -179,7 +179,7 @@ See `tuning-instruction.md` for the exact Bash incantations and finding-emission
 - **Do NOT** hand-edit `harbor/configs/rl/<algo>.parallel.yaml`. Every tuning candidate's overrides go into `<tune_dir>/<wandb_project>/iter_<NNN>/overrides.yaml` (or as Hydra overrides on the train-command); the only legal mutation of the suite config is via `/harbor:rl-add-trick`.
 - **Do NOT** stack two tricks before judging the first.
 - **Do NOT** dispatch other subagents.
-- **Do NOT** delete trial artifacts from earlier tunes — `harbor/rl-experiment/` is append-only.
+- **Do NOT** delete trial artifacts from earlier tunes — `harbor/rl_experiments/` is append-only.
 - **Do NOT** violate the four hard constraints in `tuning-instruction.md` (num_envs ratio, convergence required, wall-clock budget, post-run log scan).
 - **Do NOT** poll `metrics.jsonl`, tail slurm output, or otherwise inspect a running trial. In cluster mode the agent NEVER calls `squeue` or `sleep` — the orchestrator owns the wait. The agent's `score` phase is invoked only AFTER SLURM has already exited.
 - **Do NOT** estimate wall-clock time and "decide" to return early because waiting would be expensive. In cluster mode you are dispatched per-phase; you don't wait at all. In local mode each train.py call blocks the agent's Bash for the duration of training (which IS expensive but unavoidable for that mode).

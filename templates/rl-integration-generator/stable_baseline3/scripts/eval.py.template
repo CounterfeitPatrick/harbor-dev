@@ -9,7 +9,7 @@ shapes match what the policy was trained on).
 
 Example:
     python harbor/scripts/rl/stable_baseline3/eval.py algo=ppo task={{DEFAULT_TASK}} \\
-        checkpoint=harbor/rl_experiments/runs/ppo-{{DEFAULT_TASK_SLUG}}-1234/checkpoint.zip \\
+        checkpoint=harbor/outputs/<trial_id>/checkpoint.zip \\
         n_episodes=10
 """
 from __future__ import annotations

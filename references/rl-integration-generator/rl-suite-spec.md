@@ -1,13 +1,13 @@
 # RL Suite Spec
 
-Schema for `<repo>/.harbor/rl-integration-generator/rl-suite-spec.json` — written by `rl-integration-generator`, consumed by `rl-tuning-agent` and the RL training/tuning commands (`/harbor:rl-run`, `/harbor:rl-eval`, `/harbor:rl-sweep`, `/harbor:rl-tune`).
+Schema for `<repo>/harbor/rl-integration-generator/rl-suite-spec.json` — written by `rl-integration-generator`, consumed by `rl-tuning-agent` and the RL training/tuning commands (`/harbor:rl-run`, `/harbor:rl-eval`, `/harbor:rl-sweep`, `/harbor:rl-tune`).
 
 ## Lifecycle
 
 ```
-benchmark-generator  →  .harbor/benchmark-generator/benchmark-spec.json   (category, tasks, language, gpu_sim, …)
-rl-integration-gen   →  .harbor/rl-integration-generator/rl-suite-spec.json    (algorithm source, algorithms, W&B, scoring)
-rl-tuning-agent      →  .harbor/rl_experiments/      (per-trial records, best/<algo>/)
+benchmark-generator  →  harbor/benchmark-generator/benchmark-spec.json   (category, tasks, language, gpu_sim, …)
+rl-integration-gen   →  harbor/rl-integration-generator/rl-suite-spec.json    (algorithm source, algorithms, W&B, scoring)
+rl-tuning-agent      →  harbor/rl_experiments/tunes/<tune_id>/      (per-cell tune state)
 write_rl_report.py   →  rl_experiment_report.md         (end-of-run user-facing receipt)
 ```
 
@@ -47,7 +47,7 @@ write_rl_report.py   →  rl_experiment_report.md         (end-of-run user-facin
       "entity": null,
       "mode": "online | offline | disabled"
     },
-    "local_dir": ".harbor/rl_experiments"
+    "local_dir": "harbor/rl_experiments"
   },
   "selection_metric": {
     "primary": "success_rate",
@@ -88,7 +88,7 @@ write_rl_report.py   →  rl_experiment_report.md         (end-of-run user-facin
 
 ## Benchmark-spec extension
 
-`benchmark-generator` writes `.harbor/benchmark-generator/benchmark-spec.json`. To support the RL training/tuning surface, the spec must include:
+`benchmark-generator` writes `harbor/benchmark-generator/benchmark-spec.json`. To support the RL training/tuning surface, the spec must include:
 
 ```json
 {
