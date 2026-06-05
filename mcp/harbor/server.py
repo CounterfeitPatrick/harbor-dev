@@ -7,7 +7,7 @@ Single source of truth:
 
 The registry is **read-only** at runtime. Adding a new verified entry is a
 maintainer-only flow: hand-edit the YAML and drop a spec JSON in this plugin
-repo, then `git commit` + plugin release. Agents (env-generator /
+repo, then `git commit` + plugin release. Agents (dependency-generator /
 benchmark-generator) only produce repo-local artifacts; they cannot mutate
 this registry. See README.md "How to graduate to verified" for the curation
 flow.

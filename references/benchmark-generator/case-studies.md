@@ -1,6 +1,6 @@
 # Case Studies
 
-Annotated env-build / action / frame-extract snippets per reference benchmark. The setup recipes are owned by env-generator (rendered into `harbor/env-generator/setup_uv.sh`); benchmark-generator only picks the smoke patterns below.
+Annotated env-build / action / frame-extract snippets per reference benchmark. The setup recipes are owned by dependency-generator (rendered into `harbor/dependency-generator/setup_uv.sh`); benchmark-generator only picks the smoke patterns below.
 
 When generating against a new benchmark, pick the closest match and copy its **unique** snippets for the smoke scripts.
 
@@ -8,7 +8,7 @@ The training scaffolding (sb3 / dispatcher / configs / data_logger) referenced i
 
 ## ManiSkill (SAPIEN + Vulkan)
 
-ManiSkill needs system-level Vulkan ICD configuration (`/usr/share/vulkan/icd.d/nvidia_icd.json`). That is a host-system requirement, not something env-generator can configure from inside a venv — env-generator's pre-render check refuses to render `setup_uv.sh` when the `needs_vulkan_icd` quirk fires. To run ManiSkill, the user must already be on a host with the right Vulkan setup.
+ManiSkill needs system-level Vulkan ICD configuration (`/usr/share/vulkan/icd.d/nvidia_icd.json`). That is a host-system requirement, not something dependency-generator can configure from inside a venv — dependency-generator's pre-render check refuses to render `setup_uv.sh` when the `needs_vulkan_icd` quirk fires. To run ManiSkill, the user must already be on a host with the right Vulkan setup.
 
 Once the host is right, the smoke pattern is:
 
@@ -34,7 +34,7 @@ env = gym.make('PickCube-v1', render_mode='rgb_array', obs_mode='rgbd')
 
 ## loco-mujoco (uv + MuJoCo + JAX/MJX)
 
-Pure uv path — no special host setup needed beyond what env-generator's harbor-extras block installs.
+Pure uv path — no special host setup needed beyond what dependency-generator's harbor-extras block installs.
 
 **`run_random.py` substitutions** (use `RLFactory`, **not** `ImitationFactory` — datasets and license-gated):
 
@@ -62,6 +62,6 @@ Validation source for the L1 snippet: `tests/test_task_factories.py:55-57` (`tes
 | SAPIEN / Vulkan (host-prepared) | ManiSkill |
 | MuJoCo + JAX/MJX (or any pure-MuJoCo RL benchmark) | loco-mujoco |
 
-IsaacGym benchmarks are NOT supported in uv mode — env-generator refuses the `is_isaacgym` quirk because the toolchain (Python 3.8 + CUDA 11.8 + Ubuntu 20.04 in lockstep) cannot be honored on an arbitrary host. Run on a host that already matches.
+IsaacGym benchmarks are NOT supported in uv mode — dependency-generator refuses the `is_isaacgym` quirk because the toolchain (Python 3.8 + CUDA 11.8 + Ubuntu 20.04 in lockstep) cannot be honored on an arbitrary host. Run on a host that already matches.
 
 For non-IsaacGym MuJoCo-flavoured benchmarks (dm_control, gym MuJoCo envs, robosuite-derived), `loco-mujoco` is closest — adjust the env factory / action expression / `VIDEO_FRAME_EXTRACT` per the table at the top of `smoke-test-contract.md`.

@@ -5,11 +5,11 @@ Purpose
 -------
 Builds the benchmark env, runs N random-action steps, and verifies that
 `env.step(...)` returns a finite numeric reward on every step. This is the
-fastest end-to-end check that env-generator + benchmark-generator wired the
+fastest end-to-end check that dependency-generator + benchmark-generator wired the
 simulator correctly. NO trained policy is needed; NO video is produced.
 
 Used as the L1 smoke tier by benchmark-generator and as the day-1 sanity
-check a user can run after `bash harbor/env-generator/setup_uv.sh`.
+check a user can run after `bash harbor/dependency-generator/setup_uv.sh`.
 
 Example
 -------

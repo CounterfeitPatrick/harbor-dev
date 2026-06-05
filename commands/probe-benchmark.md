@@ -5,7 +5,7 @@ argument-hint: [repo=<path>] [canonical_task=<id>]
 
 # /harbor:probe-benchmark — Author `task-implementation.md`
 
-Inspect an already-set-up benchmark repo (env-generator + benchmark-generator Step 3.5/3.6 have run), detect its family, pick a canonical example task, and render `<repo>/harbor/create-task/task-implementation.md` from the template — the single shared file `/harbor:task-create` reads.
+Inspect an already-set-up benchmark repo (dependency-generator + benchmark-generator Step 3.5/3.6 have run), detect its family, pick a canonical example task, and render `<repo>/harbor/create-task/task-implementation.md` from the template — the single shared file `/harbor:task-create` reads.
 
 `/harbor:task-create` boots three agents (`task-generator` → `reward-generator` → `dr-generator`) that **do not re-scan the upstream repo** — they trust this doc, so getting it right is part of the probe contract.
 
@@ -21,7 +21,7 @@ Inspect an already-set-up benchmark repo (env-generator + benchmark-generator St
 ```bash
 test -f "<repo>/harbor/benchmark-generator/benchmark-spec.json"   || { echo "benchmark-spec.json missing — run benchmark-generator Step 3.5 first"; exit 1; }
 test -f "<repo>/harbor/benchmark-generator/task_overview.md"      || { echo "task_overview.md missing — run benchmark-generator Step 3.6 first"; exit 1; }
-test -f "<repo>/harbor/env-generator/probe.json"            || { echo "probe.json missing — run env-generator first"; exit 1; }
+test -f "<repo>/harbor/dependency-generator/probe.json"            || { echo "probe.json missing — run dependency-generator first"; exit 1; }
 test -x "<repo>/.venv/bin/python"               || { echo ".venv/ missing — run /harbor:env-install-uv first"; exit 1; }
 ```
 
@@ -79,7 +79,7 @@ test -x "<repo>/.venv/bin/python"               || { echo ".venv/ missing — ru
 
 - Cannot detect family → ask user (one `AskUserQuestion`).
 - No canonical example smoke-passed → emit a stub doc with `BENCHMARK_FAMILY: <unknown>` and report `task-implementation: skipped (no smoke-passing canonical example)`; future `/harbor:task-create` will refuse to run.
-- §1 smoke fails on the canonical example → that means env-generator / benchmark-generator already had a problem; surface up rather than fabricating expected output.
+- §1 smoke fails on the canonical example → that means dependency-generator / benchmark-generator already had a problem; surface up rather than fabricating expected output.
 
 ## Constraints
 

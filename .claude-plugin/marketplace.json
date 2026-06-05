@@ -12,7 +12,7 @@
     {
       "name": "harbor",
       "source": "./",
-      "description": "Set up Python GPU repos with uv and track verified benchmark entries. Includes env-generator + role-specific generator subagents, MCP registry server, and lifecycle hooks.",
+      "description": "Set up Python GPU repos with uv and track verified benchmark entries. Includes dependency-generator + role-specific generator subagents, MCP registry server, and lifecycle hooks.",
       "version": "0.1.0",
       "author": {
         "name": "yufengjin"

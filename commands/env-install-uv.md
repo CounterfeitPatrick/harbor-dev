@@ -5,13 +5,13 @@ argument-hint: "[path]"
 
 # /harbor:env-install-uv — Environment Generator (uv only)
 
-The user has invoked `/harbor:env-install-uv` with an optional `[path]` argument. Resolve it and dispatch the env-generator agent.
+The user has invoked `/harbor:env-install-uv` with an optional `[path]` argument. Resolve it and dispatch the dependency-generator agent.
 
 ## Dispatch table
 
 | User input | Route to |
 |---|---|
-| `/harbor:env-install-uv` | dispatch env-generator agent with `repo_path=$(pwd)` |
+| `/harbor:env-install-uv` | dispatch dependency-generator agent with `repo_path=$(pwd)` |
 | `/harbor:env-install-uv <path>` | dispatch with `repo_path=<absolute_path>` |
 
 ---
@@ -30,9 +30,9 @@ The user has invoked `/harbor:env-install-uv` with an optional `[path]` argument
    ```
    If none of these exist, ask the user to confirm `<repo_path>` is the right repo (Python project missing).
 
-3. Dispatch the env-generator agent with the resolved inputs:
+3. Dispatch the dependency-generator agent with the resolved inputs:
    ```
-   Skill('env-generator')
+   Skill('dependency-generator')
      repo_path = <absolute>
      force?    = false
    ```
@@ -45,4 +45,4 @@ The user has invoked `/harbor:env-install-uv` with an optional `[path]` argument
 - **Dispatch `benchmark-generator` only after a clean build + smoke.** If the env didn't come up, stop and report instead.
 - The agent produces these artifacts in `<repo>/`:
   - `<repo>/.venv/` — the actual venv (created by `uv venv` + `uv pip install`).
-  - `<repo>/harbor/env-generator/{setup_uv.sh, install_plan.json, install.md, probe.json}` — re-runnable setup script + the install receipt + metadata.
+  - `<repo>/harbor/dependency-generator/{setup_uv.sh, install_plan.json, install.md, probe.json}` — re-runnable setup script + the install receipt + metadata.

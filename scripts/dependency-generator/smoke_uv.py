@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""env-generator smoke runner.
+"""dependency-generator smoke runner.
 
 Runs against a host-side venv at `<repo>/.venv`. Intended to be called as
-Step 6 of the env-generator agent.
+Step 6 of the dependency-generator agent.
 
 Phases (controlled by CLI flags):
   --check-prereqs   verify uv + python3 are on PATH (host)
-  --build           run `bash <repo>/harbor/env-generator/setup_uv.sh` to create + populate .venv
+  --build           run `bash <repo>/harbor/dependency-generator/setup_uv.sh` to create + populate .venv
   (always)          Tier 1 (nvidia-smi + torch.cuda) and Tier 2 (project imports)
                     via `<repo>/.venv/bin/python -c "..."`.
 
@@ -51,7 +51,7 @@ def check_prereqs() -> tuple[str, str]:
 
 
 def build(repo: Path) -> tuple[str, str]:
-    setup = repo / "harbor" / "env-generator" / "setup_uv.sh"
+    setup = repo / "harbor" / "dependency-generator" / "setup_uv.sh"
     if not setup.is_file():
         return ("fail", f"{setup} not found — run render_uv.py first")
     rc, out, err = _run(["bash", str(setup)], cwd=repo, timeout=1800)

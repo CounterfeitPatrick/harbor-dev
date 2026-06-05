@@ -1,6 +1,6 @@
 # InstallationPlan schema
 
-`<repo>/harbor/env-generator/install_plan.json` is the agent's structured digest of every install-relevant instruction it found in `README.md` and friends. The renderer (`render_uv.py`) consumes it together with `probe.json` to emit the install block in `setup_uv.sh`. If `install_plan.json` is missing the renderer falls back to a heuristic install (uv.lock present → `uv sync --frozen`; else `uv pip install -r requirements.txt` and / or `uv pip install -e .`).
+`<repo>/harbor/dependency-generator/install_plan.json` is the agent's structured digest of every install-relevant instruction it found in `README.md` and friends. The renderer (`render_uv.py`) consumes it together with `probe.json` to emit the install block in `setup_uv.sh`. If `install_plan.json` is missing the renderer falls back to a heuristic install (uv.lock present → `uv sync --frozen`; else `uv pip install -r requirements.txt` and / or `uv pip install -e .`).
 
 ## Top-level fields
 
@@ -64,8 +64,8 @@ Convenience wrapper. Equivalent to two `installation_steps`: a `git_clone` follo
 | `has_flash_attn` | `uv_pip_install --no-build-isolation flash-attn==<version-from-deps>` |
 | `needs_render_libs` | `apt_install libegl1 libosmesa6 libgl1 libglib2.0-0` (emitted as a comment; user runs `sudo apt install ...` manually) |
 | `needs_devel_base` | warns the user that the host's CUDA toolkit (`nvcc`) must be present; no auto-install |
-| `needs_vulkan_icd` | NOT supported in uv mode — env-generator aborts with a clear error |
-| `is_isaacgym` | NOT supported in uv mode — env-generator aborts with a clear error |
+| `needs_vulkan_icd` | NOT supported in uv mode — dependency-generator aborts with a clear error |
+| `is_isaacgym` | NOT supported in uv mode — dependency-generator aborts with a clear error |
 | `has_third_party_sim` | (informational; extractor should emit a `git_clone` step pinned by commit) |
 
 ## Worked example 1 — pure uv.lock simple repo

@@ -31,11 +31,11 @@ export WANDB_API_KEY=${WANDB_API_KEY:-{{WANDB_API_KEY}}}
 REPO_ROOT="$HOME/code/agentic/{{REPO_NAME}}"
 cd "$REPO_ROOT"
 
-# Activate the uv venv created by `bash harbor/env-generator/setup_uv.sh`.
+# Activate the uv venv created by `bash harbor/dependency-generator/setup_uv.sh`.
 if [ ! -f .venv/bin/activate ]; then
     echo "[ERROR] .venv not found at $REPO_ROOT/.venv" >&2
     echo "        Run this once on the cluster before sbatch:" >&2
-    echo "          cd $REPO_ROOT && bash harbor/env-generator/setup_uv.sh" >&2
+    echo "          cd $REPO_ROOT && bash harbor/dependency-generator/setup_uv.sh" >&2
     exit 1
 fi
 source .venv/bin/activate

@@ -8,8 +8,8 @@ Team-internal scope.
 1. Generated `install.md` / `history.md` / `benchmark.md` MUST be English-only — regardless of chat language.
 2. The registry stores source URL + commit hash for verified benchmarks (no docker image tags). Reproduction is via `/harbor:env-install-uv` against the source repo.
 3. Registry access is via MCP tools (`mcp__plugin_harbor_harbor__*`). Never `cat registry.yaml` directly.
-4. Subagents do not nest-dispatch. Main thread orchestrates `env-generator` → `benchmark-generator`.
-5. **All plugin-generated files live under `<repo>/harbor/`** — except `scripts/_<family>_env.py` / `scripts/run_random.py` / `scripts/render_random.py` (user-facing smoke entry points). Each generator agent writes its receipts + metadata into **its own subdir**: `harbor/env-generator/{setup_uv.sh, probe.json, install_plan.json, install.md}`, `harbor/benchmark-generator/{benchmark-spec.json, task_overview.md, .task_list.json, history.md, benchmark.md}`, `harbor/rl-integration-generator/{rl-suite-spec.json, rl-integration.md}`. The shared RL training tree stays at the top level: training scripts at `<repo>/harbor/scripts/rl/`, configs at `<repo>/harbor/configs/rl/`, training output at `<repo>/harbor/outputs/`, the DataLogger at `<repo>/harbor/utils/data_logger.py`; run logs at `<repo>/harbor/run-log/*.md`; the create-task workspace at `<repo>/harbor/create-task/`. The folder name is `harbor/` (no dot) so it doubles as a valid Python package — imports like `from utils.data_logger import DataLogger` resolve against `<repo>/harbor/` after `sys.path.insert(0, HARBOR_ROOT)`.
+4. Subagents do not nest-dispatch. Main thread orchestrates `dependency-generator` → `benchmark-generator`.
+5. **All plugin-generated files live under `<repo>/harbor/`** — except `scripts/_<family>_env.py` / `scripts/run_random.py` / `scripts/render_random.py` (user-facing smoke entry points). Each generator agent writes its receipts + metadata into **its own subdir**: `harbor/dependency-generator/{setup_uv.sh, probe.json, install_plan.json, install.md}`, `harbor/benchmark-generator/{benchmark-spec.json, task_overview.md, .task_list.json, history.md, benchmark.md}`, `harbor/rl-integration-generator/{rl-suite-spec.json, rl-integration.md}`. The shared RL training tree stays at the top level: training scripts at `<repo>/harbor/scripts/rl/`, configs at `<repo>/harbor/configs/rl/`, training output at `<repo>/harbor/outputs/`, the DataLogger at `<repo>/harbor/utils/data_logger.py`; run logs at `<repo>/harbor/run-log/*.md`; the create-task workspace at `<repo>/harbor/create-task/`. The folder name is `harbor/` (no dot) so it doubles as a valid Python package — imports like `from utils.data_logger import DataLogger` resolve against `<repo>/harbor/` after `sys.path.insert(0, HARBOR_ROOT)`.
 6. Code style across main thread AND all subagents:
    - **Think before coding** — state assumptions explicitly; if uncertain, ask. Don't pick silently between alternatives.
    - **Simplicity first** — minimum code that solves the problem; no speculative features, abstractions, configurability, or error handling for impossible scenarios.
@@ -62,12 +62,12 @@ Commands are grouped by area via filename prefix (Claude Code commands have no t
 - `commands/help.md` — `/harbor:help` plugin overview
 
 **env — environment setup**
-- `commands/env-install-uv.md` — `/harbor:env-install-uv [path]` — uv-only env setup; renders `<repo>/harbor/env-generator/setup_uv.sh` and creates `<repo>/.venv/` (dispatches the `env-generator` subagent)
+- `commands/env-install-uv.md` — `/harbor:env-install-uv [path]` — uv-only env setup; renders `<repo>/harbor/dependency-generator/setup_uv.sh` and creates `<repo>/.venv/` (dispatches the `dependency-generator` subagent)
 
 **task — author / probe / inspect tasks**
 - `commands/probe-benchmark.md` — `/harbor:probe-benchmark [repo=<path>] [canonical_task=<id>]` — author `<repo>/harbor/create-task/task-implementation.md` (Step 3.7 of `benchmark-generator`, extracted so it can be re-run standalone or delegated from the agent)
 - `commands/probe-task.md` — `/harbor:probe-task task=<id> [repo=<path>] [output=<path>]` — emit a per-task `<task-slug>-implementation.md` capturing every design choice (scene / actions / reset / termination / observation / reward / DR) with verbatim code. **Runs in a subagent** (context-saving). Feed back into `/harbor:task-create from=<path>` to clone the task identically into another benchmark.
-- `commands/task-create.md` — `/harbor:task-create name=<TaskID> (description="..." | from=<spec.md>) [sections=<list>] [assets=<paths>]` — author a NEW task in the current benchmark repo, or reproduce one from a `/harbor:probe-task` spec. Pre-flight requires `<repo>/harbor/create-task/task-implementation.md` to exist (created by `benchmark-generator` Step 3.7). Dispatches `task-generator` (§1–§5) → `reward-generator` (§6) → `dr-generator` (§7) sequentially with per-phase smoke gates.
+- `commands/task-create.md` — `/harbor:task-create name=<TaskID> (description="..." | from=<spec.md>) [sections=<list>] [assets=<paths>]` — author a NEW task in the current benchmark repo, or reproduce one from a `/harbor:probe-task` spec. Pre-flight checks the `dependency-generator` → `benchmark-generator` → `rl-integration-generator` chain in sequence and dispatches any missing stage first (rl-integration defaults to `custom_torch` unless the user specifies an algorithm source). Then dispatches `task-generator` (§1–§5) → `reward-generator` (§6) → `dr-generator` (§7) sequentially with per-phase smoke gates.
 - `commands/task-list.md` — `/harbor:task-list` — list/inspect tasks in a benchmark; defaults to cwd-local `harbor/benchmark-generator/benchmark-spec.json`, falls back to registry via `list_tasks` MCP tool
 
 **reward — reward engineering**
@@ -92,7 +92,7 @@ Commands are grouped by area via filename prefix (Claude Code commands have no t
 
 ### L3 — Subagents (heavy, multi-step; main thread dispatches; no nesting)
 
-- `agents/env-generator.md` — entry point for any "set up env for \<repo\>" task; renders `<repo>/harbor/env-generator/setup_uv.sh`, creates `<repo>/.venv/`, runs the import smoke
+- `agents/dependency-generator.md` — entry point for any "set up env for \<repo\>" task; renders `<repo>/harbor/dependency-generator/setup_uv.sh`, creates `<repo>/.venv/`, runs the import smoke
 - `agents/benchmark-generator.md` — env-sanity layer: random rollout + render-to-MP4 + 2-tier smoke (L1 random / L2 render). Always treats the repo as RL — no IL detection. Does NOT generate train/eval scripts (rl-integration-generator owns those).
 - `agents/rl-integration-generator.md` — RL experiment scaffold: configs, train/eval/render/visualize scripts, algorithm adapter, smoke per algorithm
 - `agents/rl-tuning-agent.md` — algorithm-by-algorithm hyperparameter tuning loop (train→eval→render→analyze→suggest)
@@ -104,7 +104,7 @@ Commands are grouped by area via filename prefix (Claude Code commands have no t
 
 ```
 scripts/
-  env-generator/      render_uv.py, smoke_uv.py
+  dependency-generator/      render_uv.py, smoke_uv.py
   benchmark-generator/ capture_spec.py
   rl-integration-generator/ render_rl_suite.py, render_data_logger.py, discover_rl_tasks.py,
                       discover_algorithms.py, validate_rl_suite.py
@@ -121,7 +121,7 @@ MCP functions (read-only): `list_benchmarks`, `lookup_benchmark`, `get_benchmark
 
 ```
 templates/
-  env-generator/         install.md.template
+  dependency-generator/         install.md.template
   benchmark-generator/   benchmark.md, history.md, task_overview.md,
                          task-implementation.md (read by /harbor:task-create),
                          scripts/{run_random, render_random}.py.template
@@ -165,7 +165,7 @@ templates/
 
 references/
   task-library-search.md  cross-cutting: search the task-library + experience ledger for a similar prior task BEFORE designing (read by task-generator, reward-generator, /harbor:task-create, /harbor:reward-tune)
-  env-generator/         decision-protocol, install-plan-schema
+  dependency-generator/         decision-protocol, install-plan-schema
   benchmark-generator/   decision-matrix, smoke-test-contract,
                          receipt-generation, case-studies,
                          task-implementation-contract (rules for the
@@ -202,19 +202,19 @@ mcp/harbor/specs/      benchmarks/<name>.json
 
 ### L6b — Receipts (end-of-run user summary)
 
-`<repo>/harbor/env-generator/install.md`, `<repo>/harbor/benchmark-generator/history.md`, `<repo>/harbor/benchmark-generator/benchmark.md`, `<repo>/harbor/rl-integration-generator/rl-integration.md` — generated by the matching subagent at the end of a run. English only (constraint #1).
+`<repo>/harbor/dependency-generator/install.md`, `<repo>/harbor/benchmark-generator/history.md`, `<repo>/harbor/benchmark-generator/benchmark.md`, `<repo>/harbor/rl-integration-generator/rl-integration.md` — generated by the matching subagent at the end of a run. English only (constraint #1).
 
 ### Workspace layout (one root for everything plugin-generated)
 
 ```
 <repo>/                                user repo root, untouched except for the carve-outs below
-├── .venv/                             uv-managed venv (created by env-generator's setup_uv.sh)
+├── .venv/                             uv-managed venv (created by dependency-generator's setup_uv.sh)
 ├── scripts/
 │   ├── _<family>_env.py               kept at root — benchmark-generator's smoke-helper convention
 │   ├── run_random.py                  kept at root — L1 smoke entry point
 │   └── render_random.py               kept at root — L2 smoke entry point
 └── harbor/                          single root for plugin-generated artifacts
-    ├── env-generator/{setup_uv.sh, probe.json, install_plan.json, install.md}   env-generator outputs
+    ├── dependency-generator/{setup_uv.sh, probe.json, install_plan.json, install.md}   dependency-generator outputs
     ├── benchmark-generator/{benchmark-spec.json, task_overview.md, .task_list.json, history.md, benchmark.md}   benchmark-generator outputs
     ├── rl-integration-generator/{rl-suite-spec.json, rl-integration.md}   rl-integration-generator outputs (receipts/metadata; the RL training tree stays at harbor/scripts/rl/ etc.)
     ├── run-log/NN-<task>.md                                      L6a process logs

@@ -1,14 +1,14 @@
 ---
 name: rl-integration-generator
 description: |
-  Renders the RL training/eval/render scaffold (per-impl harbor/scripts/rl/<slug>/{train,eval,render,env_wrapper}.py + configs + rl-suite-spec + rl-integration.md receipt) into a benchmark repo whose base env (`<repo>/.venv/`) + benchmark-spec.json already exist. Three algorithm sources: `custom_torch` (PQL/DDiffPG-style self-contained tree, no pip-install of pql/bidex/isaacgym), `stable_baseline3` (SB3-backed), `local_implementation` (user-provided package path or github URL — thin shims). PREREQUISITE: env-generator set up the env AND benchmark-generator wrote `<repo>/harbor/benchmark-generator/benchmark-spec.json` with a non-empty `tasks[]`.
+  Renders the RL training/eval/render scaffold (per-impl harbor/scripts/rl/<slug>/{train,eval,render,env_wrapper}.py + configs + rl-suite-spec + rl-integration.md receipt) into a benchmark repo whose base env (`<repo>/.venv/`) + benchmark-spec.json already exist. Three algorithm sources: `custom_torch` (PQL/DDiffPG-style self-contained tree, no pip-install of pql/bidex/isaacgym), `stable_baseline3` (SB3-backed), `local_implementation` (user-provided package path or github URL — thin shims). PREREQUISITE: dependency-generator set up the env AND benchmark-generator wrote `<repo>/harbor/benchmark-generator/benchmark-spec.json` with a non-empty `tasks[]`.
 tools: [Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion]
 model: opus
 ---
 
 # RL Integration Generator
 
-**Role.** Take a benchmark repo whose base venv (`<repo>/.venv/`) was built by `env-generator` and whose `harbor/benchmark-generator/benchmark-spec.json` was produced by `benchmark-generator`. Drop in the RL training layer at `harbor/scripts/rl/<algorithm_slug>/` plus shared `harbor/configs/rl/`, `harbor/rl-integration-generator/rl-suite-spec.json`, and the `<repo>/harbor/rl-integration-generator/rl-integration.md` user receipt. Then run a per-algorithm T1/T2/T3 smoke (train → eval → render).
+**Role.** Take a benchmark repo whose base venv (`<repo>/.venv/`) was built by `dependency-generator` and whose `harbor/benchmark-generator/benchmark-spec.json` was produced by `benchmark-generator`. Drop in the RL training layer at `harbor/scripts/rl/<algorithm_slug>/` plus shared `harbor/configs/rl/`, `harbor/rl-integration-generator/rl-suite-spec.json`, and the `<repo>/harbor/rl-integration-generator/rl-integration.md` user receipt. Then run a per-algorithm T1/T2/T3 smoke (train → eval → render).
 
 It ships scripts (and for `custom_torch`, ~14 self-contained algorithm files), not models. Single-trial training is invoked via `/harbor:rl-run`; grid hyperparameter tuning via `/harbor:rl-tune`; multi-trial sweeps via `/harbor:rl-sweep`.
 
@@ -65,7 +65,7 @@ All training artifacts (checkpoint, TB events, metrics.jsonl, render.mp4, curve 
 - **Do NOT** run if `harbor/benchmark-generator/benchmark-spec.json` is missing or `tasks[]` is empty. Surface and stop. (`category` is always `"rl"` now — no need to check.)
 - **Do NOT** `pip install pql` / `bidex` / `isaacgym`. The `custom_torch` source ships a self-contained ~14-file algorithm tree under `harbor/scripts/rl/custom_torch/` that uses only torch + omegaconf + numpy.
 - **Do NOT** vendor the reference repos (`/home/steven/code/pql`, `/home/steven/code/ddiffpg`). They were templates for the rendered code, not runtime dependencies.
-- **Do NOT** edit the base env (`<repo>/.venv/` or `<repo>/harbor/env-generator/setup_uv.sh`) directly. If a missing pip dep is the root cause of a smoke failure, append the install line to `setup_uv.sh` AND run the equivalent `uv pip install` against the existing venv (no full rebuild needed).
+- **Do NOT** edit the base env (`<repo>/.venv/` or `<repo>/harbor/dependency-generator/setup_uv.sh`) directly. If a missing pip dep is the root cause of a smoke failure, append the install line to `setup_uv.sh` AND run the equivalent `uv pip install` against the existing venv (no full rebuild needed).
 - **Do NOT** rewrite `<repo>/harbor/utils/data_logger.py` if it already exists. Only call `scripts/rl-integration-generator/render_data_logger.py` when the file is missing.
 - **Do NOT** write into `mcp/harbor/data/*.yaml`. Registry mutation is out of scope here (use `scripts/registry/registry_submit.py` directly).
 - **Do NOT** overwrite `<repo>/harbor/configs/rl/<algo>.local.yaml` (those are user overrides — only render the canonical templates).
@@ -90,8 +90,8 @@ Read the failing tool's stderr + the rendered file, form a focused hypothesis, f
 ### Phase 0 — Pre-flight
 
 ```bash
-test -x "<repo>/.venv/bin/python" || { echo "missing <repo>/.venv — run env-generator first"; exit 1; }
-test -f "<repo>/harbor/env-generator/setup_uv.sh" || { echo "missing harbor/env-generator/setup_uv.sh — run env-generator first"; exit 1; }
+test -x "<repo>/.venv/bin/python" || { echo "missing <repo>/.venv — run dependency-generator first"; exit 1; }
+test -f "<repo>/harbor/dependency-generator/setup_uv.sh" || { echo "missing harbor/dependency-generator/setup_uv.sh — run dependency-generator first"; exit 1; }
 test -f "<repo>/harbor/benchmark-generator/benchmark-spec.json" || { echo "missing benchmark-spec.json"; exit 1; }
 python3 -c "
 import json
@@ -156,14 +156,14 @@ Plus shared (top-level) outputs: `harbor/configs/rl/{ppo,sac,td3}{.parallel}.yam
 
 ### Phase 2 — Extend setup_uv.sh
 
-env-generator's `setup_uv.sh` already installs the harbor extras (`wandb`, `tensorboardX`, `imageio[ffmpeg]`, `matplotlib`, `hydra-core`, `omegaconf`, `stable_baselines3[extra]`) — those are baked in at env-setup time so this phase is a near-no-op for `stable_baseline3` / `custom_torch`. The only source that still needs a setup_uv.sh extension is `local_implementation`, which pulls in the user's package.
+dependency-generator's `setup_uv.sh` already installs the harbor extras (`wandb`, `tensorboardX`, `imageio[ffmpeg]`, `matplotlib`, `hydra-core`, `omegaconf`, `stable_baselines3[extra]`) — those are baked in at env-setup time so this phase is a near-no-op for `stable_baseline3` / `custom_torch`. The only source that still needs a setup_uv.sh extension is `local_implementation`, which pulls in the user's package.
 
-Append (idempotent) the source-specific line below to `<repo>/harbor/env-generator/setup_uv.sh`, just before the final `echo "[setup_uv] Done. ..."` line. Then run the equivalent `uv pip install --python <repo>/.venv/bin/python ...` against the existing venv so this run can use the new packages without re-creating the venv from scratch:
+Append (idempotent) the source-specific line below to `<repo>/harbor/dependency-generator/setup_uv.sh`, just before the final `echo "[setup_uv] Done. ..."` line. Then run the equivalent `uv pip install --python <repo>/.venv/bin/python ...` against the existing venv so this run can use the new packages without re-creating the venv from scratch:
 
 | Source | Append to setup_uv.sh |
 |---|---|
-| `stable_baseline3` | (no-op — env-generator already installs `stable_baselines3[extra]`) |
-| `custom_torch` | (no-op — env-generator already installs everything custom_torch needs) |
+| `stable_baseline3` | (no-op — dependency-generator already installs `stable_baselines3[extra]`) |
+| `custom_torch` | (no-op — dependency-generator already installs everything custom_torch needs) |
 | `local_implementation` (url) | `uv pip install "git+<url>"` |
 | `local_implementation` (path) | `uv pip install -e <abs path>` |
 
@@ -298,14 +298,14 @@ These tiers MUST pass. When a tier fails, do **not** record FAIL and move on —
    - `ImportError: <module>` → missing pip dep; append the install line to setup_uv.sh AND `uv pip install --python <repo>/.venv/bin/python <module>` against the existing venv. OR add `sys.path` insert in the rendered script when the dep is in-tree.
    - `AttributeError: 'DictConfig' object has no attribute 'X'` → the algo cfg synthesis in train.py is missing key X; extend it
    - `RuntimeError: CUDA out of memory` → reduce `num_envs` or `batch_size` for the smoke (Hydra override at retry time, NOT a config edit)
-   - `[plot] matplotlib not installed` (T4) → env-generator's harbor-extras block was somehow skipped; append `matplotlib` to setup_uv.sh + `uv pip install matplotlib`
+   - `[plot] matplotlib not installed` (T4) → dependency-generator's harbor-extras block was somehow skipped; append `matplotlib` to setup_uv.sh + `uv pip install matplotlib`
    - `[plot] wrote 0/N curves` (T4) → upstream — bug in `_plot_curves`; patch the rendered train.py
    - T5 `events.out.tfevents.*` missing → DataLogger TB writer didn't initialize; check `<repo>/harbor/utils/data_logger.py` constructor args
 
 3. **Apply the fix** with `Edit` / `Bash`:
    - **Rendered file fix** (in `<repo>/harbor/scripts/rl/<slug>/...` or `<repo>/harbor/utils/data_logger.py`) — this run is unblocked. Append `{path, change_summary}` to `diagnostics_applied`.
    - **Template-level fix** (per the auto-update plugin memory directive) — also patch `${CLAUDE_PLUGIN_ROOT}/templates/rl-integration-generator/<source>/scripts/<file>.py.template` so future runs don't hit the same bug. Note in `diagnostics_applied` with `template:` prefix.
-   - **Venv fix** — append the missing pip line to `<repo>/harbor/env-generator/setup_uv.sh` + `uv pip install --python <repo>/.venv/bin/python <pkg>`. Idempotent.
+   - **Venv fix** — append the missing pip line to `<repo>/harbor/dependency-generator/setup_uv.sh` + `uv pip install --python <repo>/.venv/bin/python <pkg>`. Idempotent.
 
 4. **Retry the failed tier** with the same command (or with a Hydra override if step 2 suggested one). If the tier passes → mark `pass` and continue with the cascade (e.g. T2 retry pass → continue to T3). If still fails → go back to step 1 with the NEW stderr from this retry; form a *different* hypothesis (the obvious one is now ruled out) and iterate.
 
@@ -317,14 +317,14 @@ Never silently rewrite user files at `<repo>/harbor/configs/rl/<algo>.local.yaml
 
 | Tier | Symptom | Likely cause | Fix |
 |---|---|---|---|
-| T1 | `ImportError: stable_baselines3` | env-generator's harbor-extras block was skipped | re-run env-generator OR `uv pip install stable_baselines3[extra]` against the venv |
-| T1 | `ImportError: hydra` | env-generator's harbor-extras block was skipped | re-run env-generator OR `uv pip install hydra-core omegaconf` against the venv |
+| T1 | `ImportError: stable_baselines3` | dependency-generator's harbor-extras block was skipped | re-run dependency-generator OR `uv pip install stable_baselines3[extra]` against the venv |
+| T1 | `ImportError: hydra` | dependency-generator's harbor-extras block was skipped | re-run dependency-generator OR `uv pip install hydra-core omegaconf` against the venv |
 | T1 | `AttributeError: 'DictConfig' object has no attribute 'algo'` | unified yaml didn't trigger algo-cfg synthesis | extend the synthesis block in `train.py` (rendered + template) |
 | T1 | `CUDA out of memory` | smoke `num_envs` too high for this GPU | retry with `num_envs=2 batch_size=64` Hydra overrides |
 | T1 | `KeyError: <task_id>` | task wasn't passed correctly | check `task=` Hydra override; verify task is in benchmark-spec.json |
 | T2 | checkpoint not found | T1's `saved checkpoint to ...` print pattern changed | re-grep T1 stdout with the new pattern |
 | T2 | `algorithm mismatch` on load | Hydra `algo=` doesn't match T1 | use the same algo string for both tiers |
-| T4 | `[plot] matplotlib not installed` | env-generator's harbor-extras block was skipped | re-run env-generator OR `uv pip install matplotlib` against the venv |
+| T4 | `[plot] matplotlib not installed` | dependency-generator's harbor-extras block was skipped | re-run dependency-generator OR `uv pip install matplotlib` against the venv |
 | T4 | `[plot] wrote 0/N curves` | `_plot_curves` filter too strict (e.g. `len < 2`) | patch the function in rendered train.py + template |
 | T5 | `TB events=0` | DataLogger TB writer init failed | check `tb_dir` permission; check `log_tb=True` was passed |
 | T5 | `jsonl lines=0` | `metrics_log.append` path not hit | verify the callback / record helper is wired into the train loop |

@@ -51,7 +51,7 @@ def main():
 
     venv_python = repo / ".venv" / "bin" / "python"
     if not venv_python.exists():
-        print(f"[error] {venv_python} missing — run env-generator first.", file=sys.stderr)
+        print(f"[error] {venv_python} missing — run dependency-generator first.", file=sys.stderr)
         sys.exit(2)
 
     def wrap(cmd: list[str]) -> list[str]:

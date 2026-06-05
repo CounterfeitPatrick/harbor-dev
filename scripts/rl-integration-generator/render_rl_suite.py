@@ -138,11 +138,11 @@ def read_gpu_sim(repo: Path) -> bool:
 def main():
     args = parse_args()
     repo: Path = args.repo.resolve()
-    # env-generator must have produced <repo>/.venv + harbor/env-generator/setup_uv.sh.
-    has_uv = (repo / ".venv" / "bin" / "python").exists() and (repo / "harbor" / "env-generator" / "setup_uv.sh").exists()
+    # dependency-generator must have produced <repo>/.venv + harbor/dependency-generator/setup_uv.sh.
+    has_uv = (repo / ".venv" / "bin" / "python").exists() and (repo / "harbor" / "dependency-generator" / "setup_uv.sh").exists()
     if not has_uv:
-        print(f"[error] {repo} is missing .venv or harbor/env-generator/setup_uv.sh — "
-              "run env-generator + benchmark-generator first.", file=sys.stderr)
+        print(f"[error] {repo} is missing .venv or harbor/dependency-generator/setup_uv.sh — "
+              "run dependency-generator + benchmark-generator first.", file=sys.stderr)
         sys.exit(2)
 
     source = normalize_source(args.algorithm_source)

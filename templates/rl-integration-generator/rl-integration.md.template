@@ -16,7 +16,7 @@ This guide picks up where `benchmark.md` leaves off — that file covers the env
 
 ## 1. Activate the venv
 
-env-generator already created `<repo>/.venv/` with everything the RL scripts need (`stable_baselines3[extra]`, `wandb`, `tensorboardX`, `imageio[ffmpeg]`, `matplotlib`, `hydra-core`, `omegaconf`). All you have to do is activate it:
+dependency-generator already created `<repo>/.venv/` with everything the RL scripts need (`stable_baselines3[extra]`, `wandb`, `tensorboardX`, `imageio[ffmpeg]`, `matplotlib`, `hydra-core`, `omegaconf`). All you have to do is activate it:
 
 ```bash
 source .venv/bin/activate
@@ -125,6 +125,6 @@ For changes you want to keep, edit `harbor/configs/rl/<algo>.local.yaml` (create
 
 - This guide (`rl-integration.md`) — train / eval / render / override hyperparameters
 - `benchmark.md` — env sanity walk-through (random rollout + render); produced by `benchmark-generator`
-- `install.md` — minimum reproduction recipe; produced by `env-generator`
+- `install.md` — minimum reproduction recipe; produced by `dependency-generator`
 - `history.md` — benchmark-generator run record
 - `harbor/run-log/NN-rl-integration.md` — rl-integration-generator per-run process log (Layer 6a)

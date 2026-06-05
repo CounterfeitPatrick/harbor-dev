@@ -134,5 +134,5 @@ Loads a checkpoint, runs the rendered `render.py` (which captures frames and wri
 - **Do NOT background** — the user wants the verification result before they look at the MP4.
 - **`render.py` is the source of truth** for inference + obs-normalization restoration; do not re-implement those checks here. This command only assertively verifies the *artifact* (MP4 frames) AFTER `render.py` says it succeeded.
 - **Do NOT silently overwrite** existing `render.mp4` files at a different path than the rendered script chose. The script always writes to `<checkpoint_dir>/render.mp4`; trust that path.
-- **`ffprobe` / `ffmpeg`** must be available in the host PATH. They ship with the `imageio[ffmpeg]` extras pinned by env-generator's harbor-extras block; if missing, surface a one-line `apt install ffmpeg` hint and stop.
+- **`ffprobe` / `ffmpeg`** must be available in the host PATH. They ship with the `imageio[ffmpeg]` extras pinned by dependency-generator's harbor-extras block; if missing, surface a one-line `apt install ffmpeg` hint and stop.
 - For `algorithm_source == local_implementation`, the shim's `render.py` may not print the canonical `[render] step=` / `[render] wrote` lines. In that case Check #1 falls back to: rc=0 AND `<checkpoint_dir>/render.mp4` exists with size > 0; Check #2 (frame-diff) runs unchanged.

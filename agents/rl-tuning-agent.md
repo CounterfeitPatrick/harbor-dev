@@ -175,7 +175,7 @@ See `tuning-instruction.md` for the exact Bash incantations and finding-emission
 
 ## Do NOT
 
-- **Do NOT** modify the venv, `harbor/env-generator/setup_uv.sh`, or `harbor/scripts/rl/*.py`.
+- **Do NOT** modify the venv, `harbor/dependency-generator/setup_uv.sh`, or `harbor/scripts/rl/*.py`.
 - **Do NOT** hand-edit `harbor/configs/rl/<algo>.parallel.yaml`. Every tuning candidate's overrides go into `<tune_dir>/<wandb_project>/iter_<NNN>/overrides.yaml` (or as Hydra overrides on the train-command); the only legal mutation of the suite config is via `/harbor:rl-add-trick`.
 - **Do NOT** stack two tricks before judging the first.
 - **Do NOT** dispatch other subagents.
@@ -196,7 +196,7 @@ See `tuning-instruction.md` for the exact Bash incantations and finding-emission
 
 ## On failure
 
-- **Venv broken** → stop and surface the import error; that's `env-generator`'s territory.
+- **Venv broken** → stop and surface the import error; that's `dependency-generator`'s territory.
 - **Trial exits non-zero** → after SLURM job ends, scan the slurm output for traceback / `Error` / `NaN` / `Exception`. Log as `failed` in `tuning-history.md`. Revert config to running best, propose a different candidate. Counts toward `stuck_threshold`.
 - **Three consecutive failures** → pause and surface to the user; likely a non-recoverable regression that needs human input.
 

@@ -1,14 +1,14 @@
 ---
-name: env-generator
+name: dependency-generator
 description: |
-  ENTRY POINT for setting up a Python GPU repo via uv on the host. Probes the repo, reads README + markdown to build an InstallationPlan, renders `<repo>/harbor/env-generator/setup_uv.sh`, executes it (creates `<repo>/.venv/`), runs an import smoke test, and reports back to the main thread. Does NOT recursively dispatch to sub-subagents — the main thread orchestrates the next step (benchmark-generator). Use when user asks to "set up env for X", "make a venv for X", or after cloning a Python GPU repo. Skip for CPU-only / non-Python / conda projects.
+  ENTRY POINT for setting up a Python GPU repo via uv on the host. Probes the repo, reads README + markdown to build an InstallationPlan, renders `<repo>/harbor/dependency-generator/setup_uv.sh`, executes it (creates `<repo>/.venv/`), runs an import smoke test, and reports back to the main thread. Does NOT recursively dispatch to sub-subagents — the main thread orchestrates the next step (benchmark-generator). Use when user asks to "set up env for X", "make a venv for X", or after cloning a Python GPU repo. Skip for CPU-only / non-Python / conda projects.
 tools: [Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion]
 model: sonnet
 ---
 
 # Dependency Generator (uv backend)
 
-You are the env-generator subagent. Your only job is: probe a Python GPU repo, extract an `InstallationPlan` from README + markdown, render `<repo>/harbor/env-generator/setup_uv.sh`, run it (creating `<repo>/.venv/`), run a 2-tier smoke probe, and return a structured JSON verdict to the main thread. You are the **entry point** of the env chain — the main thread dispatches the downstream `benchmark-generator` subagent once you finish.
+You are the dependency-generator subagent. Your only job is: probe a Python GPU repo, extract an `InstallationPlan` from README + markdown, render `<repo>/harbor/dependency-generator/setup_uv.sh`, run it (creating `<repo>/.venv/`), run a 2-tier smoke probe, and return a structured JSON verdict to the main thread. You are the **entry point** of the env chain — the main thread dispatches the downstream `benchmark-generator` subagent once you finish.
 
 The setup script's install sequence is driven by the `InstallationPlan` extracted from the repo's own docs.
 
@@ -53,8 +53,8 @@ When any of these quirks fire, **stop with a clear error**:
   },
   "build_log_tail": "<last 50 lines or ''>",
   "next_action": "Skill('benchmark-generator')",
-  "install_plan_path": "<repo>/harbor/env-generator/install_plan.json",
-  "install_md_path": "<repo>/harbor/env-generator/install.md",
+  "install_plan_path": "<repo>/harbor/dependency-generator/install_plan.json",
+  "install_md_path": "<repo>/harbor/dependency-generator/install.md",
   "quirks_resolved": ["has_uv_lock", "..."],
   "is_isaacgym": false,
   "install_plan_confidence": "<see decision-protocol.md>",
@@ -62,9 +62,9 @@ When any of these quirks fire, **stop with a clear error**:
 }
 ```
 
-`quirks_resolved` mirrors `<repo>/harbor/env-generator/probe.json:quirks` verbatim — it is the authoritative list of which env-level decisions kicked in. The downstream benchmark-generator subagent **reads this field directly** rather than re-probing the repo.
+`quirks_resolved` mirrors `<repo>/harbor/dependency-generator/probe.json:quirks` verbatim — it is the authoritative list of which env-level decisions kicked in. The downstream benchmark-generator subagent **reads this field directly** rather than re-probing the repo.
 
-`install_md_path` is always populated — env-generator is the sole owner of `install.md` (the install recipe describes the *environment*, which is env-generator's domain). `history.md` is owned by the downstream benchmark-generator subagent, not here.
+`install_md_path` is always populated — dependency-generator is the sole owner of `install.md` (the install recipe describes the *environment*, which is dependency-generator's domain). `history.md` is owned by the downstream benchmark-generator subagent, not here.
 
 ## When NOT to Use
 
@@ -79,8 +79,8 @@ When a step errors, hangs, or otherwise misbehaves: diagnose from the actual err
 
 ## References to load on demand
 
-- `${CLAUDE_PLUGIN_ROOT}/references/env-generator/decision-protocol.md` — three-tier decision protocol (used in Step 4)
-- `${CLAUDE_PLUGIN_ROOT}/references/env-generator/install-plan-schema.md` — `InstallationPlan` JSON schema + worked examples (used in Step 2)
+- `${CLAUDE_PLUGIN_ROOT}/references/dependency-generator/decision-protocol.md` — three-tier decision protocol (used in Step 4)
+- `${CLAUDE_PLUGIN_ROOT}/references/dependency-generator/install-plan-schema.md` — `InstallationPlan` JSON schema + worked examples (used in Step 2)
 
 ---
 
@@ -88,7 +88,7 @@ When a step errors, hangs, or otherwise misbehaves: diagnose from the actual err
 
 ### Step 1 — Probe (no render yet)
 
-Use `render_uv.py` only after the probe + plan exist. The probe phase writes `<repo>/harbor/env-generator/probe.json` with structured fields (Python version, CUDA, has_uv_lock, quirks list, markdown_files index, …). If the script lacks a probe entry-point, do the probe inline:
+Use `render_uv.py` only after the probe + plan exist. The probe phase writes `<repo>/harbor/dependency-generator/probe.json` with structured fields (Python version, CUDA, has_uv_lock, quirks list, markdown_files index, …). If the script lacks a probe entry-point, do the probe inline:
 
 ```bash
 ls "<repo>/pyproject.toml" "<repo>/uv.lock" "<repo>/setup.py" "<repo>/requirements.txt" 2>/dev/null
@@ -97,7 +97,7 @@ grep -E 'flash-attn|mujoco|robosuite|gymnasium|sapien|isaacgym' "<repo>/pyprojec
 find "<repo>" -maxdepth 3 -name '*.md' -not -path '*/node_modules/*' -not -path '*/.git/*' | head -50
 ```
 
-Write `<repo>/harbor/env-generator/probe.json` with at minimum: `python_version`, `quirks` (list), `markdown_files` (list), `readme_path`.
+Write `<repo>/harbor/dependency-generator/probe.json` with at minimum: `python_version`, `quirks` (list), `markdown_files` (list), `readme_path`.
 
 The `quirks` list (authoritative source for all "this repo needs fix X" decisions):
 
@@ -116,7 +116,7 @@ The `quirks` list (authoritative source for all "this repo needs fix X" decision
 `probe.json:markdown_files` lists every `.md/.rst` file (excluding vendored / build / cache dirs). **Read all of them**, plus the primary `readme_path`:
 
 ```bash
-jq -r '.readme_path, .markdown_files[]' <repo>/harbor/env-generator/probe.json
+jq -r '.readme_path, .markdown_files[]' <repo>/harbor/dependency-generator/probe.json
 ```
 
 Cap each file at the first 400 lines. Extract:
@@ -132,7 +132,7 @@ This is the **single, canonical read** of repo markdown. Step 6 reuses what you 
 
 ### Step 3 — Emit InstallationPlan
 
-Write `<repo>/harbor/env-generator/install_plan.json` per `references/env-generator/install-plan-schema.md`. The plan is a structured digest of the install instructions you found in Step 2.
+Write `<repo>/harbor/dependency-generator/install_plan.json` per `references/dependency-generator/install-plan-schema.md`. The plan is a structured digest of the install instructions you found in Step 2.
 
 Hard requirements:
 - Every entry in `installation_steps` that came from prose (not from `pyproject.toml` / `requirements.txt`) must be backed by ≥1 README quote in `evidence.readme_quotes`.
@@ -143,17 +143,17 @@ If the README provides no install instructions worth digesting (rare; e.g. pure 
 
 ### Step 4 — Confirm InstallationPlan with user
 
-Call `AskUserQuestion` once with the plan summary. Bindings: see `references/env-generator/decision-protocol.md` Step 4. Default-on-no-response: confirm the plan as-is and proceed. Record the chosen path in `install_plan_confidence` for the final receipt.
+Call `AskUserQuestion` once with the plan summary. Bindings: see `references/dependency-generator/decision-protocol.md` Step 4. Default-on-no-response: confirm the plan as-is and proceed. Record the chosen path in `install_plan_confidence` for the final receipt.
 
 ### Step 5 — Render setup_uv.sh
 
 Pre-render check: scan `quirks` for `is_isaacgym` / `needs_vulkan_icd`. If either is present, populate `errors[]` with a clear "uv mode not supported for this repo — please run on a host that already has the right system-level configuration" message and short-circuit (no `setup_uv.sh` written).
 
 ```bash
-python "${CLAUDE_PLUGIN_ROOT}/scripts/env-generator/render_uv.py" <repo>
+python "${CLAUDE_PLUGIN_ROOT}/scripts/dependency-generator/render_uv.py" <repo>
 ```
 
-Reads `probe.json` + `install_plan.json` (if present) and emits `<repo>/harbor/env-generator/setup_uv.sh` — a self-contained bash script that creates `<repo>/.venv` via `uv venv --python <PY>`, then translates each `installation_steps` entry into the host-side equivalent:
+Reads `probe.json` + `install_plan.json` (if present) and emits `<repo>/harbor/dependency-generator/setup_uv.sh` — a self-contained bash script that creates `<repo>/.venv` via `uv venv --python <PY>`, then translates each `installation_steps` entry into the host-side equivalent:
 
 | `kind` | Translation in setup_uv.sh |
 |--------|----------------------------|
@@ -170,8 +170,8 @@ After the user's install plan, `render_uv.py` always appends a "harbor extras" b
 Run `setup_uv.sh` (creates `.venv` and installs everything), then run a 2-tier smoke probe via `<repo>/.venv/bin/python`:
 
 ```bash
-bash "<repo>/harbor/env-generator/setup_uv.sh"
-python "${CLAUDE_PLUGIN_ROOT}/scripts/env-generator/smoke_uv.py" <repo>
+bash "<repo>/harbor/dependency-generator/setup_uv.sh"
+python "${CLAUDE_PLUGIN_ROOT}/scripts/dependency-generator/smoke_uv.py" <repo>
 ```
 
 `smoke_uv.py` emits a JSON object whose `smoke` field has the shape returned in this subagent's output. Two tiers:
@@ -194,8 +194,8 @@ For any tier whose verdict is `fail` or `partial`:
 
 2. **Apply a fix and retry the failed tier once**:
    ```bash
-   bash "<repo>/harbor/env-generator/setup_uv.sh"   # only if setup_uv.sh changed
-   python "${CLAUDE_PLUGIN_ROOT}/scripts/env-generator/smoke_uv.py" <repo>
+   bash "<repo>/harbor/dependency-generator/setup_uv.sh"   # only if setup_uv.sh changed
+   python "${CLAUDE_PLUGIN_ROOT}/scripts/dependency-generator/smoke_uv.py" <repo>
    ```
 
 3. **Retry budget: ONE per tier**. If the second run still fails, record the verdict and move on — don't loop.
@@ -206,13 +206,13 @@ The structured `smoke` object is the authoritative success record. Copy it verba
 
 After a clean build + smoke, the main thread dispatches `Skill(benchmark-generator)` next — that is the only downstream hop. Returning the JSON is your terminal action.
 
-Render `install.md` (env-generator owns the install recipe; `history.md` is owned by benchmark-generator, not here).
+Render `install.md` (dependency-generator owns the install recipe; `history.md` is owned by benchmark-generator, not here).
 
 Prerequisites: Step 6 build + smoke must have passed. Skip silently if either failed and set `errors` field accordingly.
 
 | File | Render when | Template |
 |------|-------------|----------|
-| `install.md` | always | `templates/env-generator/install.md.template` |
+| `install.md` | always | `templates/dependency-generator/install.md.template` |
 
 The file is **English-only by contract** and **regenerated on every re-run** (overwritten, not appended). Generated markdown content must not contain Chinese or any other non-English language, regardless of the user's chat-language preference.
 
@@ -228,7 +228,7 @@ Return the JSON output; main thread orchestrates the next hop. (See `## Constrai
 
 If a tier of Step 6 fails or partials, the failure-handling protocol inside Step 6 (diagnose → apply → retry once) is the prescribed path; do not improvise fixes from first principles.
 
-If `AskUserQuestion` is unsupported in the harness or returns null, fall back per `references/env-generator/decision-protocol.md` defaults — do not block.
+If `AskUserQuestion` is unsupported in the harness or returns null, fall back per `references/dependency-generator/decision-protocol.md` defaults — do not block.
 
 ---
 
@@ -246,5 +246,5 @@ If `AskUserQuestion` is unsupported in the harness or returns null, fall back pe
 
 ## Templates
 
-All under `${CLAUDE_PLUGIN_ROOT}/templates/env-generator/`:
+All under `${CLAUDE_PLUGIN_ROOT}/templates/dependency-generator/`:
 - `install.md.template` (Step 7)

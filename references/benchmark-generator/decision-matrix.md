@@ -1,8 +1,8 @@
 # Decision Matrix
 
-This file used to document base-image / package-manager / Vulkan-ICD choices for the docker backend. The plugin is now uv-only; env-generator picks the Python version + dep set from the repo's own `pyproject.toml` / `uv.lock` / README, and there is no Vulkan ICD or `cudagl` base-image story to document.
+This file used to document base-image / package-manager / Vulkan-ICD choices for the docker backend. The plugin is now uv-only; dependency-generator picks the Python version + dep set from the repo's own `pyproject.toml` / `uv.lock` / README, and there is no Vulkan ICD or `cudagl` base-image story to document.
 
-If your benchmark needs a system-level apt package (libegl1 / libosmesa6 / libvulkan1) the InstallationPlan extractor emits a `# sudo apt install ...` comment in `setup_uv.sh` and surfaces the missing-libs hint to the user — see `references/env-generator/install-plan-schema.md` for the schema.
+If your benchmark needs a system-level apt package (libegl1 / libosmesa6 / libvulkan1) the InstallationPlan extractor emits a `# sudo apt install ...` comment in `setup_uv.sh` and surfaces the missing-libs hint to the user — see `references/dependency-generator/install-plan-schema.md` for the schema.
 
 For benchmark-side decisions, the only ones still owned by `benchmark-generator` are:
 
@@ -14,4 +14,4 @@ For benchmark-side decisions, the only ones still owned by `benchmark-generator`
   - dm_control + shimmy: `env.render()`
 - **`{{TASK_EXAMPLE}}`** — a valid task identifier wired into the rendered scripts as the `--task` default.
 
-Everything else (Python version pin, CUDA wheel pin, system apt deps) is env-generator territory.
+Everything else (Python version pin, CUDA wheel pin, system apt deps) is dependency-generator territory.

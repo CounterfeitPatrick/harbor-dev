@@ -10,7 +10,7 @@ The plugin needs one host-side tool. It is independent of Claude Code itself.
 
 | Tool | Why harbor uses it | Sudo needed? |
 |---|---|---|
-| **`uv`** | Drives `harbor/env-generator/setup_uv.sh` (the env-generator output) and the MCP server's bootstrap (`uv run --no-project --with mcp[cli] --with pyyaml`) | no |
+| **`uv`** | Drives `harbor/dependency-generator/setup_uv.sh` (the dependency-generator output) and the MCP server's bootstrap (`uv run --no-project --with mcp[cli] --with pyyaml`) | no |
 
 You also need a working **NVIDIA driver** (`nvidia-smi` should print your GPU) and the host's CUDA toolkit if your repos build CUDA extensions.
 
@@ -52,7 +52,7 @@ Grouped by filename prefix (the prefix is the group — Claude Code commands hav
 |---|---|
 | `help` | Plugin overview — commands / agents / MCP tools / hooks, plus live registry counts. |
 | **env — environment** | |
-| `env-install-uv [path]` | Probe a Python GPU repo, render `harbor/env-generator/setup_uv.sh`, create `.venv/`, run the import smoke, then dispatch `benchmark-generator`. |
+| `env-install-uv [path]` | Probe a Python GPU repo, render `harbor/dependency-generator/setup_uv.sh`, create `.venv/`, run the import smoke, then dispatch `benchmark-generator`. |
 | **task — author / probe / inspect** | |
 | `probe-benchmark [repo=<p>] [canonical_task=<id>]` | Author the family-level `<repo>/harbor/create-task/task-implementation.md` guide (Step 3.7 of `benchmark-generator`, extracted to run standalone). |
 | `probe-task task=<id> [output=<p>]` | Emit a portable per-task spec `<task-slug>-implementation.md` with verbatim §1–§7 code. Runs in a subagent (context-saving). Feed back into `task-create from=<path>` to clone the task into another benchmark. |
@@ -80,7 +80,7 @@ Grouped by filename prefix (the prefix is the group — Claude Code commands hav
 
 | Agent | Role |
 |---|---|
-| `env-generator` | Entry point for any Python GPU repo. Probes deps, renders `setup_uv.sh`, runs setup + import smoke, returns to main thread. |
+| `dependency-generator` | Entry point for any Python GPU repo. Probes deps, renders `setup_uv.sh`, runs setup + import smoke, returns to main thread. |
 | `benchmark-generator` | Adds the env-sanity layer to a repo whose env is already set up. Renders `scripts/run_random.py` (random rollout) + `scripts/render_random.py` (render-to-MP4). Runs 2-tier smoke (L1 random / L2 render). RL-only. |
 | `rl-integration-generator` | Renders the RL training tree: `harbor/scripts/rl/{train,eval,render,visualize}.py`, `harbor/configs/rl/{ppo,sac,td3}{,.parallel}.yaml`, `rl-suite-spec.json`. Smokes each algorithm against `<repo>/.venv/bin/python` via the production T1–T5 tiers (mirroring `rl-run` / `rl-eval` / `rl-render` exactly). |
 | `task-generator` | Authors §1–§5 of a new task (register/scene · actions · reset · goal+termination · observation) with per-section smokes plus an actuator-tracking check (S2.5) and a render-stability + visual check (S6); iterates up to 2× per smoke before escalating. |
@@ -124,8 +124,8 @@ The server is read-only at runtime — agents and Claude have no MCP write API. 
 
 | Path | When | What happens |
 |---|---|---|
-| **Reproduce a verified benchmark** | Repo is in the registry (read via MCP `list_benchmarks`) | `git clone <github>` → `/harbor:env-install-uv` → `bash harbor/env-generator/setup_uv.sh` → `source .venv/bin/activate`. The registry stores the source URL + commit so you know which state was certified. |
-| **Curate a new benchmark** | Maintainer onboarding a fresh repo | Full pipeline: `env-generator` → `benchmark-generator` (extend + smoke + `<repo>/harbor/benchmark-generator/benchmark-spec.json`) → `rl-integration-generator` (training tree). The MCP registry is **not** mutated by agents; maintainer hand-edits `data/benchmarks.yaml` + copies the spec JSON, then `git commit` + plugin release. |
+| **Reproduce a verified benchmark** | Repo is in the registry (read via MCP `list_benchmarks`) | `git clone <github>` → `/harbor:env-install-uv` → `bash harbor/dependency-generator/setup_uv.sh` → `source .venv/bin/activate`. The registry stores the source URL + commit so you know which state was certified. |
+| **Curate a new benchmark** | Maintainer onboarding a fresh repo | Full pipeline: `dependency-generator` → `benchmark-generator` (extend + smoke + `<repo>/harbor/benchmark-generator/benchmark-spec.json`) → `rl-integration-generator` (training tree). The MCP registry is **not** mutated by agents; maintainer hand-edits `data/benchmarks.yaml` + copies the spec JSON, then `git commit` + plugin release. |
 | **Author / clone tasks** | Add a new task to a benchmark, or port a task across benchmarks | `probe-benchmark` (once per repo, family-level guide) → `probe-task` (per existing task, portable spec) → `task-create` (with `description=` for new tasks or `from=<spec.md>` for reproductions). Loops: `reward-tune` for §6 iteration; `rl-tune` for hyperparameter search. |
 
 ## Quick start (reproduce a verified benchmark)
@@ -149,10 +149,10 @@ In Claude Code:
 Claude orchestrates:
 
 ```
-1. Skill('env-generator')   → probe + render setup_uv.sh + create .venv/ + import smoke
+1. Skill('dependency-generator')   → probe + render setup_uv.sh + create .venv/ + import smoke
 2. Skill('benchmark-generator')    → render scripts/run_random.py + scripts/render_random.py + 2-tier smoke
 3. Skill('rl-integration-generator') → render harbor/scripts/rl/{train,eval,render}.py + configs + T1–T5 smoke
-4. Writes per-agent dirs: harbor/env-generator/{install.md,...} + harbor/benchmark-generator/{benchmark-spec.json, history.md, benchmark.md, task_overview.md} + harbor/rl-integration-generator/{rl-suite-spec.json, rl-integration.md}
+4. Writes per-agent dirs: harbor/dependency-generator/{install.md,...} + harbor/benchmark-generator/{benchmark-spec.json, history.md, benchmark.md, task_overview.md} + harbor/rl-integration-generator/{rl-suite-spec.json, rl-integration.md}
 ```
 
 You can now `/harbor:rl-run task=<id> algorithm=ppo`, then `/harbor:rl-sweep …` or `/harbor:rl-tune …`.
@@ -204,12 +204,12 @@ harbor/                                        ← plugin root
 │   ├── reward-add-log.md  rl-add-log.md  update-experience.md
 │
 ├── agents/                                      ← L3 subagents (flat .md files)
-│   ├── env-generator.md  benchmark-generator.md  rl-integration-generator.md
+│   ├── dependency-generator.md  benchmark-generator.md  rl-integration-generator.md
 │   ├── task-generator.md  reward-generator.md  dr-generator.md
 │   └── rl-tuning-agent.md
 │
 ├── scripts/                                     ← L4 deterministic CLIs, per-owner subdirs
-│   ├── env-generator/                             render_uv.py, smoke_uv.py
+│   ├── dependency-generator/                             render_uv.py, smoke_uv.py
 │   ├── benchmark-generator/                       capture_spec.py
 │   ├── rl-integration-generator/                  render_rl_suite.py, render_data_logger.py, discover_*.py, validate_rl_suite.py
 │   ├── rl-tuning-agent/                           run_rl_trial.py, analyze_rl_trial.py, suggest_hparams.py
@@ -217,7 +217,7 @@ harbor/                                        ← plugin root
 │   ├── rl-run/  rl-tricks/  plot/  registry/  install/
 │
 ├── templates/                                   ← L5 read-only: rendered into target repos
-│   ├── env-generator/  benchmark-generator/       includes task-implementation.md.template
+│   ├── dependency-generator/  benchmark-generator/       includes task-implementation.md.template
 │   ├── rl-integration-generator/                  custom_torch / stable_baseline3 / local_implementation subtrees + data_logger.py.template
 │   ├── task-generator/                            per-section smokes + custom action terms
 │   ├── reward-generator/  dr-generator/           per-section smokes
@@ -225,7 +225,7 @@ harbor/                                        ← plugin root
 │   ├── rl-tuning-agent/  rl-tune/  reward-tune/  rl-sweep/  rl-tricks/  plot/
 │
 ├── references/                                  ← L5 read-only: agent decision aids
-│   ├── env-generator/  benchmark-generator/  rl-integration-generator/
+│   ├── dependency-generator/  benchmark-generator/  rl-integration-generator/
 │   ├── task-generator/  reward-generator/  dr-generator/  rl-tuning-agent/
 │
 ├── experiences/                                 ← L5 cross-run ledgers (numbered, append-only)
@@ -249,7 +249,7 @@ harbor/                                        ← plugin root
 Per-run workspace state lives inside the **target** repo, not the plugin:
 
 - `<repo>/harbor/run-log/NN-<task>.md` — append-only process log (Layer 6a).
-- `<repo>/harbor/env-generator/install.md`, `<repo>/harbor/benchmark-generator/{history,benchmark}.md`, `<repo>/harbor/rl-integration-generator/rl-integration.md` — end-of-run user receipts (Layer 6b), each in its agent's dir.
+- `<repo>/harbor/dependency-generator/install.md`, `<repo>/harbor/benchmark-generator/{history,benchmark}.md`, `<repo>/harbor/rl-integration-generator/rl-integration.md` — end-of-run user receipts (Layer 6b), each in its agent's dir.
 - `<repo>/harbor/create-task/{task-implementation.md, <task_slug>/, <task_slug>-implementation.md}` — task-authoring workspace.
 - `<repo>/harbor/outputs/<algo>_<task>_<ts>/` — per-trial checkpoints + metrics + curves + render.mp4.
 - `<repo>/harbor/rl_experiments/{sweeps,tunes}/<id>/` — sweep + tune cell artifacts.
@@ -273,7 +273,7 @@ The MCP server stays read-only — all writes are git diffs produced by `scripts
 1. Generated `install.md` / `history.md` / `benchmark.md` / `rl-integration.md` MUST be English-only.
 2. The registry stores source URL + commit hash for verified entries (no docker image tags).
 3. Registry **read** access via MCP tools only. Never `cat registry.yaml`. Registry **writes** are git-only, produced by the `registry_submit.py` / `registry_verify.py` CLI scripts — no MCP write API exists.
-4. Sub-agents return JSON to main thread; no nest-dispatch. The main thread orchestrates the env-generator → benchmark-generator → rl-integration-generator chain.
+4. Sub-agents return JSON to main thread; no nest-dispatch. The main thread orchestrates the dependency-generator → benchmark-generator → rl-integration-generator chain.
 5. All plugin-generated files live under `<repo>/harbor/`. The folder is `harbor/` (no dot) so it doubles as a valid Python package — rendered scripts use `sys.path.insert(0, "<repo>/harbor")` to resolve `from utils.data_logger import DataLogger` etc.
 
 ## License

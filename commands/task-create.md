@@ -1,11 +1,11 @@
 ---
-description: Author a NEW task or surgically edit an EXISTING task in a benchmark repo. Reads <repo>/harbor/create-task/task-implementation.md (must already exist — created by benchmark-generator) and dispatches up to three subagents (task-generator → reward-generator → dr-generator) based on the requested sections, each running its own smoke. Also supports REPRODUCE mode via `from=<path>` (a per-task spec emitted by /harbor:probe-task) — rebuilds the task identically including reward / DR / observation / action code. Use when the user types /harbor:task-create name=<TaskID> description="..." [sections=<list>] [assets=<paths>] | /harbor:task-create name=<TaskID> from=<path>, or asks "create a new task", "scaffold a task called X", "reproduce task Y from this spec", "edit only the action/reward/observation of task X".
+description: Author a NEW task or surgically edit an EXISTING task in a benchmark repo. Pre-flight verifies the dependency-generator → benchmark-generator → rl-integration-generator chain in sequence and dispatches any missing stage first (rl-integration defaults to the custom_torch algorithm source unless the user specifies one). Then reads <repo>/harbor/create-task/task-implementation.md and dispatches up to three subagents (task-generator → reward-generator → dr-generator) based on the requested sections, each running its own smoke. Also supports REPRODUCE mode via `from=<path>` (a per-task spec emitted by /harbor:probe-task) — rebuilds the task identically including reward / DR / observation / action code. Use when the user types /harbor:task-create name=<TaskID> description="..." [sections=<list>] [assets=<paths>] | /harbor:task-create name=<TaskID> from=<path>, or asks "create a new task", "scaffold a task called X", "reproduce task Y from this spec", "edit only the action/reward/observation of task X".
 argument-hint: name=<TaskID> (description="<spec>" | from=<spec.md>) [sections=<comma-list of 1..7>] [assets=<path1,path2,...>]
 ---
 
 # /harbor:task-create — Author or Edit a Task
 
-The user wants to either (a) add a NEW task to the current benchmark repo, or (b) surgically edit a subset of an EXISTING task. The shape, file pointers, code templates, and per-phase smoke commands all live in `<repo>/harbor/create-task/task-implementation.md` — written by `benchmark-generator`. This command body parses the user's spec, verifies the doc exists, and orchestrates the relevant subagents.
+The user wants to either (a) add a NEW task to the current benchmark repo, or (b) surgically edit a subset of an EXISTING task. The shape, file pointers, code templates, and per-phase smoke commands all live in `<repo>/harbor/create-task/task-implementation.md` — written by `benchmark-generator`. This command body parses the user's spec, bootstraps any missing prerequisite stage (dependency-generator → benchmark-generator → rl-integration-generator, checked in that order), and orchestrates the relevant subagents.
 
 ## Required arguments
 
@@ -46,15 +46,19 @@ The spec is treated as **ground truth** — subagents don't re-derive design cho
 
 ### Step 0 — Pre-flight
 
-1. Resolve `repo_path = $(pwd)`. Verify it's a benchmark workspace:
+1. Resolve `repo_path = $(pwd)`. Verify the prerequisite chain **in sequence** — each stage's output is the next stage's input. For any stage whose done-check fails, dispatch that agent first (main thread orchestrates — constraint #4; wait for it to finish cleanly before checking the next stage):
 
-   ```bash
-   test -x "${repo_path}/.venv/bin/python"                                   || { echo "ERROR: <repo>/.venv missing — run /harbor:env-install-uv first"; exit 1; }
-   test -f "${repo_path}/harbor/benchmark-generator/benchmark-spec.json"                       || { echo "ERROR: harbor/benchmark-generator/benchmark-spec.json missing — dispatch benchmark-generator first"; exit 1; }
-   test -f "${repo_path}/harbor/create-task/task-implementation.md"      || { echo "ERROR: harbor/create-task/task-implementation.md missing — dispatch benchmark-generator (Step 3.7) to author it"; exit 1; }
-   ```
+   | # | Stage | Done-check | If missing |
+   |---|---|---|---|
+   | 1 | `dependency-generator` | `test -x ${repo_path}/.venv/bin/python` | `Agent(dependency-generator, prompt={repo_path})` — renders `harbor/dependency-generator/setup_uv.sh`, creates `.venv/`, runs the import smoke |
+   | 2 | `benchmark-generator` | `test -f ${repo_path}/harbor/benchmark-generator/benchmark-spec.json` AND its `tasks[]` is non-empty | `Agent(benchmark-generator, prompt={repo_path})` — random rollout + render-to-MP4 smokes, writes `benchmark-spec.json` + `task-implementation.md` (Step 3.7) |
+   | 3 | `rl-integration-generator` | `test -f ${repo_path}/harbor/rl-integration-generator/rl-suite-spec.json` | `Agent(rl-integration-generator, prompt={repo_path, algorithm_source})` — renders the train/eval/render scaffold + configs |
 
-   **Hard stop on any miss.**
+   **`algorithm_source` for stage 3**: if the user's prompt names a source (`stable_baseline3`, `local_implementation` with a package path / github URL) or otherwise states a specific algorithm requirement, honor it. Otherwise default to `custom_torch` (the self-contained custom algorithm tree) — do NOT ask.
+
+   After stages 1–2 are green, additionally verify `harbor/create-task/task-implementation.md` exists. If `benchmark-spec.json` was already present but the guide is missing (older run), author it via `/harbor:probe-benchmark` (≡ benchmark-generator Step 3.7) before continuing.
+
+   A bootstrap agent that finishes with a failure verdict is a **hard stop** — print its error and exit; do not run later stages or the task-authoring chain.
 
 2. Parse args:
    - `name` → in **create**/**reproduce** mode, validate against family convention (read `task-implementation.md:CANONICAL_EXAMPLE_TASK_ID` as the pattern).

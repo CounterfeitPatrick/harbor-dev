@@ -19,7 +19,7 @@ usage() {
 Usage: $(basename "$0") [--skip-uv] [-h|--help]
 
 Installs the host-side tool harbor needs:
-    1. uv      (no sudo, drives env-generator's setup_uv.sh)
+    1. uv      (no sudo, drives dependency-generator's setup_uv.sh)
 
 Each step is idempotent — re-running is safe.
 After install, log out and back in so the uv PATH takes effect.

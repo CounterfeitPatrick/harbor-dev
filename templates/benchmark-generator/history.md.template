@@ -11,7 +11,7 @@ This file is a snapshot of what the skill did in this run — probe results, gen
 | Target repo | `{{PROJECT_NAME}}` |
 | Repo commit | `{{TARGET_REPO_COMMIT}}` |
 | Venv | `<repo>/.venv/` (uv-managed) |
-| Upstream skill | `env-generator` |
+| Upstream skill | `dependency-generator` |
 | Sub-skill | `benchmark-generator` |
 | Benchmark category | **RL** |
 
@@ -83,4 +83,4 @@ python scripts/render_random.py \
 
 ### How this file is regenerated
 
-Re-run `benchmark-generator` against the repo (usually dispatched automatically after `env-generator` sets up the env). The skill overwrites both `history.md` and `benchmark.md`. To diff before overwriting, rename the old copies to `history.previous.md` / `benchmark.previous.md` first.
+Re-run `benchmark-generator` against the repo (usually dispatched automatically after `dependency-generator` sets up the env). The skill overwrites both `history.md` and `benchmark.md`. To diff before overwriting, rename the old copies to `history.previous.md` / `benchmark.previous.md` first.

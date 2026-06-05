@@ -1,6 +1,6 @@
-# Decision protocol (env-generator)
+# Decision protocol (dependency-generator)
 
-Common pattern used in `agents/env-generator.md` Step 4 (InstallationPlan confirmation). It follows a three-tier resolution order.
+Common pattern used in `agents/dependency-generator.md` Step 4 (InstallationPlan confirmation). It follows a three-tier resolution order.
 
 ## The three tiers
 

@@ -5,7 +5,7 @@ After Step 4 smoke tests complete, render **two** markdown files at the **target
 - `history.md` — one-shot record of what the skill did in this run: probe results, generated files, smoke tiers pass/fail, final report.
 - `benchmark.md` — static guide to the benchmark itself: short "About" paragraph, task inventory table, action / observation / reward summary, and a numbered "How to use" walk-through limited to env sanity checks (random rollout + render). Training/evaluation walk-through lives in `<repo>/rl-integration.md`, owned by `rl-integration-generator`.
 
-`install.md` is **owned by env-generator**. Do not render it here.
+`install.md` is **owned by dependency-generator**. Do not render it here.
 `rl-integration.md` is **owned by rl-integration-generator**. Do not render it here either; link to it from `benchmark.md` so users find it after they wire training.
 
 Templates:
@@ -173,7 +173,7 @@ These are the shortcuts future agents will attempt. Each has a counter:
 
 ## Red flags — STOP before writing
 
-- About to render `<repo>/install.md` → WRONG owner. env-generator owns it. Stop.
+- About to render `<repo>/install.md` → WRONG owner. dependency-generator owns it. Stop.
 - About to render `<repo>/rl-integration.md` → WRONG owner. `rl-integration-generator` owns it. Stop.
 - About to write a `Train a policy` / `Evaluate a checkpoint` / `Override hyperparameters` section into `benchmark.md` → WRONG file. Those belong in `rl-integration.md`.
 - About to skip `history.md` because "smoke tests passed, we don't need a log" → WRONG. `history.md` records the probe + smoke decisions regardless of outcome.
