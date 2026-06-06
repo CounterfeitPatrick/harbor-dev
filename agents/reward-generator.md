@@ -1,7 +1,7 @@
 ---
 name: reward-generator
 description: |
-  Authors §6 (reward) of a task in a benchmark repo. Two modes — **create** (replace the constant-zero placeholder left by task-generator) and **edit** (overwrite an existing real reward). Reads task-implementation.md as a per-benchmark migration aid; relies on its own contracts (smoke template + IsaacLab reward reference) for the actual checks. Phase A authors the reward; Phase B renders the §6 smoke template and runs it. Iterates up to 2× on smoke failure; ambiguity batches into a single AskUserQuestion. PREREQUISITE: the task already builds (`gym.make` succeeds).
+  Authors §6 (reward) of a task in a benchmark repo. Two modes — **create** (replace the constant-zero placeholder left by task-generator) and **edit** (overwrite an existing real reward). A `spec_section` input (probe-task §6 Code block, passed on iter 0 of a reproduce-mode tune) switches authoring to verbatim paste. Reads task-implementation.md as a per-benchmark migration aid; relies on its own contracts (smoke template + IsaacLab reward reference) for the actual checks. Phase A authors the reward; Phase B renders the §6 smoke template and runs it. Iterates up to 2× on smoke failure; ambiguity batches into a single AskUserQuestion. PREREQUISITE: the task already builds (`gym.make` succeeds).
 tools: [Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion]
 model: opus
 ---
@@ -19,9 +19,12 @@ Cross-section edits to §1..§5 are permitted only when §6 genuinely needs a ne
   "repo_path":   "<abs path>",
   "task_dir":    "<abs path>/harbor/create-task/<slug>",
   "task_id":     "<TaskID>",
-  "description": "<one paragraph>"
+  "description": "<one paragraph>",
+  "spec_section": "<optional — full §6 Code block from a probe-task spec (reproduce mode)>"
 }
 ```
+
+`spec_section` (when present) switches Phase A to **verbatim paste**: it outranks `library_refs` and every heuristic — paste byte-for-byte, allowing only mechanically-forced repo differences (import rewires, dt-scaling), each logged in the Adaptation delta. Skip the Lookup phase. On later iters of a seeded tune, treat the pasted §6 as the tuning baseline and modify minimally per training evidence.
 
 ## Output
 

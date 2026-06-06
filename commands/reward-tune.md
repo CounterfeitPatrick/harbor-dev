@@ -62,6 +62,7 @@ There is **NO** per-iter `reward-history.md` / `handoff-reward-generator.md` / `
 | `seed` | `42` | Per-iter RNG. |
 | `n_frames` | `12` | Frames extracted from render.mp4 for behavior analysis. |
 | `prompt_every_n_stuck` | `5` | After N consecutive non-improving iters, prompt the user for direction (continue / abort / change strategy). Removes the need for a hard cap while still bounding runaway loops. |
+| `spec_section` | (none) | Full §6 Code block from a probe-task spec (passed by `/harbor:task-create` reproduce mode). When set, iter 0 pastes it VERBATIM as the BASE reward (no library search, no re-derivation; only mechanically-forced repo differences like import rewires / dt-scaling, logged in the Adaptation delta). Later iters tune by minimal modification from that baseline only if training falls short of `success_threshold`. |
 
 ## Action
 
@@ -112,7 +113,7 @@ If `<task_dir>/reward-history.md` does NOT exist, render it from the template (h
 
 If `<task_dir>/memories.jsonl` does NOT exist, `touch` it.
 
-**Task-library search (CREATE branch, once per tune).** Before the first iteration, run the protocol in `${CLAUDE_PLUGIN_ROOT}/references/task-library-search.md`: classify the task's embodiment, grep `experiences/task-library/<folder>/` for the 1–3 most relevant prior specs, and stash their abs paths as `library_refs` in `tune-state.json`. **Adapt-first is binding** (protocol Step 4): when a match exists, iteration 0's reward-generator takes the best match's §6 as the BASE reward and applies the minimal modification for the new task — pure de-novo reward design only when `library_refs = []` (no relevant task in the library). The iter-0 section of `reward-history.md` must open with the **Adaptation delta** block (base spec, kept-as-is, enumerated changes + why); later iterations document their deltas vs the previous iteration. On RESUME, reuse the stored `library_refs` (don't re-search). `library_refs = []` when the library has no match — never block.
+**Task-library search (CREATE branch, once per tune).** Skip entirely when `spec_section` is given (reproduce mode) — the spec IS the base; set `library_refs = []` and record `seeded_from_spec: true` in `tune-state.json`. Otherwise, before the first iteration, run the protocol in `${CLAUDE_PLUGIN_ROOT}/references/task-library-search.md`: classify the task's embodiment, grep `experiences/task-library/<folder>/` for the 1–3 most relevant prior specs, and stash their abs paths as `library_refs` in `tune-state.json`. **Adapt-first is binding** (protocol Step 4): when a match exists, iteration 0's reward-generator takes the best match's §6 as the BASE reward and applies the minimal modification for the new task — pure de-novo reward design only when `library_refs = []` (no relevant task in the library). The iter-0 section of `reward-history.md` must open with the **Adaptation delta** block (base spec, kept-as-is, enumerated changes + why); later iterations document their deltas vs the previous iteration. On RESUME, reuse the stored `library_refs` (don't re-search). `library_refs = []` when the library has no match — never block.
 
 ### Step 2 — Iteration loop
 
@@ -142,6 +143,9 @@ Agent(reward-generator, prompt={
   iter:                <N>,
   library_refs:        <library_refs from tune-state>,                    # adapt-first BASE for §6 (minimal modification);
                                                                           # binding on iter 0 when non-empty
+  spec_section:        <spec_section>,                                    # reproduce mode only — iter 0 pastes this §6
+                                                                          # Code block verbatim (outranks library_refs);
+                                                                          # later iters treat it as the tuning baseline
   recent_findings:     <findings>,                                        # JSONL-derived, distilled
   prior_handoff:       <prior_handoff>,                                   # LATEST reward state (latest iter)
   prior_analyses:      <prior_analyses>,                                  # FULL analysis.md from last 3 iters

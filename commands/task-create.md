@@ -1,5 +1,5 @@
 ---
-description: Author a NEW task or surgically edit an EXISTING task in a benchmark repo. Pre-flight verifies the dependency-generator → benchmark-generator → rl-integration-generator chain in sequence and dispatches any missing stage first (rl-integration defaults to the custom_torch algorithm source unless the user specifies one). Then reads <repo>/harbor/create-task/task-implementation.md and orchestrates: task-generator (§1–§5, per-section smokes) → the /harbor:reward-tune training loop for §6 (reward-generator iterations validated by ACTUAL training until success_rate ≥ threshold) → dr-generator (§7) ONLY when the user explicitly requests DR — the default is to skip DR. Also supports REPRODUCE mode via `from=<path>` (a per-task spec emitted by /harbor:probe-task) — rebuilds the task identically including reward / DR / observation / action code (reproduce §6 is pasted verbatim + smoked, not re-tuned). Use when the user types /harbor:task-create name=<TaskID> description="..." [sections=<list>] [assets=<paths>] | /harbor:task-create name=<TaskID> from=<path>, or asks "create a new task", "scaffold a task called X", "reproduce task Y from this spec", "edit only the action/reward/observation of task X".
+description: Author a NEW task or surgically edit an EXISTING task in a benchmark repo. Pre-flight verifies the dependency-generator → benchmark-generator → rl-integration-generator chain in sequence and dispatches any missing stage first (rl-integration defaults to the custom_torch algorithm source unless the user specifies one). Then reads <repo>/harbor/create-task/task-implementation.md and orchestrates: task-generator (§1–§5, per-section smokes) → the /harbor:reward-tune training loop for §6 (reward-generator iterations validated by ACTUAL training until success_rate ≥ threshold) → dr-generator (§7) ONLY when the user explicitly requests DR — the default is to skip DR. Also supports REPRODUCE mode via `from=<path>` (a per-task spec emitted by /harbor:probe-task) — rebuilds the task identically including reward / DR / observation / action code (reproduce §6 is pasted verbatim at iter 0 of the same reward-tune loop, then validated by actual training like any other reward). Use when the user types /harbor:task-create name=<TaskID> description="..." [sections=<list>] [assets=<paths>] | /harbor:task-create name=<TaskID> from=<path>, or asks "create a new task", "scaffold a task called X", "reproduce task Y from this spec", "edit only the action/reward/observation of task X".
 argument-hint: name=<TaskID> (description="<spec>" | from=<spec.md>) [sections=<comma-list of 1..7>] [assets=<path1,path2,...>] [algorithm=<ppo|sac|td3>] [timesteps_per_iter=N] [success_threshold=0.5]
 ---
 
@@ -18,7 +18,7 @@ The user wants to either (a) add a NEW task to the current benchmark repo, or (b
 
 | Arg | Default | Effect |
 |---|---|---|
-| `sections` | (1..6) | Comma-separated list of section numbers from 1..7. Omitted ⇒ create mode (§1..§6 chain; §7 DR is **opt-in** — see the DR gate below). Provided ⇒ edit mode (partial chain, task must already exist). Section→owner mapping: §1 register/scene · §2 actions · §3 reset · §4 goal+termination · §5 observation → `task-generator`. §6 reward → `/harbor:reward-tune` loop (reproduce mode: direct `reward-generator` dispatch). §7 DR → `dr-generator`. |
+| `sections` | (1..6) | Comma-separated list of section numbers from 1..7. Omitted ⇒ create mode (§1..§6 chain; §7 DR is **opt-in** — see the DR gate below). Provided ⇒ edit mode (partial chain, task must already exist). Section→owner mapping: §1 register/scene · §2 actions · §3 reset · §4 goal+termination · §5 observation → `task-generator`. §6 reward → `/harbor:reward-tune` loop (reproduce mode: iter 0 pastes the spec's §6 verbatim, then the same training validation). §7 DR → `dr-generator`. |
 | `assets` | (none) | Comma-separated repo-relative paths or asset URLs. If set, `task-generator` §1 prefers these over Nucleus / library defaults. Ignored when §1 is not in the requested sections. In reproduce mode (`from=...`) `assets` overrides paths the spec resolved against the source repo — use when the destination repo's assets live at different locations. |
 | `algorithm` | `ppo` | Forwarded to `/harbor:reward-tune` for the §6 training loop. |
 | `timesteps_per_iter` | (reward-tune default) | Forwarded to `/harbor:reward-tune` — per-iteration training budget. |
@@ -45,7 +45,7 @@ When `from=` is supplied, the orchestrator:
 3. Passes each section's Code block as a `spec_section` kwarg to the relevant subagent in addition to the family-level `task-implementation.md`. The subagents prefer the per-task spec over the family guide when both are present.
 4. `sections` defaults to **all 7** in reproduce mode (so the rebuilt task is byte-identical except for `name` / `assets` overrides). If the user passes `sections=...`, only the listed sections are reproduced; the rest are left at the family template's placeholder.
 
-The spec is treated as **ground truth** — subagents don't re-derive design choices from the description, they paste-then-adjust.
+The spec is treated as **ground truth** — subagents don't re-derive design choices from the description, they paste-then-adjust. Ground truth covers the *design*, not the outcome: §6's verbatim paste is still validated by the reward-tune training loop (Step 3) — the spec proves the reward worked in the source repo; training proves it still works here.
 
 ## Action
 
@@ -118,7 +118,7 @@ Write `${task_dir}/spec.json` (overwriting any prior run for this slug):
 
 `status: skipped` is set up-front for any phase whose sections aren't requested (e.g. if `sections=2,5`, `reward_tune` and `dr_generator` start as `skipped`). `dr_generator` starts as `skipped` by default — it flips to `pending` only when the DR gate fired (explicit request).
 
-Each phase's slot gets its final status when the phase ends — `task_generator` / `dr_generator` are updated by their subagents; `reward_tune` is persisted by the orchestrator from the tune outcome (or, in reproduce mode, from the direct reward-generator verdict). The orchestrator reads the slot post-phase to decide whether to continue.
+Each phase's slot gets its final status when the phase ends — `task_generator` / `dr_generator` are updated by their subagents; `reward_tune` is persisted by the orchestrator from the tune outcome (all modes — reproduce included). The orchestrator reads the slot post-phase to decide whether to continue.
 
 Each phase also writes a process log inside the same directory:
 
@@ -184,12 +184,13 @@ Persist into `${task_dir}/spec.json:phases.task_generator`. **Stop the chain if 
 
 Only when `do_reward` is true AND (task-generator was skipped OR returned pass).
 
-**Create / edit mode** — do NOT dispatch `reward-generator` directly. The §6 smoke (finite + non-constant + composer) only proves the reward is well-formed, not that it trains the behavior. Instead, run the `/harbor:reward-tune` command flow (read `commands/reward-tune.md` and execute it inline) with:
+**All modes (create / edit / reproduce)** — do NOT dispatch `reward-generator` directly. The §6 smoke (finite + non-constant + composer) only proves the reward is well-formed, not that it trains the behavior. Instead, run the `/harbor:reward-tune` command flow (read `commands/reward-tune.md` and execute it inline) with:
 
 ```
 /harbor:reward-tune task=<name> \
     algorithm=<algorithm>                          # from args, default ppo \
-    [timesteps_per_iter=<N>] [success_threshold=<v>]  # forwarded when given
+    [timesteps_per_iter=<N>] [success_threshold=<v>]  # forwarded when given \
+    [spec_section=<spec_sections["6"]>]            # reproduce mode only — seeds iter 0 (see below)
 ```
 
 Notes for the inline execution:
@@ -199,23 +200,9 @@ Notes for the inline execution:
 - The loop's iteration 0 authors the reward from the placeholder `task-generator` left (a placeholder §6 is a valid reward-tune starting point), then each iteration trains a policy, renders, and analyzes per-term logs + frames until `success_rate ≥ success_threshold` (or the user aborts at a stuck-prompt).
 - This is the expensive phase (each iteration is a real training run). Tell the user the expected cost before starting the loop and stream per-iteration progress.
 
-**Reproduce mode** — skip the tune loop (the spec's §6 is a byte-for-byte copy of an already-proven reward; re-training to validate a verbatim paste is wasted compute). Dispatch `reward-generator` directly, exactly as before:
+**Reproduce mode** — the tune loop still runs (a verbatim paste proves the reward worked in the SOURCE repo, not that it trains in THIS one — dt-scaling, physics, assets, or vendored dependencies may have shifted the balance). The difference is only iter 0's starting point: forward `spec_sections["6"]` (the full §6 Code block — RewardsCfg + all reward-function source) as `spec_section` into the loop. Iter 0's reward-generator pastes it verbatim (mechanically-forced repo differences only — import rewires, dt-scaling — logged in the Adaptation delta), runs the §6 smoke, then the loop trains to validate exactly as in create mode. A proven source reward typically converges at iter 0; later iterations activate only when `success_rate < success_threshold` and tune by minimal modification from the spec baseline.
 
-```
-Agent(reward-generator, prompt={
-  repo_path:     <abs>,
-  task_dir:      <task_dir>,
-  task_id:       <name>,
-  description:   <description>,
-  spec_section:  <spec_sections["6"]>             // full §6 Code block (RewardsCfg + all reward function
-                                                  // source) from probe-task. Pasted verbatim into
-                                                  // mdp/rewards.py + env_cfg.
-})
-```
-
-The agent pastes `spec_section` verbatim, runs the §6 smoke, and only iterates if the smoke fails (a spec defect, not authoring ambiguity).
-
-Persist the outcome into `${task_dir}/spec.json:phases.reward_tune` — for the tune loop: `{"status": "pass", "via": "reward-tune", "iters": <N>, "best_success_rate": <v>}` on convergence, `fail` on abort/failure; for reproduce: the reward-generator verdict as before. Stop the chain if `status != pass`.
+Persist the outcome into `${task_dir}/spec.json:phases.reward_tune` — `{"status": "pass", "via": "reward-tune", "iters": <N>, "best_success_rate": <v>}` on convergence, `fail` on abort/failure; reproduce mode additionally records `"seeded_from_spec": true`. Stop the chain if `status != pass`.
 
 ### Step 4 — Dispatch `dr-generator` (§7) — opt-in only
 
@@ -262,7 +249,7 @@ Skipped phases (whose section was not in the request) read `skipped (not request
 - **Do NOT regenerate `task-implementation.md` from this command.** Subagents may patch it surgically when they find a bug; full re-renders are owned by `benchmark-generator`.
 - **Sequential, not parallel.** Later phases may read files written by earlier ones; the chain is strict.
 - **Per-phase gate is fatal.** A subagent that returns `status: fail` (or a reward-tune loop that ends aborted/failed) halts the chain. Each phase owns its own retry/iteration loop.
-- **§6 is validated by training, not just smoke** (create/edit mode). The reward-tune loop is the gate — a reward that passes the structural smoke but never trains toward success does not pass Step 3. Reproduce mode is exempt (verbatim paste of a proven reward; smoke only).
+- **§6 is validated by training, not just smoke** (ALL modes, reproduce included). The reward-tune loop is the gate — a reward that passes the structural smoke but never trains toward success does not pass Step 3. Reproduce mode differs only in iter 0's starting point: the spec's §6 pasted verbatim instead of authored.
 - **§7 DR is opt-in.** Never wire DR speculatively; silence about DR in the user's request means skip.
 - **Ambiguity → user, not heuristic.** Any "Decisions" sub-block in `task-implementation.md` that the user's `description` doesn't fully resolve must trigger an `AskUserQuestion`. Subagents must batch all open questions for one section into a single ask.
 - **No editing of sibling tasks.** Refactoring nearby tasks is out-of-scope.

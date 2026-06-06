@@ -1,5 +1,13 @@
 # Triton-Lift-Box — Implementation Spec
 
+> **SUPERSEDED by [[lift-box-IsaacLab-v2]]** (`lift-box-IsaacLab-v2.md`). This spec's §6 success
+> predicate (`lift_box_success`) has NO grasp condition — training-validated reproduction
+> (2026-06-06, reward-tune on Isaac-Lift-Box-Dual-Franka-v0) showed PPO exploits it via a
+> grasp-less wedge-lift (success_rate 0.994 with zero finger contact), and the ungated
+> `box_xy_align` term admits a tip-box-on-end optimum. v2 gates success, success_bonus and
+> box_xy_align on dual finger contact (gate_0 & gate_1) and is training-validated to
+> success_rate 0.89. Prefer v2 as the reproduction/adaptation base.
+
 - benchmark_family: isaaclab-manager-based
 - source_repo: IsaacLab
 - probed_from_commit: 15b9942d2ccaaff092c70f4bdb71e1efd136852a
