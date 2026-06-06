@@ -41,6 +41,7 @@ Provide **exactly one** of `experience=` / `file=`. For `target=task-library`, `
 - If `file=` is given, read the file; its full body is the entry.
 - **Length check (human bullets):** if the entry came from `experience=` (a hand-written bullet), it MUST be **≤ 5 lines** (count newlines; wrapping in the terminal doesn't count — count literal `\n`). If it exceeds 5 lines, **refuse** and tell the user to shorten it or pass it as a `file=` instead. A `file=` body is exempt from the 5-line cap (it's a curated note, not a quick bullet) — but warn if it exceeds ~30 lines (ledgers stay skimmable).
 - English-only (constraint #1). Reject non-English bullets with a one-line note.
+- **High-level heuristics only:** ledger entries state the generalized lesson, NOT the run-specific story. Strip task names, iteration numbers, step counts, and percentage anecdotes before appending (e.g. "porting the base init pose unlocked grasping" — not "on <task> iter 3, return rose 6.9× at 20M steps"). If the entry as given is mostly a specific example, distill it to the heuristic and append that.
 
 ### A2 — Compute the next entry number
 

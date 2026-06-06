@@ -1,6 +1,6 @@
 # rl-tuning-agent — Cross-run Tuning Experience
 
-Append-only ledger of heuristics that have generalized across tunes. Read at Phase 0 of every new tune. Promote new lessons here from the per-tune `tuning-history.md` summaries when they're likely to repeat. **Each entry is numbered for stable cross-reference; never renumber existing entries — only append.**
+Append-only ledger of high-level heuristics that have generalized across tunes — no run-specific examples; keep each bullet short. Read at Phase 0 of every new tune. Promote new lessons here from the per-tune `tuning-history.md` summaries when they're likely to repeat. **Each entry is numbered for stable cross-reference; never renumber existing entries — only append.**
 
 ## Hyperparameter heuristics
 
@@ -33,8 +33,8 @@ Append-only ledger of heuristics that have generalized across tunes. Read at Pha
 
 ## Tricks that almost always help (when applicable)
 
-16. `obs_rms_jax` / `obs_rms_torch` — observation normalization. Free win on any task with multi-scale state vectors (joint positions + velocities + IMU). +51% return at 10M on UnitreeGo2/LocomotionReward (custom_jax PPO).
-17. `reward_norm_jax` — return-scale reward normalization. Big lift on shaped-reward locomotion tasks (+59% return at 10M on UnitreeGo2/LocomotionReward, custom_jax PPO). Do NOT use on sparse-reward tasks — it eats the signal.
+16. `obs_rms_jax` / `obs_rms_torch` — observation normalization. Free win on any task with multi-scale state vectors (joint positions + velocities + IMU).
+17. `reward_norm_jax` — return-scale reward normalization. Big lift on shaped-reward locomotion tasks. Do NOT use on sparse-reward tasks — it eats the signal.
 18. `value_clip_torch` — PPO clipped value loss. Lets you run more epochs / larger minibatches without value collapse.
 
 ## Failure-mode signatures

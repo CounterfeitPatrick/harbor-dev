@@ -123,12 +123,13 @@ embodiment, find the 1–3 most relevant `experiences/task-library/<folder>/*.md
 
 **Adapt-first (BINDING — protocol Step 4).** When a relevant match exists, its §1–§5 is the BASE
 implementation: author by computing the **minimal modification** that turns the proven base into the
-new task (object count/size, poses, robot placement, success geometry, names, asset paths). Do NOT
-re-derive decisions the base already settles (action mode, reset ranges, obs layout, **robot init
-pose/qpos**). The in-repo canonical example still wins on API/idiom. If a match is byte-identical to
-what's wanted, recommend `/harbor:task-create from=<spec>` instead of re-authoring. **Pure creation
-mode activates ONLY when no relevant task exists in the library** — an imperfect match means a
-larger delta, not pure-create.
+new task (object count/size, poses, robot placement, success geometry, names, asset paths). Library
+tasks are PROVEN successful (protocol "Priority" section): the base's settled decisions outrank every
+`task-experience.md` heuristic — do NOT re-derive decisions the base already settles (action mode,
+reset ranges, obs layout, **robot init pose/qpos**). The in-repo canonical example still wins on
+API/idiom. If a match is byte-identical to what's wanted, recommend `/harbor:task-create from=<spec>`
+instead of re-authoring. **Pure creation mode activates ONLY when no relevant task exists in the
+library** — an imperfect match means a larger delta, not pure-create.
 
 **Embodiment-swap trap (known failure mode):** when the base's robot asset is missing and you
 substitute the canonical in-repo robot, you must still PORT the base's `init_state.joint_pos` /

@@ -8,6 +8,25 @@ turns a cold-start design into "adapt a proven sibling," which is faster and hig
 The library is filled by `/harbor:update-experience target=task-library` from `/harbor:probe-task`
 specs; each file is a full §1..§7 implementation spec named `<short-task>-<repo>.md`.
 
+## Priority: library specs are PROVEN — they outrank all experience ledgers
+
+Every task in the library is a **verified, successfully-trained task** — its design choices have been
+proved correct end-to-end. The experience ledgers (`task-experience.md` / `reward-experience.md` /
+`dr-experience.md` / `tuning-experience.md`) are **heuristics distilled from past runs** — useful
+priors, but never proof. When the two disagree, the precedence is:
+
+1. **User description / explicit constraints** — always binding.
+2. **The matched library base spec** — its settled design choices (term ladders, weights, gating,
+   init poses, action modes, …) are copied as-is.
+3. **Destination-repo mechanics** — the in-repo canonical example / `task-implementation.md` for
+   *how* to express things, plus mechanically-forced repo differences (e.g. a RewardManager that
+   dt-scales weights when the base's fork didn't). These adapt the base's *expression*, never its
+   *design*.
+4. **Experience-ledger heuristics** — apply ONLY to (a) choices the base spec leaves open,
+   (b) pure-creation mode (no library match), or (c) a base choice that training evidence from the
+   CURRENT run has demonstrably falsified on the new task (logged in the Adaptation delta with the
+   evidence). A ledger heuristic is NEVER a reason to pre-emptively "improve" a proven base design.
+
 ## Step 1 — Classify the new task's embodiment
 
 From the task `description` + `task_id` (and the in-repo canonical example if already known), pick the
@@ -56,6 +75,10 @@ unforced risk.
 - **Start from the base**: take the matched spec's sections you own as the starting implementation.
   Change only what the new task's description / scene actually requires (object count/size, poses,
   robot placement, success geometry, stage predicates, asset paths, names).
+- **Ledger heuristics do not override the base** (see the Priority section above): the base spec is
+  proven; the ledgers are not. Do not rebalance proven weights, remove proven terms, or restructure
+  proven gating because a ledger entry suggests a different pattern — let training falsify the base
+  first, then change it citing that evidence.
 - **Embodiment swaps do NOT license inheriting the destination cfg's defaults.** When the base's
   robot asset is unavailable and you substitute the in-repo canonical robot, the base's **init
   pose / init qpos**, gains-relevant choices, and other pose-level design decisions must still be
