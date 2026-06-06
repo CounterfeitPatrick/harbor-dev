@@ -94,7 +94,7 @@ def create_env(cfg):
 
     n = int(cfg.get("n_envs", 1))
     task = str(cfg.get("task"))
-    seed = int(cfg.get("seed", 0))
+    seed = int(cfg.get("seed") or 0)
 
     def _factory(idx: int) -> Callable:
         def _f():
@@ -112,5 +112,5 @@ def create_render_env(cfg):
     Always n_envs=1 by contract. render_mode='rgb_array' so frames can be captured headlessly.
     """
     task = str(cfg.get("task"))
-    seed = int(cfg.get("seed", 0))
+    seed = int(cfg.get("seed") or 0)
     return _make_single_env(task, render_mode="rgb_array", seed=seed)

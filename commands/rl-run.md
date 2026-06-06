@@ -22,7 +22,7 @@ Any other `key=value` token after the required two is forwarded **verbatim** as 
 |---|---|
 | `total_timesteps=1_000_000` | shorten training |
 | `num_envs=512` | smaller batch |
-| `seed=7` | RNG seed |
+| `seed=7` | RNG seed (default: a fresh random seed per run, printed as `[train] seed=N` and persisted to `resolved_config.yaml`) |
 | `wandb=my-project` | enable W&B (project name = value) |
 | `normalize_env=true` | turn on NormalizeVecReward |
 | `env_params.horizon=500` | override env horizon (Hydra dotted-path) |

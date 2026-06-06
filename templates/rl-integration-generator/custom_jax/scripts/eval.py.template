@@ -85,7 +85,7 @@ def main(cfg: DictConfig):
         ckpt = REPO / ckpt
     if not ckpt.exists():
         print(f"[error] checkpoint not found: {ckpt}", file=sys.stderr); sys.exit(2)
-    set_random_seed(int(cfg.get("seed", 42)))
+    set_random_seed(int(cfg.get("seed") or 42))  # eval stays deterministic when seed is null
 
     env = create_env(cfg)
     payload = load_agent_dict(ckpt)
@@ -98,7 +98,7 @@ def main(cfg: DictConfig):
 
     n = int(cfg.num_envs)
     # VecEnv.reset is vmap'd over rng_key axis 0; expects (N, 2) split keys.
-    reset_rngs = jax.random.split(jax.random.PRNGKey(int(cfg.get("seed", 0))), n)
+    reset_rngs = jax.random.split(jax.random.PRNGKey(int(cfg.get("seed") or 0)), n)
     obs, env_state = env.reset(reset_rngs)
 
     # ------------------------------------------------------------------

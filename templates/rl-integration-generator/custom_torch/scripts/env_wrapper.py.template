@@ -160,7 +160,7 @@ def _make_cpu_vec_env(task_id: str, num_envs: int, seed: int):
 def create_env(cfg):
     task = str(cfg.get("task"))
     n = int(cfg.get("num_envs", cfg.get("n_envs", 1)))
-    seed = int(cfg.get("seed", 0))
+    seed = int(cfg.get("seed") or 0)
     device = str(cfg.get("device", "cuda" if torch.cuda.is_available() else "cpu"))
     gpu_sim = bool(cfg.get("gpu_sim", False))
 
@@ -188,7 +188,7 @@ def create_env(cfg):
 def create_render_env(cfg):
     """Single env (n=1) with rendering enabled — used by render.py."""
     task = str(cfg.get("task"))
-    seed = int(cfg.get("seed", 0))
+    seed = int(cfg.get("seed") or 0)
     device = str(cfg.get("device", "cuda" if torch.cuda.is_available() else "cpu"))
     env = _make_single_env(task, render_mode="rgb_array", seed=seed)
     # Wrap in a 1-env vector so the agent code path stays uniform.

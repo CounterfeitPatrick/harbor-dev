@@ -134,13 +134,18 @@ def main(cfg: DictConfig):
     if task is None:
         print("[error] task=<id> is required (Hydra override).", file=sys.stderr)
         sys.exit(2)
-    set_random_seed(int(cfg.get("seed", 42)))
+    # Default = random seed per run; pass seed=N for reproducibility. The drawn seed is
+    # written back into cfg so resolved_config.yaml / W&B record it.
+    seed = cfg.get("seed")
+    seed = int(seed) if seed is not None else int.from_bytes(os.urandom(4), "little") % (2**31)
+    cfg.seed = seed
+    print(f"[train] seed={seed}", flush=True)
+    set_random_seed(seed)
 
     env = create_env(cfg)
 
     ts = datetime.now().strftime("%Y%m%d-%H%M%S")
     task_slug = str(task).replace('/', '_')
-    seed = int(cfg.get("seed", 42))
     algo_slug = str(cfg.algo.name).lower()
     # Filesystem dir keeps the timestamp so parallel reruns don't collide.
     trial_id = f"{algo_slug}_{task_slug}_seed{seed}_{ts}"
@@ -259,7 +264,7 @@ def _render_and_log_video(agent, cfg: DictConfig, log_dir: Path, step: int,
     # Reset on the render env (single env). VecEnv.reset is vmap'd over rng_key
     # axis 0 → expects (N, 2) split PRNGKeys; no env_id kwarg.
     n = 1
-    reset_rngs = jax.random.split(jax.random.PRNGKey(int(cfg.get("seed", 0))), n)
+    reset_rngs = jax.random.split(jax.random.PRNGKey(int(cfg.get("seed") or 0)), n)
     obs, env_state = env.reset(reset_rngs)
 
     frames = []

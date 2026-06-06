@@ -10,7 +10,7 @@ defaults:
   - _self_
 
 # ---- Run identity ----
-seed: 42
+seed: null                # null = draw a fresh random seed at launch; pass seed=N for reproducibility
 algo: ppo
 task: null                # required at CLI: task=<id>
 

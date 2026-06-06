@@ -10,7 +10,7 @@
 name: ppo
 algo: ppo
 task: null            # override at CLI: task=<id>
-seed: 0
+seed: null            # null = draw a fresh random seed at launch (logged + persisted to resolved_config.yaml); pass seed=N for reproducibility
 n_envs: 8                 # parallel envs (SB3 SubprocVecEnv / custom_torch GymVecEnvWrapper)
 total_timesteps: 1_000_000  # training budget; CLI: total_timesteps=N
 wandb: null                # null = disabled; CLI: wandb=<project_name>

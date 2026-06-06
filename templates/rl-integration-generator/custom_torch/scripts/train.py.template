@@ -25,6 +25,7 @@ Example:
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -142,7 +143,13 @@ def main(cfg: DictConfig):
     if task is None:
         print("[error] task=<id> is required (Hydra override).", file=sys.stderr)
         sys.exit(2)
-    set_random_seed(int(cfg.get("seed", 42)))
+    # Default = random seed per run; pass seed=N for reproducibility. The drawn seed is
+    # written back into cfg so resolved_config.yaml / W&B record it.
+    seed = cfg.get("seed")
+    seed = int(seed) if seed is not None else int.from_bytes(os.urandom(4), "little") % (2**31)
+    cfg.seed = seed
+    print(f"[train] seed={seed}", flush=True)
+    set_random_seed(seed)
 
     env = create_env(cfg)
 

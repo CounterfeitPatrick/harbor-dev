@@ -140,7 +140,7 @@ def main(cfg: DictConfig):
 
     n = 1
     # VecEnv.reset is vmap'd over rng_key axis 0; expects (N, 2) split keys.
-    reset_rngs = jax.random.split(jax.random.PRNGKey(int(cfg.get("seed", 0))), n)
+    reset_rngs = jax.random.split(jax.random.PRNGKey(int(cfg.get("seed") or 0)), n)
     obs, env_state = env.reset(reset_rngs)
 
     frames = []

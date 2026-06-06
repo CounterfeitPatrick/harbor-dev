@@ -60,7 +60,7 @@ write_rl_report.py   →  rl_experiment_report.md         (end-of-run user-facin
     "eval_episodes": 10,
     "n_envs_cpu": 8,
     "n_envs_gpu": 4096,
-    "seed": 42
+    "seed": null
   }
 }
 ```
