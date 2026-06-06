@@ -35,6 +35,11 @@ def _make_single_env(task_id: str, render_mode=None, seed: int = 0):
     scripts_dir = REPO / "scripts"
     if scripts_dir.is_dir():
         for helper in scripts_dir.glob("_*_env.py"):
+            # _isaaclab_env.py (reward-add-log Path B helper) is NOT a Path-A
+            # family factory — it needs Kit booted and is consumed on the
+            # gpu_sim branch. Importing it here (pre-boot) dies on pxr.
+            if helper.name == "_isaaclab_env.py":
+                continue
             # Some benchmarks (e.g. dm_control) check a mounted source dir into
             # the repo root that shadows the installed wheel. The helper module
             # is responsible for normalizing cwd, but we ALSO drop the repo root

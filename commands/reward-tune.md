@@ -79,7 +79,7 @@ command -v ffmpeg >/dev/null                                            || exit 
 
 Resolve `task_dir = harbor/create-task/<slug>` (slug derived from task name). The dir MUST already exist (`create-task` or earlier `tune-reward` runs have used it).
 
-If `mode=cluster`, log "cluster not implemented; using local" and continue.
+**Per-term reward logging MUST be wired before iter 0** — the ANALYZE step (2e) parses `reward/<term>/episodic_return_mean` keys, and without `info["detailed_reward"]` the training run logs only `reward/total/...` (the loop is blind on term breakdown). Check whether the repo's env factory already exposes `detailed_reward` (Path A: `scripts/_<family>_env.py` has the `_DetailedRewardWrapper`; Path B IsaacLab: `scripts/_isaaclab_env.py` exists and `env_wrapper.py::_build_isaaclab_env` delegates to it). If not wired, execute the `/harbor:reward-add-log` flow (it auto-detects Path A/B) including its composer sanity check, and only then start the loop. Do NOT proceed with a training run that can't log per-term curves.
 
 ### Step 1 — Initialize / resume tune state
 
@@ -216,6 +216,11 @@ The renderer:
 m = parse_jsonl_tail(f"{trial_dir}/metrics.jsonl", n=200)
 final = pick_last_step(m)
 per_term = {k: v for k, v in final.items() if k.startswith("reward/") and "/episodic_return_mean" in k}
+# HARD GATE: per-term keys must be present beyond reward/total/... — if they are
+# missing, the Step 0 reward-add-log wiring regressed (or the run predates it).
+# Abort the tune with a remediation pointer (/harbor:reward-add-log) instead of
+# analyzing blind on total-only curves.
+assert len(per_term) > 1, "metrics.jsonl has only reward/total — per-term logging not wired; run /harbor:reward-add-log"
 total = final["reward/total/episodic_return_mean"]
 success = final.get("reward/success/episodic_return_mean", 0.0) / SUCCESS_REWARD_WEIGHT
 ```

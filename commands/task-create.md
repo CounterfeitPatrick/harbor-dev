@@ -194,6 +194,7 @@ Only when `do_reward` is true AND (task-generator was skipped OR returned pass).
 
 Notes for the inline execution:
 - The tune loop runs in `task_dir` (same slug ⇒ reward-tune co-locates there by design): `reward-history.md`, `handoff-reward-generator.md`, `memories.jsonl`, `tune-state.json`, `iter_<NNN>/`.
+- **Wire per-term reward logging before the first training run** (reward-tune Step 0): if the env factory doesn't expose `info["detailed_reward"]` yet, execute `/harbor:reward-add-log` first — otherwise the loop's per-term analysis is blind (`reward/total/...` only).
 - Seed `tune-state.json:library_refs` with the Step 1.5 matches — don't re-run the task-library search.
 - The loop's iteration 0 authors the reward from the placeholder `task-generator` left (a placeholder §6 is a valid reward-tune starting point), then each iteration trains a policy, renders, and analyzes per-term logs + frames until `success_rate ≥ success_threshold` (or the user aborts at a stuck-prompt).
 - This is the expensive phase (each iteration is a real training run). Tell the user the expected cost before starting the loop and stream per-iteration progress.

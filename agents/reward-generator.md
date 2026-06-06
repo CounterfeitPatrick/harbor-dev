@@ -144,6 +144,8 @@ Locate the existing reward (placeholder or real) by scanning the repo using the 
 
 Render `smoke_s6.py.template` → `<task_dir>/smokes/smoke_s6.py` with `{{TASK_ID}}` substituted. Run inside `.venv`. The contract auto-detects `info["detailed_reward"]` and asserts the composer match when present; otherwise it falls through to passthrough mode.
 
+**Passthrough is a FAILURE in a reward-tune context.** When dispatched with an `iter` field (the `/harbor:reward-tune` loop), the orchestrator has already wired per-term logging via `/harbor:reward-add-log` (its Step 0 gate) — so `composer=passthrough` means the wiring is broken or the smoke built the env without the helper (e.g. raw `gym.make` instead of the repo's instrumented factory). Do NOT report `status: pass` with `per_term_logging: no` in that context; surface the wiring problem instead. Standalone create mode (no `iter`) may still pass through — per-term wiring is `/harbor:reward-add-log`'s job there.
+
 Retry loop on failure (3 attempts; `task-implementation.md` patches allowed during retry).
 
 ## Iteration budget

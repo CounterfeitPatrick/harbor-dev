@@ -56,6 +56,13 @@ unforced risk.
 - **Start from the base**: take the matched spec's sections you own as the starting implementation.
   Change only what the new task's description / scene actually requires (object count/size, poses,
   robot placement, success geometry, stage predicates, asset paths, names).
+- **Embodiment swaps do NOT license inheriting the destination cfg's defaults.** When the base's
+  robot asset is unavailable and you substitute the in-repo canonical robot, the base's **init
+  pose / init qpos**, gains-relevant choices, and other pose-level design decisions must still be
+  PORTED (joint values map 1:1 across same-family arms, e.g. FR3 → Panda). The base chose its init
+  qpos for a reason (e.g. "EE arcs over the table"); silently taking the substitute cfg's default
+  pose is a known failure mode that cripples exploration. If a value genuinely cannot port, that is
+  a `changed:` bullet in the Adaptation delta — never an undeclared fallback.
 - **The in-repo canonical example + `task-implementation.md` remain ground truth** for the destination
   benchmark's API/idioms. When the library spec and the destination family disagree on *how* to express
   something, follow the destination family; borrow the *design* from the library.

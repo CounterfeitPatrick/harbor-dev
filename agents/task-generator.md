@@ -124,10 +124,18 @@ embodiment, find the 1–3 most relevant `experiences/task-library/<folder>/*.md
 **Adapt-first (BINDING — protocol Step 4).** When a relevant match exists, its §1–§5 is the BASE
 implementation: author by computing the **minimal modification** that turns the proven base into the
 new task (object count/size, poses, robot placement, success geometry, names, asset paths). Do NOT
-re-derive decisions the base already settles (action mode, reset ranges, obs layout). The in-repo
-canonical example still wins on API/idiom. If a match is byte-identical to what's wanted, recommend
-`/harbor:task-create from=<spec>` instead of re-authoring. **Pure creation mode activates ONLY when
-no relevant task exists in the library** — an imperfect match means a larger delta, not pure-create.
+re-derive decisions the base already settles (action mode, reset ranges, obs layout, **robot init
+pose/qpos**). The in-repo canonical example still wins on API/idiom. If a match is byte-identical to
+what's wanted, recommend `/harbor:task-create from=<spec>` instead of re-authoring. **Pure creation
+mode activates ONLY when no relevant task exists in the library** — an imperfect match means a
+larger delta, not pure-create.
+
+**Embodiment-swap trap (known failure mode):** when the base's robot asset is missing and you
+substitute the canonical in-repo robot, you must still PORT the base's `init_state.joint_pos` /
+init pose onto the substitute (joint values map 1:1 across same-family arms, e.g. FR3 → Panda) —
+`SomeRobotCfg.replace(...)` silently inherits the substitute's default home pose otherwise. Init
+qpos is task DESIGN (it places the EE over the workspace at t=0), not robot idiom. Any value that
+genuinely cannot port gets an explicit `changed:` bullet in the Adaptation delta.
 
 Document the outcome in `task-history.md` as an **Adaptation delta** block (protocol Step 5): the
 base spec path (or "none — pure creation mode"), what was kept as-is, and one bullet per change made
