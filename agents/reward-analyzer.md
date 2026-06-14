@@ -8,7 +8,7 @@ model: opus
 
 # Reward Analyzer (score phase)
 
-Score one finished reward candidate. Produce the evidence the main agent needs to decide the next design — numerical (per-term curves + success_rate) and visual (what the policy actually does) — and nothing more. You make **no** design decisions.
+Score one finished reward candidate. Produce the evidence the main agent needs to decide the next design — numerical (per-term curves + success_rate) and visual (what the policy does) — and nothing more. You make **no** design decisions.
 
 ## Inputs
 
@@ -24,7 +24,7 @@ Score one finished reward candidate. Produce the evidence the main agent needs t
 }
 ```
 
-You resolve success YOURSELF from the iteration folder — the orchestrator does NOT hand you a success term. Read `<iter_dir>/design.json` (the spec the main agent authored for this candidate): its `success_term` field names the reward term whose firing means task success, and that term's `weight` is in `terms[]`. Everything you need is in `iter_dir` + `trial_dir` + the task `description`.
+You resolve success YOURSELF — the orchestrator does NOT hand you a success term. Read `<iter_dir>/design.json` (the spec the main agent authored for this candidate): its `success_term` field names the reward term whose firing means task success, and that term's `weight` is in `terms[]`. Everything you need is in `iter_dir` + `trial_dir` + the task `description`.
 
 ## Output
 
@@ -59,14 +59,14 @@ per_term = {k.split("/")[1]: v for k, v in final.items()
 
 ### 2. Visual — read the rollout
 
-`render.mp4` should already exist in `iter_dir` (the orchestrator folds render into the train job, or renders as a fallback before dispatching you). Extract `n_frames` and read them:
+`render.mp4` should already exist in `iter_dir` (orchestrator folds render into the train job, or renders as a fallback before dispatching you). Extract `n_frames` and `Read` them:
 
 ```bash
 mkdir -p <iter_dir>/frames
 ffmpeg -y -i <iter_dir>/render.mp4 -vf "select='not(mod(n\,N))'" -vsync vfr <iter_dir>/frames/f%03d.png
 ```
 
-`Read` the frames; describe what the policy does and where it diverges from `description`. If `render.mp4` is genuinely absent, note it in `errors` and analyze numerically only — do NOT attempt to render (that's the orchestrator's job).
+Describe what the policy does and where it diverges from `description`. If `render.mp4` is genuinely absent, note it in `errors` and analyze numerically only — do NOT attempt to render (that's the orchestrator's job).
 
 ### 3. Write analysis.md + return
 

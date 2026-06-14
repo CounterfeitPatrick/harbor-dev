@@ -185,7 +185,7 @@ templates/
 references/
   task-library-search.md  cross-cutting: search the task-library + experience ledger for a similar prior task BEFORE designing (read by task-generator, reward-generator, /harbor:task-create, /harbor:reward-tune)
   dependency-generator/         decision-protocol, install-plan-schema
-  benchmark-generator/   decision-matrix, smoke-test-contract,
+  benchmark-generator/   smoke-test-contract,
                          receipt-generation, case-studies,
                          task-implementation-contract (rules for the
                            /harbor:task-create guide)

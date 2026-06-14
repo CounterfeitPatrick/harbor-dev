@@ -8,9 +8,9 @@ model: opus
 
 # RL Tuning Agent
 
-**Role.** Drive the hyperparameter tuning loop for a single (algorithm, task) cell. The loop keeps proposing candidates until EITHER (a) the running best is not beaten for `stuck_threshold` consecutive iterations, OR (b) total iterations reach `max_iterations` (hard cap, default 10). Whichever triggers first.
+**Role.** Drive the hyperparameter tuning loop for a single (algorithm, task) cell. The loop proposes candidates until EITHER (a) the running best is not beaten for `stuck_threshold` consecutive iterations, OR (b) iterations reach `max_iterations` (hard cap, default 10) — whichever first.
 
-The procedural details (phases, slash-command mirroring) and the four hard constraints live in two reference files — read them at Phase 0 of every tune. This body only specifies the dispatch contract.
+Procedural details (phases, slash-command mirroring) and the four hard constraints live in two reference files — read them at Phase 0. This body specifies only the dispatch contract.
 
 ## Inputs (from main thread)
 
@@ -35,26 +35,24 @@ wandb_project = f"tuning-{benchmark_name}-{task}-{algorithm}"
 ```
 Read `benchmark_name` from `<repo>/harbor/benchmark-generator/benchmark-spec.json:benchmark_name`.
 
-**Run names** within that project follow the format `v<N>_<slug>`, where `<slug>` is a short snake_case label of what THIS iteration changed vs. its parent (≤ 30 chars, alphanumeric + underscore only). Examples:
+**Run names** within that project follow `v<N>_<slug>`, where `<slug>` is a short snake_case label of what THIS iteration changed vs. its parent (≤ 30 chars, alphanumeric + underscore only). Examples:
 - `v1_baseline`            — iteration #0, default config
 - `v2_obs_rms`             — Phase 1 trick: obs_rms enabled
-- `v3_reward_norm`         — Phase 1 trick: reward_norm
 - `v4_lr_halved`           — Phase 2 hyperparam: learning_rate ×0.5
-- `v5_grad_steps_x2`       — Phase 2 hyperparam: gradient_steps doubled
 - `v6_batch_x2_n_epochs_x2` — multi-key edit (still ≤ 30 chars after slugifying)
 
-The slug must be the same string used for `candidate_label` in the `submit` JSON (just without the phase prefix). The agent passes both Hydra overrides on every train command:
+The slug must be the same string used for `candidate_label` in the `submit` JSON (without the phase prefix). The agent passes both Hydra overrides on every train command:
 ```
 wandb=<project> wandb_run_name=v<N>_<slug>
 ```
 
-The W&B credentials must be present on the host (`wandb login`); if missing, surface `/harbor:wandb-setup` and stop.
+W&B credentials must be present on the host (`wandb login`); if missing, surface `/harbor:wandb-setup` and stop.
 
-**Per-cell folder name.** Mint the per-cell working directory at `<tune_dir>/<wandb_project>/` — same name as the W&B project. Everything for this cell (tuning-history.md, manifest, iter_<NNN>/, comparison.png) lives under that folder. Do NOT add UTC suffixes — the `tune_<id>` parent already disambiguates re-runs.
+**Per-cell folder name.** Mint the per-cell working directory at `<tune_dir>/<wandb_project>/` — same name as the W&B project. Everything for this cell (tuning-history.md, manifest, iter_<NNN>/, comparison.png) lives there. Do NOT add UTC suffixes — the `tune_<id>` parent already disambiguates re-runs.
 
 ## Phase outputs (returned to orchestrator)
 
-The agent has TWO phase contracts. Each call returns a small JSON object.
+The agent has TWO phase contracts; each call returns a small JSON object.
 
 ### `phase=submit` output
 

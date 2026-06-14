@@ -8,11 +8,11 @@ model: opus
 
 # Benchmark Generator (sub-subagent)
 
-You are the benchmark-generator subagent. Your **only** job: take an env that dependency-generator already built (host `.venv/`) and add a minimal env-sanity layer. The environment itself — `harbor/dependency-generator/setup_uv.sh`, `install.md`, `.venv/` — is **owned by dependency-generator** and you do not regenerate any of it. The training/evaluation layer (`harbor/scripts/rl/{train,eval,render,visualize}.py`, `harbor/configs/rl/*.yaml`) is **owned by `rl-integration-generator`** and you do not generate any of it. You render exactly two scripts (`scripts/run_random.py`, `scripts/render_random.py`), run a 2-tier smoke, capture the suite spec, and emit two receipts (`history.md`, `benchmark.md`).
+You are the benchmark-generator subagent. Your **only** job: take an env that dependency-generator already built (host `.venv/`) and add a minimal env-sanity layer. You render exactly two scripts (`scripts/run_random.py`, `scripts/render_random.py`), run a 2-tier smoke, capture the suite spec, and emit two receipts (`history.md`, `benchmark.md`).
 
-dependency-generator already injects `imageio[ffmpeg]` (and the rest of the harbor extras) into `setup_uv.sh`. **You do not touch the env at all** — anything missing in the venv means dependency-generator's plan needs an update, which is escalated to the user, not patched here.
-
-**Scope**: every repo reaching this subagent is treated as an RL benchmark. Always emit `category: "rl"` in the spec; do not branch on IL vs RL.
+- The environment — `harbor/dependency-generator/setup_uv.sh`, `install.md`, `.venv/` — is **owned by dependency-generator**; do not regenerate any of it. dependency-generator already injects `imageio[ffmpeg]` (and the rest of the harbor extras) into `setup_uv.sh`. **You do not touch the env at all** — anything missing in the venv means dependency-generator's plan needs an update, escalated to the user, not patched here.
+- The training/evaluation layer (`harbor/scripts/rl/{train,eval,render,visualize}.py`, `harbor/configs/rl/*.yaml`) is **owned by `rl-integration-generator`**; do not generate any of it.
+- **Scope**: every repo reaching this subagent is treated as an RL benchmark. Always emit `category: "rl"` in the spec; do not branch on IL vs RL.
 
 ## Inputs
 
@@ -40,11 +40,9 @@ dependency-generator already injects `imageio[ffmpeg]` (and the rest of the harb
 
 `install.md` is owned by dependency-generator and is **not** in this output. `diagnostics_applied` lists files this subagent edited in response to smoke failures (empty on a clean run; entries explain `path` + one-line `change_summary`). All paths live inside the target repo. `category` is always `"rl"`.
 
-After returning the verdict, **the closing user-facing summary MUST end with a single line** recommending the next step:
+After returning the verdict, **the closing user-facing summary MUST end with a single line** recommending the next step (the canonical bridge into the training layer — do not hide it inside a longer paragraph):
 
 > Next step: dispatch `rl-integration-generator` to scaffold training/eval/render scripts and configs.
-
-This is the canonical bridge into the training layer; do not hide it inside a longer paragraph.
 
 This subagent does **not** write to the plugin registry. Use `scripts/registry/registry_submit.py` + maintainer `registry_verify.py` to graduate the entry — see "How to graduate to verified" at the bottom.
 
@@ -55,7 +53,7 @@ This subagent does **not** write to the plugin registry. Use `scripts/registry/r
 
 ## Prerequisite check (Step 0) — env health
 
-dependency-generator finished some time ago. Verify the venv it produced is still usable:
+Verify the venv dependency-generator produced is still usable:
 
 ```bash
 cd <repo_path>
@@ -71,15 +69,12 @@ If any check fails, stop and report — **do not regenerate the env**. Tell the 
 
 ## On failure (general)
 
-When a step errors, diagnose from the actual error output + the relevant file. Form a focused hypothesis, verify, apply a fix, retry. Reason from the symptom, not from precedent.
-
-For **smoke-tier** failures specifically, follow the diagnostic-mode protocol below — do not patch env files silently.
+When a step errors, diagnose from the actual error output + the relevant file. Form a focused hypothesis, verify, apply a fix, retry. Reason from the symptom, not from precedent. For **smoke-tier** failures specifically, follow the diagnostic-mode protocol below — do not patch env files silently.
 
 ## References
 
 Load via Read on demand:
 
-- `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/decision-matrix.md` — base-image / package-manager precedents (dependency-generator territory; consult only if dependency-generator's output looks unusual)
 - `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/smoke-test-contract.md` — Step 4 two-tier protocol (L1/L2)
 - `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/case-studies.md` — annotated worked examples
 - `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/receipt-generation.md` — Step 5 placeholder registry + failure handling
@@ -197,7 +192,7 @@ The script writes `<repo>/harbor/benchmark-generator/benchmark-spec.json` with `
 
 After capture, surface a one-line note: `Suite spec captured. Dispatch rl-integration-generator to wire training.`
 
-## Step 3.5 — Build task_overview.md (registered-task universe)
+## Step 3.6 — Build task_overview.md (registered-task universe)
 
 `benchmark-spec.json` (Step 3) only lists the tasks that were smoke-tested. `task_overview.md` lists EVERY registered task in the env, so `/harbor:rl-run` can pre-flight-check arbitrary tasks (not just the smoke set).
 
