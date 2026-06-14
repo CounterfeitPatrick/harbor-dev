@@ -16,7 +16,7 @@ The user wants a tour of everything this plugin offers. **Print the static block
 
 <!-- BEGIN STATIC -->
 
-**harbor** — Set up Python GPU repos with uv and curate verified benchmark entries. Team-internal plugin.
+**harbor** — Set up Python GPU repos with uv and curate verified benchmark entries.
 
 ## Slash commands
 

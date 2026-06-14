@@ -12,7 +12,7 @@ algorithms: [ppo, sac, td3]
 backend: custom_torch
 
 references:
-  - /home/steven/code/pql/pql/algo/ppo.py            # `obs_norm` cfg flag
+  - <pql-repo>/pql/algo/ppo.py            # `obs_norm` cfg flag
   - templates/rl-integration-generator/custom_torch/utils/torch_util.py.template   # RunningMeanStd
   - templates/rl-integration-generator/custom_torch/algo/ac_base.py.template       # builds self.obs_rms
 

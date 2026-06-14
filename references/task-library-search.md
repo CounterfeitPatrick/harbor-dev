@@ -1,7 +1,7 @@
 # Task-library search protocol (run FIRST, before any design)
 
-Loaded by `task-generator`, `reward-generator`, and the `/harbor:task-create` / `/harbor:reward-tune`
-orchestrators. Before authoring or tuning anything, search the cross-run **task-library** for a similar
+Loaded by `task-generator` and the `/harbor:task-create` / `/harbor:reward-tune` orchestrators (the
+reward-tune **main agent** owns reward design, so it — not the `reward-generator` subagent — reads this for §6). Before authoring or tuning anything, search the cross-run **task-library** for a similar
 task already designed end-to-end, plus the relevant **experience ledger** — then reuse what fits. This
 turns a cold-start design into "adapt a proven sibling," which is faster and higher-quality.
 
@@ -51,7 +51,7 @@ grep -ril "<verb|object|robot keywords>" "$LIB"   # e.g. "stack", "drawer", "cub
 
 Rank by overlap with the new task's verb (stack / insert / lift / grasp / walk …), object class, and
 robot. Pick the **1–3 best matches**. Skim each match's `Task summary` + the sections you own
-(`task-generator` → §1–§5; `reward-generator` → §6) — don't read whole files you don't need.
+(`task-generator` → §1–§5; the reward-tune main agent → §6) — don't read whole files you don't need.
 
 ## Step 3 — Read the matching experience ledger
 
@@ -60,7 +60,7 @@ Also read the caller's own append-only ledger (heuristics distilled across runs)
 | Caller | Ledger |
 |---|---|
 | `task-generator` | `experiences/task-generator/task-experience.md` |
-| `reward-generator` / `/harbor:reward-tune` | `experiences/reward-generator/reward-experience.md` |
+| `/harbor:reward-tune` (main agent) | `experiences/reward-generator/reward-experience.md` |
 | `dr-generator` | `experiences/dr-generator/dr-experience.md` |
 
 ## Step 4 — Adapt-first (BINDING): minimal modification of the matched spec

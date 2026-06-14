@@ -6,7 +6,7 @@
 - **task_id**: `Isaac-Lift-Box-Dual-Franka-v0` (+ `Isaac-Lift-Box-Dual-Franka-Play-v0`)
 - **family**: `isaaclab-manager-based` (ManagerBasedRLEnv)
 - **embodiment**: multi-arm manipulation (two FR3 + Franka-hand robots, dual-arm cooperative lift)
-- **repo**: `/home/steven/code/agentic/IsaacLab`
+- **repo**: `<IsaacLab-repo>`
 - **task source dir**: `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/`
 - **probed_from_commit**: `090aed18163b2194d5551c7919f7539283677743` (task files are untracked — HEAD sha recorded for repo provenance only)
 - **canonical_build**: smoke_s1.py exit 0 →

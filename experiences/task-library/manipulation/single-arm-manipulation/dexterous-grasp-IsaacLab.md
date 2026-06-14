@@ -437,7 +437,7 @@ def __post_init__(self):
 
 ### Description
 
-Single action term `arm_hand_action` — 22-D EMA cumulative-relative joint position controller, vendored verbatim from `bidex/env/action_managers/actions.py:EMACumulativeRelativeJointPositionAction` into this task's `mdp/actions.py` (so there is **no runtime import from `/home/steven/code/bidex`**). One scalar per joint, regex `.*` captures all 22 joints in USD canonical order (6 arm `joint1..joint6` followed by 16 hand joints in the order encoded by `JOINT_LOWER_LIMIT` / `JOINT_UPPER_LIMIT` — see §2 lists). Controller is joint-space (NOT IK / NOT task-space). Per-step rule (raw `a_t`, scale `s = 0.03`, alpha `α = 0.2`, init joint pose `q_init` captured at reset, cumulative delta `del_t`, previous applied `prev_t`):
+Single action term `arm_hand_action` — 22-D EMA cumulative-relative joint position controller, vendored verbatim from `bidex/env/action_managers/actions.py:EMACumulativeRelativeJointPositionAction` into this task's `mdp/actions.py` (so there is **no runtime import from `<bidex-repo>`**). One scalar per joint, regex `.*` captures all 22 joints in USD canonical order (6 arm `joint1..joint6` followed by 16 hand joints in the order encoded by `JOINT_LOWER_LIMIT` / `JOINT_UPPER_LIMIT` — see §2 lists). Controller is joint-space (NOT IK / NOT task-space). Per-step rule (raw `a_t`, scale `s = 0.03`, alpha `α = 0.2`, init joint pose `q_init` captured at reset, cumulative delta `del_t`, previous applied `prev_t`):
 
 ```
 1. processed_t = s * a_t              # JointPositionAction (offset disabled, use_default_offset=False)
@@ -1520,8 +1520,8 @@ def placeholder_zero(env: "ManagerBasedRLEnv") -> torch.Tensor:
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dex_grasp/mdp/observations.py` | 1–72 | `joint_pos_right_normalized`, `dog_position_in_world`, `asset_cfg_to_joint_ids` helper. |
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dex_grasp/mdp/rewards.py` | 1–310 | 6 reward funcs + `_allegro_grasp_predicate` helper + `_get_latch_buffer` + `_LATCH_BUFFERS` module-level registry + `placeholder_zero` legacy shim. |
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dex_grasp/mdp/terminations.py` | 1–36 | `dog_reached_target`. |
-| `harbor/assets/ufactory850/uf850_allegro_right.usd` | (binary) | UF850 + Allegro right hand articulation USD. **Copied from bidex during task creation** — no runtime dependency on `/home/steven/code/bidex`. Verified `test -e`. |
-| `harbor/assets/grasp/dog.usd` | (binary) | "Dog" rigid object USD (0.11 kg target mass). **Copied from bidex during task creation** — no runtime dependency on `/home/steven/code/bidex`. Verified `test -e`. |
+| `harbor/assets/ufactory850/uf850_allegro_right.usd` | (binary) | UF850 + Allegro right hand articulation USD. **Copied from bidex during task creation** — no runtime dependency on `<bidex-repo>`. Verified `test -e`. |
+| `harbor/assets/grasp/dog.usd` | (binary) | "Dog" rigid object USD (0.11 kg target mass). **Copied from bidex during task creation** — no runtime dependency on `<bidex-repo>`. Verified `test -e`. |
 | `harbor/assets/table/lab_table_instanceable_colored_rotated.usd` | (binary) | Lab table (shared with `lift_box` / `insert_drawer`; kinematic). Verified `test -e`. |
 
 External imports the task relies on:

@@ -1,7 +1,6 @@
 # harbor
 
 Plugin for setting up Python GPU repos via uv and tracking verified benchmark entries.
-Team-internal scope.
 
 ## Hard constraints (apply to ALL tasks)
 
@@ -27,6 +26,7 @@ L1   AGENT (intelligence)         — Claude itself; not in code
 L2   ENTRY POINTS                 — User-facing surfaces. Two flavours:
                                     · commands/<name>.md   = explicit slash /harbor:<name>
                                     · skills/<name>/SKILL.md = description-driven auto-load (also slash-able)
+                                      (harbor ships none today — all current entry points are commands)
 L3   SUBAGENTS (roles)            — agents/<name>.md   (fresh context, isolated agent loop)
 L4   TOOLS (deterministic)        — scripts/<owner>/*.py + MCP functions + Bash + Read/Write/Edit
 L5   SHARED KNOWLEDGE (read-only) — templates/, references/, mcp/data/
@@ -108,12 +108,15 @@ Commands are grouped by area via filename prefix (Claude Code commands have no t
 ```
 scripts/
   dependency-generator/      render_uv.py, smoke_uv.py
-  benchmark-generator/ capture_spec.py
+  benchmark-generator/ capture_spec.py, list_tasks.py, render_task_overview.py
   rl-integration-generator/ render_rl_suite.py, render_data_logger.py, discover_rl_tasks.py,
                       discover_algorithms.py, validate_rl_suite.py
   rl-tuning-agent/    run_rl_trial.py, analyze_rl_trial.py, suggest_hparams.py,
                       render_trial_contact_sheet.py, write_rl_report.py
+  rl-run/             check_reward_logger.py
+  rl-tricks/          apply_trick.py, list_tricks.py
   reward-add-log/     sanity_check.py, sanity_check_isaaclab.py
+  plot/               render_plot.py
   registry/           registry_submit.py, registry_verify.py
   install/            install_prerequisites.sh, install_uv.sh
 ```
@@ -132,6 +135,8 @@ templates/
                                stable_baseline3/scripts/{train,eval,render,env_wrapper}.py.template
                                custom_torch/scripts/{train,eval,render,env_wrapper}.py.template
                                custom_torch/{algo,replay,models,utils}/*.py.template (~14 self-contained algo files)
+                               custom_jax/scripts/{train,eval,render,env_wrapper,visualize}.py.template +
+                                 custom_jax/{algo,replay,models,utils}/*.py.template (JAX mirror of custom_torch)
                                local_implementation/scripts/{train,eval,render,env_wrapper}.py.template (shims)
                              shared (top-level):
                                configs/{ppo,sac,td3}{,.parallel}.yaml.template (unified schema both sources read)
@@ -151,7 +156,10 @@ templates/
                            tracking error → physics-param sanity, runs after S2) +
                            smoke_s6_render.py.template (random-rollout render → scene-stability
                            asserts + keyframe PNGs the agent visually inspects; MP4 to
-                           <task_dir>/) — all rendered to <task_dir>/smokes/ then run in .venv;
+                           <task_dir>/) + smoke_success{,_visualize}.py.template (success-scenario
+                           replication → confirm the success termination fires; the visualize
+                           sibling is headed and NOT run in regression) —
+                           all rendered to <task_dir>/smokes/ then run in .venv;
                          action_terms/ema_delta_joint_pos{,_cfg}.py.template (custom
                            EMACumulativeRelativeJointPositionAction — rendered into
                            <task>/mdp/ when §2 mode == ema_delta_joint_pos);
@@ -168,6 +176,11 @@ templates/
                            re-checked after reset; obs-noise terms checked vs paired no-noise cfg)
   reward-add-log/        reward_terms_block.py.template (Path A scalar wrapper),
                          isaaclab_env_helper.py.template (Path B IsaacLab helper)
+  rl-tricks/             <trick>/{manifest.yaml, patches.yaml, smoke.py, edits/*} — trick library read
+                         by /harbor:rl-add-trick (obs_rms_jax, obs_rms_torch, reward_norm_jax,
+                         value_clip_torch, value_norm_torch, distributional_critic_torch)
+  rl-sweep/              launch.sh{,.isaaclab}.template (SLURM trial launchers for /harbor:rl-sweep)
+  plot/                  spec.example.yaml (example /harbor:plot spec)
 
 references/
   task-library-search.md  cross-cutting: search the task-library + experience ledger for a similar prior task BEFORE designing (read by task-generator, reward-generator, /harbor:task-create, /harbor:reward-tune)
@@ -196,9 +209,10 @@ experiences/             cross-run heuristic ledgers (numbered, append-only)
   task-generator/        task-experience.md
   reward-generator/      reward-experience.md
   dr-generator/          dr-experience.md
-  task-library/          task-design knowledge indexed by embodiment + family (not by agent):
-                           manipulation/{multi-arm-manipulation, single-arm-manipulation}/library.md
-                           locomotion/{humanoid, quadrupedal}/library.md
+  task-library/          task-design knowledge indexed by embodiment + family (not by agent);
+                         one self-contained <task>-<repo>.md probe-task spec per task (+ README.md):
+                           manipulation/{multi-arm-manipulation, single-arm-manipulation}/*.md
+                           locomotion/{humanoid, quadrupedal}/*.md
 
 mcp/harbor/data/       benchmarks.yaml  (live registry)
 mcp/harbor/specs/      benchmarks/<name>.json

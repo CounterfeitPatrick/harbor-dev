@@ -140,6 +140,7 @@ test -x "<repo>/.venv/bin/python"                         || { echo ".venv/ miss
 
 - **Verbatim code, not paraphrased.** Every reward / observation / action function in §6 / §5 / §2 is pasted as-is. The spec must be self-contained enough that a downstream agent can recreate the file without re-reading the source repo.
 - **Resolve asset paths.** Where the env_cfg uses `Path(__file__).resolve().parents[N] / "..."`, resolve to the actual path (relative to `<source_repo>`) so the downstream agent can locate equivalent assets in the destination repo.
+- **No machine-specific or absolute paths.** The spec must be self-contained: every path is relative to `<source_repo>` or a clearly-marked `<placeholder>`. Never emit a personal home path (`/home/...`, `/Users/...`) — a reader on another machine must be able to follow the spec verbatim.
 - **English-only.**
 - **Read-only.** probe-task never modifies the source repo — it only reads + writes the output file.
 

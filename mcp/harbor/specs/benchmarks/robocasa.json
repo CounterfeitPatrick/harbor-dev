@@ -3,7 +3,7 @@
   "schema_version": 1,
   "captured_at": "2026-04-26T17:22:41+00:00",
   "captured_from": {
-    "repo_path": "/home/yjin/repos/robocasa",
+    "repo_path": "<local checkout>",
     "env_id": "PnPCounterToCab",
     "make_expr": "create_robocasa_env(task_name='PnPCounterToCab', robots='PandaMobile', arm_controller='cartesian_pose', img_res=128, obj_instance_split='B', layout_and_style_ids=None, seed=0, use_gui=False)",
     "category": "IL"

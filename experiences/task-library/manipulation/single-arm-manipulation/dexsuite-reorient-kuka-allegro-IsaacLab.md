@@ -240,7 +240,7 @@ class KukaAllegroMixinCfg:
 
 ### Smoke
 ```bash
-cd /home/steven/code/agentic/IsaacLab
+cd <IsaacLab-repo>
 .venv/bin/python -c "import gymnasium as gym; env = gym.make('Isaac-Dexsuite-Kuka-Allegro-Reorient-v0'); print(env.observation_space, env.action_space); env.close()"
 ```
 Expected stdout: **NOT CAPTURED** — see build caveat. WARN: requires booting Isaac Sim (`pxr`) which is unavailable on this host. Downstream reproduction must run inside an Isaac Sim runtime.

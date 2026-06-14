@@ -104,7 +104,7 @@ def build_twocolor_peg(
 
 **Smoke (§1 build).**
 ```bash
-cd /home/steven/code/agentic/ManiSkill
+cd <ManiSkill-repo>
 .venv/bin/python -c "import gymnasium as gym, mani_skill; e=gym.make('LiftPegUpright-v1'); print(e.observation_space, e.action_space); e.close()"
 ```
 Expected stdout:

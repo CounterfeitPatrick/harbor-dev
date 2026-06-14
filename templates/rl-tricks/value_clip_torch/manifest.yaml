@@ -14,7 +14,7 @@ algorithms: [ppo]
 backend: custom_torch
 
 references:
-  - /home/steven/code/pql/pql/algo/ppo.py            # canonical value-clip block in update_net
+  - <pql-repo>/pql/algo/ppo.py            # canonical value-clip block in update_net
   - templates/rl-integration-generator/custom_torch/algo/ppo.py.template  # the file we patch (rendered copy under <repo>/harbor/...)
 
 caveats:

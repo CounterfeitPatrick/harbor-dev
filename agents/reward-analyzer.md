@@ -20,11 +20,11 @@ Score one finished reward candidate. Produce the evidence the main agent needs t
   "task_id":     "<clone task id this candidate trained>",
   "trial_dir":   "<abs path to harbor/outputs/...>",
   "description": "<task description — the behavior to match>",
-  "success_term":   "<reward term whose firing means success, e.g. success>",
-  "success_weight": <float weight of that term in the composer>,
   "n_frames":    12
 }
 ```
+
+You resolve success YOURSELF from the iteration folder — the orchestrator does NOT hand you a success term. Read `<iter_dir>/design.json` (the spec the main agent authored for this candidate): its `success_term` field names the reward term whose firing means task success, and that term's `weight` is in `terms[]`. Everything you need is in `iter_dir` + `trial_dir` + the task `description`.
 
 ## Output
 
@@ -55,7 +55,7 @@ per_term = {k.split("/")[1]: v for k, v in final.items()
 
 - **HARD GATE:** there must be per-term keys beyond `reward/total/...`. If only `total` is present, per-term logging regressed — return `errors: ["per-term logging missing — run /harbor:reward-add-log"]` and `success_rate: null`. Do NOT fabricate a score from total-only curves.
 - `total_return = final["reward/total/episodic_return_mean"]`.
-- `success_rate = per_term[success_term] / success_weight` (fraction of episodes that triggered the success termination).
+- Read `<iter_dir>/design.json` → `success_term` + that term's `weight`. Then `success_rate = per_term[success_term] / weight` (fraction of episodes that triggered the success termination). If `design.json` has no `success_term` or the term is absent from the curves, fall back to a behavioral success estimate from the video vs `description` and flag the fallback in `errors`.
 
 ### 2. Visual — read the rollout
 

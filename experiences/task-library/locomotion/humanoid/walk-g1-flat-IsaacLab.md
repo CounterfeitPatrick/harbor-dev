@@ -208,7 +208,7 @@ Note: `G1RoughEnvCfg.__post_init__` sets `height_scanner.prim_path = "{ENV_REGEX
 
 **Smoke (§1).**
 ```bash
-cd /home/steven/code/agentic/IsaacLab
+cd <IsaacLab-repo>
 .venv/bin/python -c "import gymnasium as gym; env=gym.make('Isaac-Velocity-Flat-G1-v0'); print(env.observation_space, env.action_space); env.close()"
 ```
 Expected stdout: NOT CAPTURED — fails headless (`pxr` import unavailable; `gymnasium.error.NameNotFound: Environment 'Isaac-Velocity-Flat-G1' doesn't exist` because the IsaacLab task plugins never registered without a GPU/Isaac boot). On a GPU host with Isaac Sim this prints `Box(123,) Box(37,)` analytically (N=37 DOF).

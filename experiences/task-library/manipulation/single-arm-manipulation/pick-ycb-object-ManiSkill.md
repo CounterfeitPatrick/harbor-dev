@@ -429,6 +429,6 @@ No physics-parameter / friction / mass / observation-noise randomization is conf
 ## Reproduce
 
 ```
-probe-task: wrote /home/steven/code/agentic/ManiSkill/harbor/create-task/picksingleycb-v1-implementation.md (sections §1..§7, 2 reward funcs, 7 obs terms)
-             Reproduce via: /harbor:task-create name=<new_task_id> from=/home/steven/code/agentic/ManiSkill/harbor/create-task/picksingleycb-v1-implementation.md
+probe-task: wrote <ManiSkill-repo>/harbor/create-task/picksingleycb-v1-implementation.md (sections §1..§7, 2 reward funcs, 7 obs terms)
+             Reproduce via: /harbor:task-create name=<new_task_id> from=<ManiSkill-repo>/harbor/create-task/picksingleycb-v1-implementation.md
 ```

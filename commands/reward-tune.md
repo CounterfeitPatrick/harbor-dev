@@ -121,6 +121,7 @@ The main agent owns ALL reward design. It reads the completed `iters[]` analyses
 {
   "kind": "structured",                  // "verbatim" only for reproduce iter 0
   "composer": "sum|product",
+  "success_term": "<name of the term whose firing = task success — reward-analyzer reads this>",
   "terms": [{"name": "...", "weight": <concrete float>, "shape": "<fn + params>", "gate": "<predicate|null>"}],
   "budget_rationale": "<per-stage saturated per-step targets the weights realize>",
   "env_changes": ["<any §1–§5 field the spec requires, e.g. add contact sensor>"]
@@ -198,11 +199,10 @@ fi
 ```
 Agent(reward-analyzer, prompt={
   repo_path, task_dir, iter_dir=<task_dir>/iter_<NNN>, task_id=<dest>,
-  trial_dir=<from trial_dir.txt>, description=<from spec.json>,
-  success_term, success_weight, n_frames=<n_frames>
+  trial_dir=<from trial_dir.txt>, description=<from spec.json>, n_frames=<n_frames>
 })
 ```
-The analyzer returns `success_rate`, `total_return`, `per_term`, `behavior`, `findings`. Append `findings` to `memories.jsonl`. Update `tune-state.json:iters[NNN]`. Remove this iter from `in_flight[]`.
+The analyzer is self-contained: it reads `<iter_dir>/design.json` for the `success_term` + weight, parses the per-term curves, reads the rendered frames vs `description`, writes `analysis.md`, and returns `success_rate`, `total_return`, `per_term`, `behavior`, `findings`. Append `findings` to `memories.jsonl`. Update `tune-state.json:iters[NNN]`. Remove this iter from `in_flight[]`.
 
 ### 2.6 — CLEANUP
 

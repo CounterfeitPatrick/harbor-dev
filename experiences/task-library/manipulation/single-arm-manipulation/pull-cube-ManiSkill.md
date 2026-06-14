@@ -83,7 +83,7 @@ class PullCubeEnv(BaseEnv):
 
 ### Smoke
 ```bash
-cd /home/steven/code/agentic/ManiSkill
+cd <ManiSkill-repo>
 .venv/bin/python -c "import gymnasium as gym, mani_skill; e=gym.make('PullCube-v1'); print('OBS', e.observation_space); print('ACT', e.action_space); print('CTRL', e.unwrapped.control_mode); e.close()"
 ```
 Expected stdout (literal, minus a benign goal_region initial-pose warning):
@@ -305,4 +305,4 @@ Expected: `True` (finite reward).
 ---
 
 ## Reproduce
-`/harbor:task-create name=<NewTaskID> from=/home/steven/code/agentic/ManiSkill/harbor/create-task/pullcube-v1-implementation.md`
+`/harbor:task-create name=<NewTaskID> from=<ManiSkill-repo>/harbor/create-task/pullcube-v1-implementation.md`

@@ -95,7 +95,7 @@ _TABLE_USD_PATH = str(
     / "harbor" / "assets" / "table" / "lab_table_instanceable_colored_rotated.usd"
 )
 # Resolved at this commit:
-#   /home/steven/code/agentic/IsaacLab/harbor/assets/table/lab_table_instanceable_colored_rotated.usd
+#   <IsaacLab-repo>/harbor/assets/table/lab_table_instanceable_colored_rotated.usd
 
 
 @configclass
@@ -197,7 +197,7 @@ _FR3_USD_PATH = str(
     Path(__file__).resolve().parents[8] / "harbor" / "assets" / "fr3" / "fr3_franka_hand.usd"
 )
 # Resolved at this commit:
-#   /home/steven/code/agentic/IsaacLab/harbor/assets/fr3/fr3_franka_hand.usd
+#   <IsaacLab-repo>/harbor/assets/fr3/fr3_franka_hand.usd
 
 # FR3 + Franka-hand robot config — built fresh (the shipped FRANKA_PANDA_*
 # cfgs assume the Isaac Sim Panda USD with `panda_*` joint/link names; the

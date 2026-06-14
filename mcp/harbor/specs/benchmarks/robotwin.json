@@ -3,7 +3,7 @@
   "schema_version": 1,
   "captured_at": "2026-04-26T19:15:20.129350Z",
   "captured_from": {
-    "repo_path": "/home/yjin/repos/RoboTwin",
+    "repo_path": "<local checkout>",
     "env_id": "beat_block_hammer",
     "make_expr": "<MANUAL: yaml-driven setup_demo via build_eval_args_from_yaml + class_decorator>",
     "category": "IL"

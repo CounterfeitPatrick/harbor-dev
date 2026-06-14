@@ -154,7 +154,7 @@ H1_CFG = ArticulationCfg(
 
 **Smoke** (§1 build — best-effort, headless):
 ```bash
-cd /home/steven/code/agentic/IsaacLab
+cd <IsaacLab-repo>
 .venv/bin/python -c "import gymnasium as gym; env=gym.make('Isaac-Velocity-Rough-H1-v0'); print(env.observation_space, env.action_space); env.close()"
 ```
 Expected (when Isaac sim deps available): `Box(..., (256,) ...) Box(-inf, inf, (19,) ...)`.
