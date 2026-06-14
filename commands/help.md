@@ -32,8 +32,9 @@ Grouped by prefix: `env-*` · task (`task-*`/`probe-*`) · `reward-*` · `rl-*` 
 | `/harbor:probe-task task=<id> [output=<path>]` | Emit a portable per-task spec (verbatim §1–§7 code). Runs in a subagent to save context. |
 | `/harbor:task-create name=<TaskID> (description=… \| from=<spec.md>)` | Author a NEW task, or reproduce one from a probe-task spec. Auto-bootstraps missing prerequisites (dependency-generator → benchmark-generator → rl-integration-generator, defaulting to custom_torch), then runs task-generator (§1–§5) → the reward-tune training loop (§6) → dr-generator (§7, opt-in — skipped unless DR is explicitly requested). |
 | `/harbor:task-list [<task-id>]` | List / inspect tasks in the cwd-local benchmark (falls back to the registry via `list_tasks`). |
+| `/harbor:task-clone op=create source=<id> dest=<id>` | Clone a task into an isolated, independently-editable copy under a new suffixed gym id (delete with `op=delete`). The collision-free isolation primitive behind parallel reward-tune candidates. |
 | **reward** | |
-| `/harbor:reward-tune task=<id> [algorithm=<algo>]` | Iteratively tune the §6 reward of an existing task (train → render → analyze → repeat until success). |
+| `/harbor:reward-tune task=<id> [algorithm=<algo>] [pool_size=N] [mode=local\|cluster]` | Async-pool §6 reward tuning. Main agent decides each candidate's full reward spec; reward-generator writes it onto a task clone; train+render+score; repeat until success. `pool_size>1` runs candidates in parallel, each on its own clone. |
 | `/harbor:reward-add-log` | Wire per-reward-term decomposition into a benchmark repo without changing the env's native reward — asserts `composer(terms) == reward` every step. |
 | **rl** | |
 | `/harbor:rl-run task=<id> algorithm=<algo> [k=v ...]` | Train one trial. Wraps `harbor/scripts/rl/<impl>/train.py` with the repo's `<repo>/.venv/bin/python` and Hydra overrides. |
