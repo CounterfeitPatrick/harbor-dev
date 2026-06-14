@@ -916,7 +916,7 @@ def success_bonus(
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/mdp/terminations.py` | 1–60 | `lift_box_success`. |
 | `harbor/assets/eurobox/eurobox.usd` | (binary) | Converted from `<downloads>/eurobox.stl` via `harbor/create-task/triton-lift-box/make_eurobox_usd.py`. Recentered: extents x=±0.20, y=±0.15, z=±0.11025. |
 | `harbor/assets/fr3/fr3_franka_hand.usd` | (binary) | FR3 + Franka hand articulation USD (imported via insert_drawer's `FR3_FRANKA_HAND_CFG`). |
-| `harbor/assets/table/lab_table_instanceable_colored_rotated.usd` | (binary) | Lab table (bidex rotated variant, kinematic), surface at z≈0. |
+| `harbor/assets/table/lab_table_instanceable_colored_rotated.usd` | (binary) | Lab table (the source repo rotated variant, kinematic), surface at z≈0. |
 
 External imports the task relies on:
 - `isaaclab_tasks.manager_based.manipulation.insert_drawer.config.franka.joint_pos_env_cfg.FR3_FRANKA_HAND_CFG` — the FR3 articulation cfg with actuator stiffness/damping.

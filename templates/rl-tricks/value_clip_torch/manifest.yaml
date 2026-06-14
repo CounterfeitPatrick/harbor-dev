@@ -7,14 +7,14 @@ description: |
   bootstrap targets in a single update. Frees you to run more epochs /
   larger minibatches without value collapse.
 
-  Reference: pql/algo/ppo.py — the `if self.cfg.algo.value_clip:` branch
+  Reference: the built-in custom_torch PPO — the `if self.cfg.algo.value_clip:` branch
   inside `update_net` that applies torch.max over unclipped/clipped MSE.
 
 algorithms: [ppo]
 backend: custom_torch
 
 references:
-  - <pql-repo>/pql/algo/ppo.py            # canonical value-clip block in update_net
+  - custom_torch PPO            # canonical value-clip block in update_net
   - templates/rl-integration-generator/custom_torch/algo/ppo.py.template  # the file we patch (rendered copy under <repo>/harbor/...)
 
 caveats:

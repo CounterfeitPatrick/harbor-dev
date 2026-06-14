@@ -5,7 +5,7 @@ Reads <repo>/harbor/benchmark-generator/benchmark-spec.json (written by benchmar
 If the spec already has tasks[], echo them as JSON. Otherwise, try a few
 auto-discovery heuristics:
 
-1. <repo>/configs/**/task/*.yaml         — Hydra-style task configs (pql / IsaacGymEnvs / Isaac Lab)
+1. <repo>/configs/**/task/*.yaml         — Hydra-style task configs (IsaacGymEnvs / Isaac Lab)
 2. gym.envs.registry                     — registered gymnasium envs imported via the benchmark module
 3. <repo>/<benchmark>/__init__.py:TASKS  — module-level TASKS list
 

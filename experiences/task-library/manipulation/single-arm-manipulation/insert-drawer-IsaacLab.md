@@ -26,7 +26,7 @@ Task summary: Franka FR3 (single arm) starts with a drawer ALREADY OPEN (joint p
 | Cube | DexCube (Nucleus USD, scaled 0.86 → 4.3 cm edge), 55 g mass |
 | Drawer | No-handle prismatic drawer at `harbor/assets/drawer_no_handle/drawer_no_handle.usd`; pre-scaled URDF → spawn scale (1,1,1); joint `base_drawer_joint` axis +X-local, range [0, 0.3] m |
 | Drawer init pose | `pos=(0, 0, 0.10)`, `rot=(0.7071, 0, 0, 0.7071)` (90° about +Z so prismatic +X-local maps to world +Y) |
-| Table | `harbor/assets/table/lab_table_instanceable_colored_rotated.usd` (rotated bidex lab table), surface at z≈0 |
+| Table | `harbor/assets/table/lab_table_instanceable_colored_rotated.usd` (rotated the source repo lab table), surface at z≈0 |
 | Ground plane | `z = -0.82` |
 | ee_frame target | `fr3_hand` with `+Z` offset 0.2 m (fingertip TCP) |
 | drawer_drop_frame target | `Drawer/drawer` body with offset `(0, 0, 0.25)` drawer-local (≈ above the open tray rim) |

@@ -154,7 +154,7 @@ class StackCubeSceneCfg(InteractiveSceneCfg):
         ],
     )
 
-    # Table — bidex StackCube convention (lab_table USD, instanceable + rotated +
+    # Table — the source repo StackCube convention (lab_table USD, instanceable + rotated +
     # colored, kinematic). pos=(0,0,0); the table surface sits at z≈0.
     table = AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/Table",
@@ -164,7 +164,7 @@ class StackCubeSceneCfg(InteractiveSceneCfg):
         ),
     )
 
-    # Ground plane — bidex convention: below the table by 0.82 m.
+    # Ground plane — the source repo convention: below the table by 0.82 m.
     plane = AssetBaseCfg(
         prim_path="/World/GroundPlane",
         init_state=AssetBaseCfg.InitialStateCfg(pos=[0.0, 0.0, -0.82]),
@@ -242,7 +242,7 @@ FR3_FRANKA_HAND_CFG = ArticulationCfg(
 )
 
 
-# Init joint pose mirrors bidex `bidex/env/tasks/StackCube/env_cfg.py`:
+# Init joint pose mirrors the source repo `<source-repo>/env/tasks/StackCube/env_cfg.py`:
 FRANKA_INIT_JOINT_POS = {
     "fr3_joint1": -0.785,
     "fr3_joint2": -0.785,
@@ -1750,7 +1750,7 @@ To add later: `/harbor:create-task name=Triton-Franka-StackCube description="add
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/mdp/rewards.py` | 1–472 | 8 active reward terms (incl. inactive `release_bonus`) + private predicate + latch infra + private contact helpers + 1 unused `_gripper_far_from_cube_0` helper. |
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/mdp/terminations.py` | 1–41 | Cross-module helper `_no_contact_between_cube_and_gripper_or_ee` only (no public termination funcs — the only DoneTerm is `mdp.time_out` from the shared namespace). |
 | `harbor/assets/fr3/fr3_franka_hand.usd` | (binary) | FR3 + Franka hand articulation USD (converted from `franka_description/urdfs/fr3_franka_hand.urdf` via `scripts/tools/convert_urdf.py`). Verified `test -e` OK. |
-| `harbor/assets/table/lab_table_instanceable_colored_rotated.usd` | (binary) | Lab table (bidex rotated/colored variant, kinematic), surface at z≈0. Verified `test -e` OK. |
+| `harbor/assets/table/lab_table_instanceable_colored_rotated.usd` | (binary) | Lab table (the source repo rotated/colored variant, kinematic), surface at z≈0. Verified `test -e` OK. |
 | `${ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd` | (binary, remote) | Nucleus-hosted DexCube USD (Isaac Sim default props). Resolves at runtime via `isaaclab.utils.assets.ISAAC_NUCLEUS_DIR`. |
 
 External imports the task relies on:

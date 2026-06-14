@@ -1,7 +1,7 @@
 ---
 name: rl-integration-generator
 description: |
-  Renders the RL training/eval/render scaffold (per-impl harbor/scripts/rl/<slug>/{train,eval,render,env_wrapper}.py + configs + rl-suite-spec + rl-integration.md receipt) into a benchmark repo whose base env (`<repo>/.venv/`) + benchmark-spec.json already exist. Three algorithm sources: `custom_torch` (PQL/DDiffPG-style self-contained tree, no pip-install of pql/bidex/isaacgym), `stable_baseline3` (SB3-backed), `local_implementation` (user-provided package path or github URL — thin shims). PREREQUISITE: dependency-generator set up the env AND benchmark-generator wrote `<repo>/harbor/benchmark-generator/benchmark-spec.json` with a non-empty `tasks[]`.
+  Renders the RL training/eval/render scaffold (per-impl harbor/scripts/rl/<slug>/{train,eval,render,env_wrapper}.py + configs + rl-suite-spec + rl-integration.md receipt) into a benchmark repo whose base env (`<repo>/.venv/`) + benchmark-spec.json already exist. Three algorithm sources: `custom_torch` (a self-contained algorithm tree shipped with the plugin — no external RL-lib pip-install), `stable_baseline3` (SB3-backed), `local_implementation` (user-provided package path or github URL — thin shims). PREREQUISITE: dependency-generator set up the env AND benchmark-generator wrote `<repo>/harbor/benchmark-generator/benchmark-spec.json` with a non-empty `tasks[]`.
 tools: [Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion]
 model: opus
 ---
@@ -63,8 +63,8 @@ All training artifacts (checkpoint, TB events, metrics.jsonl, render.mp4, curve 
 ## Do NOT
 
 - **Do NOT** run if `harbor/benchmark-generator/benchmark-spec.json` is missing or `tasks[]` is empty. Surface and stop. (`category` is always `"rl"` now — no need to check.)
-- **Do NOT** `pip install pql` / `bidex` / `isaacgym`. The `custom_torch` source ships a self-contained ~14-file algorithm tree under `harbor/scripts/rl/custom_torch/` that uses only torch + omegaconf + numpy.
-- **Do NOT** vendor the reference repos (the `pql` / `ddiffpg` checkouts). They were templates for the rendered code, not runtime dependencies.
+- **Do NOT** `pip install` external RL libraries to back `custom_torch`. It ships a self-contained ~14-file algorithm tree under `harbor/scripts/rl/custom_torch/` that uses only torch + omegaconf + numpy.
+- **Do NOT** vendor any external reference repo. The `custom_torch` tree is self-contained plugin code, not a runtime dependency.
 - **Do NOT** edit the base env (`<repo>/.venv/` or `<repo>/harbor/dependency-generator/setup_uv.sh`) directly. If a missing pip dep is the root cause of a smoke failure, append the install line to `setup_uv.sh` AND run the equivalent `uv pip install` against the existing venv (no full rebuild needed).
 - **Do NOT** rewrite `<repo>/harbor/utils/data_logger.py` if it already exists. Only call `scripts/rl-integration-generator/render_data_logger.py` when the file is missing.
 - **Do NOT** write into `mcp/harbor/data/*.yaml`. Registry mutation is out of scope here (use `scripts/registry/registry_submit.py` directly).
@@ -113,7 +113,7 @@ If the caller did not pass `algorithm_source`, ask **once** via `AskUserQuestion
 > 3. `stable_baseline3` — SB3-backed thin wrappers. Best for the broadest baseline coverage and quick iteration.
 > 4. `local_implementation` — wrap an existing package of yours. Follow-up question for `path` (filesystem) or `url` (github).
 
-If user picks `local_implementation`, ask follow-up: `path or url?` then collect the value. The renderer auto-derives the directory name from the basename (`pql.git` → `pql`; `/path/to/pql` → `pql`).
+If user picks `local_implementation`, ask follow-up: `path or url?` then collect the value. The renderer auto-derives the directory name from the basename (`myalgo.git` → `myalgo`; `/path/to/myalgo` → `myalgo`).
 
 **Cross-check `language` field** in `harbor/benchmark-generator/benchmark-spec.json` against the user's pick:
 - `custom_jax` + `language="pytorch"` → warn loudly: "the benchmark-spec says language=pytorch but you picked custom_jax. The MJX vmap contract expected by custom_jax is rare in PyTorch-only benchmarks; consider custom_torch unless you're sure your env exposes `env.step(env_state, action)`."
