@@ -1,4 +1,4 @@
-"""PPO — proximal policy optimization. On-policy, single-process. Adapted from PQL."""
+"""PPO — proximal policy optimization. On-policy, single-process. Self-contained."""
 from __future__ import annotations
 
 from copy import deepcopy

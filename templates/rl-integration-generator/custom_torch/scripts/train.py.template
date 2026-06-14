@@ -1,7 +1,7 @@
 """
 {{PROJECT_NAME}} — RL training entry point (custom_torch).
 
-Single-process Hydra-driven train loop modeled on the PQL/DDiffPG `train_baselines.py`
+Single-process Hydra-driven train loop
 pattern. Picks an algorithm from algo/ via the cfg.algo.name field, builds env via
 env_wrapper.create_env(), and loops:
 

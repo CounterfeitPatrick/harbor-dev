@@ -127,7 +127,7 @@ class DexGraspSceneCfg(InteractiveSceneCfg):
     # Palm EE frame transformer -- filled by per-robot subclass.
     ee_frame: FrameTransformerCfg = MISSING
 
-    # Dog: the object to grasp+lift. Bidex verbatim: kinematic_enabled=False
+    # Dog: the object to grasp+lift. the source repo verbatim: kinematic_enabled=False
     # (dynamic), mass=0.11 kg, scale=(1,1,1), activate_contact_sensors=True.
     # The reset event teleports it to env-local (0.05, -0.35, 0.0) with random
     # yaw on every episode reset.
@@ -260,7 +260,7 @@ _ROBOT_USD_PATH = str(
 )
 
 
-# Bidex right-robot init joint pose (verbatim from
+# the source repo right-robot init joint pose (verbatim from
 # `<source-repo>/env/tasks/InsertDrawer/env_cfg.py:InsertDrawerSceneCfg.robot.init_state.joint_pos`).
 ROBOT_INIT_JOINT_POS = {
     "joint1": 0.8,
@@ -644,7 +644,7 @@ from isaaclab.utils import configclass
 from .actions import EMACumulativeRelativeJointPositionAction
 
 
-# Bidex right-hand joint limits (vendored verbatim from
+# the source repo right-hand joint limits (vendored verbatim from
 # `<source-repo>/env/tasks/manager_based_env_cfg.py:JOINT_LOWER_LIMIT`).
 JOINT_LOWER_LIMIT = [
     -6.283, -2.304, -4.224, -6.283, -2.164, -6.283,

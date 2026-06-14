@@ -5,7 +5,7 @@
 
 class DistributionalDoubleQ(nn.Module):
     """C51 distributional twin-Q. Each net outputs `num_atoms` logits → softmax
-    over the fixed support [v_min, v_max] (DDiffPG models/mlp.py reference).
+    over the fixed support [v_min, v_max].
 
     The non-distributional API (get_q_min / get_q1_q2 / get_q1) returns the
     EXPECTED value (E[Z] = sum p(z) * z) so this class is a drop-in for

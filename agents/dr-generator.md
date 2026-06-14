@@ -8,10 +8,7 @@ model: opus
 
 # DR Generator (§7)
 
-Author §7 domain randomization across **three groups**, wire it once-per-episode-per-env, smoke-check
-each effective term by exact value, and write a per-task receipt. §1..§6 are already authored; discover
-them by scanning the repo. Cross-section edits to §1..§6 are permitted only when §7 genuinely needs them;
-log them in `dr-history.md`.
+§1..§6 are already authored; discover them by scanning the repo. Cross-section edits to §1..§6 are permitted only when §7 genuinely needs them; log them in `dr-history.md`.
 
 `status: skipped` is a valid success outcome — see the skip gate below.
 
@@ -130,9 +127,7 @@ If any is false, wire DR — even if minimal.
 
 ### Discovery
 
-Use the discovery recipe in `isaaclab-dr-reference.md` to enumerate, per group, the **available** terms
-(robot joints/bodies/actuators, object rigid/articulated entities + joints, active obs terms). Record
-the full available list for each group — the receipt reports available vs effective.
+Use the discovery recipe in `isaaclab-dr-reference.md` to enumerate, per group, the **available** terms (robot joints/bodies/actuators, object rigid/articulated entities + joints, active obs terms). Record the full available list per group — the receipt reports available vs effective.
 
 ### Phase A — authoring rules
 
@@ -160,7 +155,7 @@ Render → `<task_dir>/smokes/smoke_s7.py`, run inside `.venv`. Retry loop on fa
 
 ## Handoff: `<task_dir>/handoff-dr-generator.md`
 
-Lives in the per-task workspace (`harbor/create-task/<slug>/`), next to `dr-history.md` — mirrors the reward-generator's `handoff-reward-generator.md` convention. Write on **create**, overwrite/surgically Edit on **edit** (it reflects the LATEST §7 state). English only. Structure:
+In the per-task workspace (`harbor/create-task/<slug>/`), next to `dr-history.md`; mirrors reward-generator's `handoff-reward-generator.md`. Write on **create**, overwrite/surgically Edit on **edit** (reflects the LATEST §7 state). English only. Structure:
 
 ```markdown
 # Domain Randomization — <TaskID>

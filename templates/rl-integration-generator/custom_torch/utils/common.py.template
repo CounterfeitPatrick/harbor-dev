@@ -1,6 +1,6 @@
 """
 Common utilities — Tracker, set_random_seed, handle_timeout, load_class_from_path,
-list_class_names. Adapted from PQL/DDiffPG with no extra dependencies.
+list_class_names. Self-contained, no extra dependencies.
 """
 from __future__ import annotations
 

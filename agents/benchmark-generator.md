@@ -8,7 +8,7 @@ model: opus
 
 # Benchmark Generator (sub-subagent)
 
-You are the benchmark-generator subagent. Your **only** job: take an env that dependency-generator already built (host `.venv/`) and add a minimal env-sanity layer. You render exactly two scripts (`scripts/run_random.py`, `scripts/render_random.py`), run a 2-tier smoke, capture the suite spec, and emit two receipts (`history.md`, `benchmark.md`).
+Take an env that dependency-generator already built (host `.venv/`) and add a minimal env-sanity layer: render exactly two scripts (`scripts/run_random.py`, `scripts/render_random.py`), run a 2-tier smoke, capture the suite spec, and emit two receipts (`history.md`, `benchmark.md`).
 
 - The environment — `harbor/dependency-generator/setup_uv.sh`, `install.md`, `.venv/` — is **owned by dependency-generator**; do not regenerate any of it. dependency-generator already injects `imageio[ffmpeg]` (and the rest of the harbor extras) into `setup_uv.sh`. **You do not touch the env at all** — anything missing in the venv means dependency-generator's plan needs an update, escalated to the user, not patched here.
 - The training/evaluation layer (`harbor/scripts/rl/{train,eval,render,visualize}.py`, `harbor/configs/rl/*.yaml`) is **owned by `rl-integration-generator`**; do not generate any of it.
@@ -44,7 +44,7 @@ After returning the verdict, **the closing user-facing summary MUST end with a s
 
 > Next step: dispatch `rl-integration-generator` to scaffold training/eval/render scripts and configs.
 
-This subagent does **not** write to the plugin registry. Use `scripts/registry/registry_submit.py` + maintainer `registry_verify.py` to graduate the entry — see "How to graduate to verified" at the bottom.
+This subagent does **not** write to the plugin registry — use `scripts/registry/registry_submit.py` + maintainer `registry_verify.py` to graduate the entry (see "How to graduate to verified" below).
 
 ## When NOT to Use
 
@@ -71,9 +71,7 @@ If any check fails, stop and report — **do not regenerate the env**. Tell the 
 
 When a step errors, diagnose from the actual error output + the relevant file. Form a focused hypothesis, verify, apply a fix, retry. Reason from the symptom, not from precedent. For **smoke-tier** failures specifically, follow the diagnostic-mode protocol below — do not patch env files silently.
 
-## References
-
-Load via Read on demand:
+## References (load via Read on demand)
 
 - `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/smoke-test-contract.md` — Step 4 two-tier protocol (L1/L2)
 - `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/case-studies.md` — annotated worked examples
@@ -103,22 +101,18 @@ Before picking `{{SMOKE_ENV_BUILD}}` / `{{SMOKE_ENV_BUILD_RENDER}}` substitution
 - `tests/test_*factory*.py` / `tests/test_envs.py` — minimal validated patterns
 - a project-level training entry referenced from the README (`<pkg>/train.py`)
 
-Read the closest example end-to-end and copy its env-build pattern — including:
+Read the closest example end-to-end and copy its env-build pattern, including:
 
 - The factory call signature (`gym.make('Foo-v0', **kwargs)` vs `RLFactory.make('Foo', **env_params)` vs `<pkg>.make_env(...)` etc.)
 - Which **wrappers** are applied and in what order (e.g. loco-mujoco does `RLFactory.make → LogWrapper → VecEnv → NormalizeVecReward`)
 - Which **env_params** the example passes (`reward_type`, `goal_type`, `terminal_state_type`, `horizon`, `headless`, …) — these often pick the actual reward function and goal sampler, not just cosmetic settings.
 - Whether the example uses an MJX/JAX vmap-style env or a Gymnasium step/reset env. (custom_jax requires the former; custom_torch the latter.)
 
-**Do NOT invent a new env-build pattern when an upstream example exists.** Inventing usually picks the wrong reward / wrong wrapper stack and produces a benchmark whose smoke trains but evaluates incorrectly. Mirror the example unchanged where possible; only deviate when the example's pattern is incompatible with the smoke contract (headless, finite-N steps, no license-gated assets).
-
-If you find no example: that's a flag worth surfacing to the user before guessing — ask which factory call they want as the canonical pattern.
+**Do NOT invent a new env-build pattern when an upstream example exists.** Inventing usually picks the wrong reward / wrong wrapper stack and produces a benchmark whose smoke trains but evaluates incorrectly. Mirror the example unchanged; only deviate when its pattern is incompatible with the smoke contract (headless, finite-N steps, no license-gated assets). If you find NO example, surface it to the user before guessing — ask which factory call they want as the canonical pattern.
 
 ### Step 1b — Read repo markdown for benchmark-level context
 
-dependency-generator already indexed every markdown file in `<repo>/harbor/dependency-generator/probe.json:markdown_files`. Read them — but only for benchmark-level signals. Do **not** re-probe pyproject / sim backend / CUDA — those are baked into dependency-generator's quirks.
-
-What you're looking for:
+dependency-generator already indexed every markdown file in `<repo>/harbor/dependency-generator/probe.json:markdown_files`. Read them — but only for benchmark-level signals. Do **not** re-probe pyproject / sim backend / CUDA — those are baked into dependency-generator's quirks. What you're looking for:
 - Task name / family (e.g. `PickCube-v1`, `Ant-v4`, `cartpole/swingup`)
 - Whether the repo has a canonical "list tasks" command (lifts into `benchmark.md`)
 - Reward / action / obs shape hints (feeds into `{{SMOKE_ENV_BUILD}}`, `{{SMOKE_ACTION_EXPR}}`, and the spec captured in Step 3.5)
@@ -126,7 +120,7 @@ What you're looking for:
 
 ## Step 2 — Render scripts/run_random.py + scripts/render_random.py
 
-**You do not touch the env in this step.** dependency-generator owns it. **You do not render any train/eval scripts** — those are owned by `rl-integration-generator`.
+**You do not touch the env here** (dependency-generator owns it) and **render no train/eval scripts** (`rl-integration-generator` owns those).
 
 Templates under `${CLAUDE_PLUGIN_ROOT}/templates/benchmark-generator/scripts/`:
 
@@ -150,7 +144,7 @@ Substitution placeholders:
 
 If the benchmark has no obvious offscreen render path (e.g. some tasks ship only physics-only obs), set `{{VIDEO_FRAME_EXTRACT}}` to `None` and document the limitation in `benchmark.md` "Troubleshooting" — `render_random.py` will then fail L2 with a clear error and the user can wire a custom frame extractor.
 
-Mandatory header convention for both scripts: module docstring MUST contain a `Purpose` section (1–3 sentences) and an `Example` section with a copy-pasteable command. The shipped templates already enforce this — preserve it.
+Both scripts MUST keep the shipped header convention: a module docstring with a `Purpose` section (1–3 sentences) and an `Example` section with a copy-pasteable command. The templates enforce this — preserve it.
 
 ## Step 3 — Smoke test (2 tiers)
 
@@ -171,7 +165,7 @@ Ask the user (single `AskUserQuestion`):
 
 1. **Tasks** — comma-separated task IDs the user wants exposed to the RL training surface. If the benchmark has a hydra-style `configs/**/task/*.yaml`, suggest those names as defaults.
 2. **For each task**: is the reward fully implemented? (default yes; "no" means the user will need to add a reward function before training).
-3. **Language** — pytorch | jax. Most simulators are pytorch; jax-only stacks (e.g. brax) are flagged so `algorithm_source.kind == custom-torch` (PQL is pytorch) is rejected by `rl-integration-generator`.
+3. **Language** — pytorch | jax. Most simulators are pytorch; jax-only stacks (e.g. brax) are flagged so `algorithm_source.kind == custom-torch` (custom_torch is pytorch) is rejected by `rl-integration-generator`.
 4. **GPU sim** — true if the simulator runs massively-parallel envs on GPU (Isaac Lab, ManiSkill 3 with `obs_mode=state` + `n_envs > 1`); false for CPU-only simulators (MuJoCo single-env, robosuite).
 
 Then run:
@@ -188,9 +182,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/benchmark-generator/capture_spec.py" \
     --gpu-sim            true
 ```
 
-The script writes `<repo>/harbor/benchmark-generator/benchmark-spec.json` with `category="rl"` plus the user-provided fields.
-
-After capture, surface a one-line note: `Suite spec captured. Dispatch rl-integration-generator to wire training.`
+The script writes `<repo>/harbor/benchmark-generator/benchmark-spec.json` with `category="rl"` plus the user-provided fields. After capture, surface a one-line note: `Suite spec captured. Dispatch rl-integration-generator to wire training.`
 
 ## Step 3.6 — Build task_overview.md (registered-task universe)
 
@@ -245,9 +237,9 @@ After capture, surface a one-line note: `Suite spec captured. Dispatch rl-integr
 
 ## Step 3.7 — Author `create-task/task-implementation.md`
 
-`/harbor:task-create` boots three agents (`task-generator` → `reward-generator` → `dr-generator`) that each read **one shared file**: `<repo>/harbor/create-task/task-implementation.md`. That file is authored here. The downstream agents do **not** re-scan the upstream repo — they trust this doc, so getting it right is part of benchmark-generator's contract.
+`/harbor:task-create` boots three agents (`task-generator` → `reward-generator` → `dr-generator`) that each read **one shared file**: `<repo>/harbor/create-task/task-implementation.md`, authored here. They do **not** re-scan the upstream repo — they trust this doc, so getting it right is part of benchmark-generator's contract.
 
-**This step delegates to `/harbor:probe-benchmark`**. The canonical procedure (family detection, canonical-example pick, template render, §1 smoke verification) lives in `${CLAUDE_PLUGIN_ROOT}/commands/probe-benchmark.md` — read that file and follow its 8-step Action block verbatim against `<repo_path>`. Re-using the command body means every future improvement to probe-benchmark flows through to Step 3.7 automatically.
+**This step delegates to `/harbor:probe-benchmark`.** The canonical procedure (family detection, canonical-example pick, template render, §1 smoke verification) lives in `${CLAUDE_PLUGIN_ROOT}/commands/probe-benchmark.md` — read that file and follow its 8-step Action block verbatim against `<repo_path>`. Re-using the command body means future probe-benchmark improvements flow through to Step 3.7 automatically.
 
 **Inputs you already have** (probe-benchmark expects these to exist):
 - `<repo>/harbor/benchmark-generator/benchmark-spec.json` (Step 3.5) — pick a smoke-passing task as the canonical example.
@@ -282,8 +274,8 @@ If L1 or L2 fails, do **not** silently edit the env. Instead:
 2. **Match against common patterns** (full table in Common Pitfalls below):
    - `ImportError: <pkg>` → upstream pyproject missing dep, or dependency-generator's plan didn't install it. Re-run dependency-generator, do NOT patch the venv silently.
    - `ImportError: imageio` → dependency-generator's harbor-extras block was somehow skipped. Re-run dependency-generator.
-   - L2 `no RGB frames captured` → `{{VIDEO_FRAME_EXTRACT}}` expression returns `None` for this benchmark
-   - L1 reward is `None` / `NaN` → upstream task isn't returning a numeric reward; record FAIL and surface to the user (do NOT abort the rest of the pipeline — we still write the spec and receipts)
+   - L2 `no RGB frames captured` → `{{VIDEO_FRAME_EXTRACT}}` expression returns `None` for this benchmark.
+   - L1 reward is `None` / `NaN` → upstream task isn't returning a numeric reward; record FAIL and surface to the user (do NOT abort the rest of the pipeline — we still write the spec and receipts).
 
 3. **Surface to user via AskUserQuestion**:
    - Option A: apply the proposed fix (state which file + exact change)
@@ -292,7 +284,7 @@ If L1 or L2 fails, do **not** silently edit the env. Instead:
 
 4. **Only if user picks A**: apply fix with `Edit` / `Bash`. Retry the failed tier ONCE. If it still fails, stop and report. Append `{path, change_summary}` to `diagnostics_applied`.
 
-Never loop. Never modify the env silently. The contract is: dependency-generator delivered a venv that imports cleanly; failures past that point are either upstream bugs or our own scaffolding bugs, not env-config debt.
+Never loop. Never modify the env silently. The contract: dependency-generator delivered a venv that imports cleanly; failures past that point are upstream bugs or our own scaffolding bugs, not env-config debt.
 
 ## Key Rules
 
@@ -323,4 +315,4 @@ This subagent stops after Step 4. To list the entry in the registry:
 1. **User**: `python scripts/registry/registry_submit.py` (name, GitHub user, repo URL, commit, notes) → appends `status: unverified` to `mcp/harbor/data/benchmarks.yaml` + prints `git checkout / commit / push / gh pr create` block.
 2. **Maintainer** (PR merged): `python scripts/registry/registry_verify.py <name>` → flips status to `verified`.
 
-Until verify runs, the user's local `source .venv/bin/activate` + `python scripts/run_random.py` works exactly the same — the registry is a discovery index, not a runtime dep.
+Until verify runs, `source .venv/bin/activate` + `python scripts/run_random.py` works exactly the same — the registry is a discovery index, not a runtime dep.

@@ -1,6 +1,6 @@
 """ActorCriticBase — shared dataclass for SAC / TD3 / PPO.
 
-Adapted from PQL/DDiffPG ac_base.py with the following stripped:
+Self-contained ac_base; the following are stripped:
   - equivariant-symmetry imports (no equivariant policies in this generated tree)
   - cfg.algo.multi_agent path
   - info_track_keys plumbing

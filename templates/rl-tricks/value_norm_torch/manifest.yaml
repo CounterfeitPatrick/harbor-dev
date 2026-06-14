@@ -5,7 +5,7 @@ description: |
   wires `self.value_rms` (creates it + unnormalizes inside get_actions but
   forgets to unnormalize the bootstrap `next_value` and to renormalize
   `returns`/`values` before update_net). This trick fixes both gaps so the
-  critic trains against normalized targets — matching PQL's reference.
+  critic trains against normalized targets.
 
   Reference: the built-in custom_torch PPO — `compute_adv` lines that
   `self.value_rms.update(next_value)` + `next_value = self.value_rms.unnormalize(next_value)`,

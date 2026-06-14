@@ -1,7 +1,7 @@
 """
 Torch utilities — RunningMeanStd, soft_update, SquashedNormal (tanh-Gaussian).
 
-Adapted from the reference custom-torch RL pattern (PQL / DDiffPG style),
+Self-contained custom-torch RL utilities,
 self-contained — no escnn / equivariant deps.
 """
 from __future__ import annotations

@@ -18,7 +18,7 @@ references:
   - templates/rl-integration-generator/custom_torch/algo/ppo.py.template  # the file we patch (rendered copy under <repo>/harbor/...)
 
 caveats:
-  - "Reuses the policy `clip_range` (ε) for the value clip, matching PQL. If you want them to diverge, set cfg.algo.clip_range_vf separately and tweak the trick edits."
+  - "Reuses the policy `clip_range` (ε) for the value clip. If you want them to diverge, set cfg.algo.clip_range_vf separately and tweak the trick edits."
   - "Stacks cleanly with value_norm_torch — the clip op is on whatever scale `v` and `returns` are at, so normalized targets work too."
 
 patches: patches.yaml

@@ -5,7 +5,7 @@ description: |
   fixed support [v_min, v_max]. The Bellman update is implemented via the
   Bellemare projection (no MSE), and the critic loss is cross-entropy.
 
-  TD3 (modeled after DDiffPG's critic update):
+  TD3 (distributional critic update):
       target_dist = pick min-expected-value distribution between Q1, Q2
       target_dist = projection(next_dist, reward, done, gamma^nstep, v_min, v_max, num_atoms, support)
       loss = BCE(current_Q1, target_dist) + BCE(current_Q2, target_dist)
