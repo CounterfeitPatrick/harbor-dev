@@ -2,8 +2,7 @@
 
 Loaded by `task-generator` and the `/harbor:task-create` / `/harbor:reward-tune` orchestrators (the
 reward-tune **main agent** owns reward design, so it — not the `reward-generator` subagent — reads this for §6). Before authoring or tuning anything, search the cross-run **task-library** for a similar
-task already designed end-to-end, plus the relevant **experience ledger** — then reuse what fits. This
-turns a cold-start design into "adapt a proven sibling," which is faster and higher-quality.
+task already designed end-to-end, plus the relevant **experience ledger** — then reuse what fits.
 
 The library is filled by `/harbor:update-experience target=task-library` from `/harbor:probe-task`
 specs; each file is a full §1..§7 implementation spec named `<short-task>-<repo>.md`.

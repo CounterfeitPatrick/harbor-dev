@@ -27,7 +27,7 @@ test -x "<repo>/.venv/bin/python"               || { echo ".venv/ missing — ru
 
 ## Action
 
-1. **Load the contract.** `Read ${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/task-implementation-contract.md`. It lists per-family evidence-gathering rules and the seven-section schema. Do not improvise around it.
+1. **Load the contract.** `Read ${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/task-implementation-contract.md` — per-family evidence-gathering rules + the seven-section schema. Do not improvise around it.
 
 2. **Pick `BENCHMARK_FAMILY`** using the contract's detection cues (`isaaclab-manager-based` / `isaaclab-direct` / `dexteroushands` / `loco-mujoco` / `dm_control` / `gymnasium-generic`). If the repo doesn't fit, ask the user via a single `AskUserQuestion` with the six options — do not silently pick one.
 
@@ -35,7 +35,7 @@ test -x "<repo>/.venv/bin/python"               || { echo ".venv/ missing — ru
    - If `canonical_task=<id>` was passed, verify it appears in `benchmark-spec.json:tasks[]` with `smoke_status` starting `L1`; reject otherwise.
    - Else auto-pick from `tasks[]` where `smoke_status` starts `L1`. If no task smoke-passed, refuse to author the doc and surface that to the user (the downstream agents would have nothing to mirror).
 
-4. **Locate the canonical example file** (the per-family table in the contract tells you where to look). Open it with `Read` and confirm the section anchors exist:
+4. **Locate the canonical example file** (the contract's per-family table tells you where to look). Open it with `Read` and confirm the section anchors exist:
    - registration entry
    - scene/cfg class
    - actions definition
@@ -45,18 +45,18 @@ test -x "<repo>/.venv/bin/python"               || { echo ".venv/ missing — ru
    - rewards definition
    - DR / event terms
 
-   If any anchor is missing in the canonical example, pick a different canonical example (one of the other smoke-passing tasks) — never fall back to "skeleton-only" for §1 or §2.
+   If any anchor is missing, pick a different smoke-passing task as the canonical example — never fall back to "skeleton-only" for §1 or §2.
 
-5. **Render the doc** by copying `${CLAUDE_PLUGIN_ROOT}/templates/benchmark-generator/task-implementation.md.template` and filling every `{{...}}` placeholder. Each section has five sub-blocks (Description / File pointers / Code template / Decisions / Smoke check). The contract's per-family table tells you where to source File pointers.
+5. **Render the doc** by copying `${CLAUDE_PLUGIN_ROOT}/templates/benchmark-generator/task-implementation.md.template` and filling every `{{...}}` placeholder. Each section has five sub-blocks (Description / File pointers / Code template / Decisions / Smoke check); the contract's per-family table tells you where to source File pointers.
 
-6. **Verify §1's smoke before saving.** The §1 smoke command must pass when run today against the canonical example. Run it inside the venv:
+6. **Verify §1's smoke before saving.** The §1 smoke command must pass today against the canonical example. Run it inside the venv:
 
    ```bash
    cd "<repo>"
    .venv/bin/python -c "import gymnasium as gym; env = gym.make('<canonical_id>'); print(env.observation_space, env.action_space); env.close()"
    ```
 
-   (or the family equivalent — see contract). Paste the literal stdout into `{{REGISTER_SMOKE_EXPECTED}}`. §2..§7 smoke commands are written but not executed at this stage — they become the per-phase smoke for the future agents.
+   (or the family equivalent — see contract). Paste the literal stdout into `{{REGISTER_SMOKE_EXPECTED}}`. §2..§7 smoke commands are written but NOT executed at this stage — they become the per-phase smoke for the future agents.
 
 7. **Write the file**:
    ```bash

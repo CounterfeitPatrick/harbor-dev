@@ -1,10 +1,8 @@
 # Case Studies
 
-Annotated env-build / action / frame-extract snippets per reference benchmark. The setup recipes are owned by dependency-generator (rendered into `harbor/dependency-generator/setup_uv.sh`); benchmark-generator only picks the smoke patterns below.
+Annotated env-build / action / frame-extract snippets per reference benchmark. The setup recipes are owned by dependency-generator (rendered into `harbor/dependency-generator/setup_uv.sh`); benchmark-generator only picks the smoke patterns below. When generating against a new benchmark, pick the closest match and copy its **unique** snippets for the smoke scripts.
 
-When generating against a new benchmark, pick the closest match and copy its **unique** snippets for the smoke scripts.
-
-The training scaffolding (sb3 / dispatcher / configs / data_logger) referenced in older case studies has moved to `rl-integration-generator`. These case studies focus on what `benchmark-generator` actually owns now: env-build expressions, action expressions, and render-frame extraction.
+Training scaffolding (sb3 / dispatcher / configs / data_logger) has moved to `rl-integration-generator`. These case studies cover what `benchmark-generator` owns: env-build expressions, action expressions, and render-frame extraction.
 
 ## ManiSkill (SAPIEN + Vulkan)
 

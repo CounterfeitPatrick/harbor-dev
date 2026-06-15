@@ -5,7 +5,7 @@ argument-hint: [list] | list <benchmark-name> | list all | <task-id>
 
 # /harbor:task-list — Task Browser
 
-The user has invoked `/harbor:task-list` with optional sub-command arguments. **Parse the arguments and route to one of the actions below.** Do not execute multiple actions in one invocation.
+The user invoked `/harbor:task-list` with optional sub-command args. **Parse the args and route to ONE action below.** Do not execute multiple actions in one invocation.
 
 ## Dispatch table
 
@@ -23,7 +23,7 @@ Anything else: print the dispatch table above and stop.
 
 ## Action: list local
 
-Tasks captured by `benchmark-generator` into the **current repo's** `harbor/benchmark-generator/benchmark-spec.json`. This is the rich path: each task carries `id`, `max_episode_steps`, `success_metric`, `reward_implemented`, `reward_metric`, plus any benchmark-specific fields.
+Tasks captured by `benchmark-generator` into the **current repo's** `harbor/benchmark-generator/benchmark-spec.json` — the rich path: each task carries `id`, `max_episode_steps`, `success_metric`, `reward_implemented`, `reward_metric`, plus benchmark-specific fields.
 
 1. Locate the spec:
    ```bash
@@ -104,6 +104,6 @@ Show the full task entry for `<task-id>` from the cwd-local benchmark-spec.
 
 ## Constraints
 
-- Local mode is the default because it carries the rich per-task metadata; the registry mode is informational and currently sparse.
+- Local mode is the default — it carries the rich per-task metadata; registry mode is informational and currently sparse.
 - Do NOT modify `harbor/benchmark-generator/benchmark-spec.json` — this command is read-only.
-- Do NOT mix the two sources in a single output. If the user wants one specific benchmark, prefer the registry path so it works without `cd`-ing.
+- Do NOT mix the two sources in a single output. For one specific benchmark, prefer the registry path so it works without `cd`-ing.

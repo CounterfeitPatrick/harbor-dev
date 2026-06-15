@@ -33,4 +33,4 @@ SC1 / SC3 / SC4 share one `AppLauncher` in `smoke_clone.py` (sim launch is the e
 
 - **Copy:** the `*_env_cfg.py` (cfg class + `RewardsCfg`) and every mdp module a reward edit could touch (typically `mdp/rewards.py` + any task-local mdp the cfg imports).
 - **Do NOT copy:** family-wide shared modules the reward never edits — keep importing those from their originals.
-- The independence (SC2) is exactly the property that justifies parallel candidates: two clones editing `rewards.py` must edit two different files.
+- Independence (SC2) is what justifies parallel candidates: two clones editing `rewards.py` must edit two different files.

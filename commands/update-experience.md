@@ -37,9 +37,8 @@ Provide **exactly one** of `experience=` / `file=`. For `target=task-library`, `
 
 ### A1 — Resolve & validate the experience text
 
-- If `experience=` is given, that string is the entry body.
-- If `file=` is given, read the file; its full body is the entry.
-- **Length check (human bullets):** if the entry came from `experience=` (a hand-written bullet), it MUST be **≤ 5 lines** (count newlines; wrapping in the terminal doesn't count — count literal `\n`). If it exceeds 5 lines, **refuse** and tell the user to shorten it or pass it as a `file=` instead. A `file=` body is exempt from the 5-line cap (it's a curated note, not a quick bullet) — but warn if it exceeds ~30 lines (ledgers stay skimmable).
+- If `experience=` is given, that string is the entry body. If `file=` is given, read the file; its full body is the entry.
+- **Length check (human bullets):** if the entry came from `experience=` (a hand-written bullet), it MUST be **≤ 5 lines** (count literal `\n`; terminal wrapping doesn't count). If longer, **refuse** and tell the user to shorten it or pass it as a `file=` instead. A `file=` body is exempt from the 5-line cap (it's a curated note) — but warn if it exceeds ~30 lines (ledgers stay skimmable).
 - English-only (constraint #1). Reject non-English bullets with a one-line note.
 - **High-level heuristics only:** ledger entries state the generalized lesson, NOT the run-specific story. Strip task names, iteration numbers, step counts, and percentage anecdotes before appending (e.g. "porting the base init pose unlocked grasping" — not "on <task> iter 3, return rose 6.9× at 20M steps"). If the entry as given is mostly a specific example, distill it to the heuristic and append that.
 
@@ -87,7 +86,7 @@ Read the `Task summary:` paragraph + the `## §1` description (that's enough —
 | `locomotion/humanoid/`                   | bipedal humanoid locomotion |
 | `locomotion/quadrupedal/`                | quadruped / 4-legged locomotion |
 
-Decision cues, in order: (1) explicit count of arms/robots in the Task summary ("a single …" → single; "two …" → multi); (2) robot morphology named in §1 (Franka/UR/Allegro arm → manipulation; Anymal/Go2/Spot → quadrupedal; H1/G1/humanoid → humanoid). If the spec is genuinely ambiguous (e.g. a mobile manipulator, or a category not covered by the four folders), **ask the user once** with `AskUserQuestion` listing the four destinations.
+Decision cues, in order: (1) explicit count of arms/robots in the Task summary ("a single …" → single; "two …" → multi); (2) robot morphology named in §1 (Franka/UR/Allegro arm → manipulation; Anymal/Go2/Spot → quadrupedal; H1/G1/humanoid → humanoid). If genuinely ambiguous (e.g. a mobile manipulator, or a category not covered by the four folders), **ask the user once** with `AskUserQuestion` listing the four destinations.
 
 Base path: `${CLAUDE_PLUGIN_ROOT}/experiences/task-library/<destination>`.
 
@@ -100,7 +99,6 @@ The filename is what `task-generator` / `reward-generator` grep when searching f
 - `<short-task-slug>`: a concise kebab-case description of what the task DOES, ≤ ~4 words. Derive from the Task summary, not a mechanical lowercase of the TaskID. Examples (TaskID → slug):
   - `Isaac-Dex-Grasp` → `dexterous-grasp` → `dexterous-grasp-IsaacLab.md`
   - `Triton-Franka-StackCube` (stacks three cubes) → `stack-three-cube` → `stack-three-cube-IsaacLab.md`
-  - `Triton-Insert-Drawer` → `insert-drawer` → `insert-drawer-IsaacLab.md`
   - `Triton-Lift-Box` (two arms lift a box) → `lift-box` → `lift-box-IsaacLab.md`
 
 ### B4 — Collision-safe copy

@@ -4,7 +4,7 @@ Read by `benchmark-generator` when filling `templates/benchmark-generator/task-i
 
 ## What the doc is for
 
-Each future invocation of `/harbor:task-create` boots three agents in sequence. None of them re-scan the upstream repo from scratch — they all read this single doc. So the doc has to be:
+Each `/harbor:task-create` invocation boots three agents in sequence. None re-scan the upstream repo — they all read this single doc. So the doc has to be:
 
 1. **Self-sufficient** — the agents must be able to write a working task using only this doc + the user's task description, without re-discovering the repo's layout.
 2. **Family-faithful** — the patterns in the code templates must compile against the venv at `<repo>/.venv/`. If the family uses `mdp.JointPositionActionCfg`, do not invent `mdp.JointPositionActionConfig`.

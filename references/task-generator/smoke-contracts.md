@@ -17,7 +17,7 @@ Loaded by `task-generator`. The minimum behavioral check for each section. Templ
 
 ### Visualize sibling (`smoke_success_visualize.py`)
 
-A non-asserting, **never-exits** sibling for visual confirmation of the success geometry. Same task pattern, different intent:
+A non-asserting, **never-exits** sibling for visual confirmation of the success geometry:
 
 - Defaults to **headed** (`HEADLESS=0`) and **NUM_ENVS=1**.
 - Loops on `unw.sim.step(render=True)`, re-pinning every relevant entity to its success pose each frame (so gravity / integration drift never accumulates).

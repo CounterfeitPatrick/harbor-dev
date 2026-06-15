@@ -11,8 +11,7 @@ Wraps `scripts/plot/render_plot.py`: fetches wandb runs, groups by (task, baseli
 
 ### Step 0 — Resolve the spec + output dir
 
-Every invocation writes spec + plot artifacts under a fresh, timestamped folder so
-results never overwrite each other:
+Every invocation writes spec + plot artifacts under a fresh, timestamped folder so results never overwrite each other:
 
 ```
 <cwd>/plot_output/<YYYYMMDD-HHMMSS>/
@@ -20,8 +19,7 @@ results never overwrite each other:
    └── harbor-plot.<ext>       (the rendered figure)
 ```
 
-Add `plot_output/` to `.gitignore` (it's data, not source). Before doing anything
-else, compute the run directory:
+Add `plot_output/` to `.gitignore` (it's data, not source). First, compute the run directory:
 
 ```bash
 RUN_DIR="$(pwd)/plot_output/$(date +%Y%m%d-%H%M%S)"
@@ -35,7 +33,7 @@ Two paths to populate the spec:
    - **Source**: `explicit run IDs (paste a list)` | `wandb project URL (auto-group by config keys)`
    - **Tasks**: comma-separated names (used as subplot titles)
    - **Baselines**: comma-separated names (used as legend labels + legend order)
-   - For source = explicit: ask for the run-ID list per (task × baseline) cell. The user can paste `entity/project/run_id` strings.
+   - For source = explicit: ask for the run-ID list per (task × baseline) cell (user can paste `entity/project/run_id` strings).
    - For source = project: ask for the project path (`entity/project`) plus the two config keys to group by (e.g. `env_name`, `algorithm`).
    - **X axis key** (default `_step`)
    - **Y axis key** (default `eval/success_rate`)
@@ -68,7 +66,7 @@ uv run --no-project \
 
 ### Step 3 — Report
 
-Print BOTH the spec path (`$RUN_DIR/harbor-plot-spec.yaml`) and the rendered output path (verbatim from the script's `[ok] wrote <path>` line). If any run fetch logged a `[warn]`, surface it so the user knows which run was skipped (transient API errors, missing keys, all-NaN history).
+Print BOTH the spec path (`$RUN_DIR/harbor-plot-spec.yaml`) and the rendered output path (verbatim from the script's `[ok] wrote <path>` line). Surface any `[warn]` from a run fetch so the user knows which run was skipped (transient API errors, missing keys, all-NaN history).
 
 ## Spec schema (summary — see `templates/plot/spec.example.yaml` for the full version)
 
@@ -91,4 +89,4 @@ Print BOTH the spec path (`$RUN_DIR/harbor-plot-spec.yaml`) and the rendered out
 - **Do NOT leak the W&B API key.** It lives in `~/.netrc`; never echo or copy it.
 - **Do NOT silently swap axis keys** if a run is missing them. The renderer skips that run and prints a `[warn]`; let the user decide whether to retry.
 - **Do NOT auto-install `wandb`/`plotly` into a project venv.** Always invoke via `uv run --no-project --with ...` so the host stays clean.
-- **HTML output** does not need `kaleido`; if the user only wants `.html`, you can drop `--with kaleido` for a faster cold start.
+- **HTML output** needs no `kaleido`; for `.html`-only, drop `--with kaleido` for a faster cold start.

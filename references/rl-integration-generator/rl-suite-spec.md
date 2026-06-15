@@ -67,7 +67,7 @@ write_rl_report.py   →  rl_experiment_report.md         (end-of-run user-facin
 
 ## Field notes
 
-- **`benchmark.category`** — always `"rl"`. benchmark-generator no longer detects IL vs RL — every benchmark reaching the RL stack is treated as RL.
+- **`benchmark.category`** — always `"rl"`. Every benchmark reaching the RL stack is treated as RL.
 - **`tasks[].success_metric`** — name of the boolean key in the env's `info` dict that signals episode success. `null` for benchmarks where success is not defined (in which case scoring falls back to `eval_return_mean`).
 - **`algorithm_source.kind`**
   - `custom-torch` — self-contained PyTorch implementations under `templates/rl-integration-generator/algorithms/custom/` (GPU-parallel, hydra-config). Implies `parallel=true`.

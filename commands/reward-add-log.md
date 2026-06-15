@@ -11,7 +11,7 @@ Adds a per-term reward visibility wrapper to a Harbor benchmark repo. The wrappe
    - `"sum"`     — IsaacLab `RewardManager` pattern (`reward = Σ weight_i * term_i`); ManagerBasedRLEnv tasks default to this.
    - `"product"` — `dm_control` pattern (`reward = ∏ tolerance_i(...)`); cartpole / walker / humanoid all multiply tolerance terms.
 3. Stashes the term breakdown on `info["detailed_reward"]` so both `custom_torch` (`ac_base.update_tracker`) and `stable_baseline3` (`_DataLoggerCallback`) emit `reward/<term>/episodic_return_mean`.
-4. **Does NOT modify the env's native reward.** Earlier drafts forced `reward = Σ weight_i * term_i` for all tasks; this silently re-shaped multiplicative tasks (the policy learned to max the easy additive terms while abandoning the hard one). The current contract is read-only.
+4. **Does NOT modify the env's native reward.** The contract is read-only. (Earlier drafts forced `reward = Σ weight_i * term_i` for all tasks; this silently re-shaped multiplicative tasks — the policy learned to max the easy additive terms while abandoning the hard one.)
 
 Reference: `isaaclab.managers.reward_manager.RewardManager.compute()` — that pattern is the `composer="sum"` case here.
 

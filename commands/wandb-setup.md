@@ -4,13 +4,13 @@ description: Show the host's current W&B login info (account name + masked API k
 
 # /harbor:wandb-setup — Inspect / re-login / logout W&B credentials
 
-The W&B credentials live in `~/.netrc` on the host (the rl-integration container mounts the file read-only). This command shows the active identity and offers the standard reconfigure actions: re-login, logout, or just inspect.
+W&B credentials live in `~/.netrc` on the host (the rl-integration container mounts it read-only). This command shows the active identity and offers re-login, logout, or inspect.
 
-The actual API key is **never** printed in full — only `***<last4> (length=N)`. Safe to share the output.
+The API key is **never** printed in full — only `***<last4> (length=N)`. Output is safe to share.
 
 ## Action
 
-1. **Print the current state** — run the credential check below, surface the masked identity in cmd:
+1. **Print the current state** — run the credential check below, surface the masked identity:
 
 ```bash
 NETRC="${HOME}/.netrc"
@@ -40,7 +40,7 @@ fi
 
    - `inspect` — just print the state above; do nothing else (default if `STATUS=found`)
    - `re-login` — start fresh: prompt the user to run `wandb login --relogin` on the host
-   - `logout` — remove the credentials from `~/.netrc` by running `wandb logout` (or strip the entry manually if `wandb` CLI is missing)
+   - `logout` — remove credentials from `~/.netrc` via `wandb logout` (or strip the entry manually if the `wandb` CLI is missing)
    - `abort` — bail out
 
 3. **On `re-login`** — print these instructions and wait via a follow-up `AskUserQuestion`:
@@ -53,7 +53,7 @@ fi
    >    Paste the key when prompted.
    > 3. Reply `ready` when done, or `abort` to cancel.
 
-   On `ready`, re-run the credential block from step 1. If the new identity differs from the old (compare `LOGIN` + `KEY_TAIL` before/after), confirm: "Switched from `<old_login>` to `<new_login>`. Continue?" — purely informational; nothing else to do.
+   On `ready`, re-run the credential block from step 1. If the new identity differs (compare `LOGIN` + `KEY_TAIL` before/after), confirm: "Switched from `<old_login>` to `<new_login>`. Continue?" — purely informational.
 
 4. **On `logout`** — confirm once (`AskUserQuestion: [yes, logout / cancel]`), then:
 
@@ -81,15 +81,15 @@ fi
 ## What this command does NOT do
 
 - **Does NOT touch any container** — credentials live on the host. The rl-integration container reads them via the bind-mount on next start.
-- **Does NOT clear cached W&B run dirs** under `outputs/<run>/wandb/` — those are tied to specific past runs, not credentials. Delete them manually if you want to.
-- **Does NOT switch entities/teams** — that's per-run via `WANDB_ENTITY=<team>` env or per-run `wandb.init(entity=...)`. This command only manages the API key.
+- **Does NOT clear cached W&B run dirs** under `outputs/<run>/wandb/` — those are tied to specific past runs, not credentials. Delete them manually if you want.
+- **Does NOT switch entities/teams** — that's per-run via `WANDB_ENTITY=<team>` env or `wandb.init(entity=...)`. This command only manages the API key.
 
 ## When the user runs this mid-workflow
 
-If `rl-integration-generator` is currently running and the user wants to swap accounts:
+If `rl-integration-generator` is running and the user wants to swap accounts:
 
 1. Let the in-flight smoke complete (or abort it).
 2. Run `/harbor:wandb-setup` → `re-login`.
-3. Re-dispatch `rl-integration-generator` — it will pick up the new credentials at the next training run.
+3. Re-dispatch `rl-integration-generator` — it picks up the new credentials at the next training run.
 
-A live training process started before the credential change will keep the old identity until restarted.
+A live training process started before the credential change keeps the old identity until restarted.
