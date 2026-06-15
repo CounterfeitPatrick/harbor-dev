@@ -15,8 +15,8 @@ Three layers (see `tests/README.md`):
 |---|---|---|
 | `layers` | `1,2,3` | Subset to run, in order. e.g. `layers=1`, `layers=1,2`, `layers=3`. |
 | `repo` | — | Benchmark repo (git working tree). **Required for L3.** |
-| `task` | — | Task id the L3 pipeline creates/drives. **Required for L3.** |
-| `from_spec` | — | A `/harbor:probe-task` spec for the §6 reproduce-mode tune (bounds the reward stage to ~1 training). Strongly recommended for L3. |
+| `task` | `Isaac-Stack-Two-Cube-Franka-v0` | The L3 fixture is **fixed: a Franka arm stacking two cubes** — the pipeline always creates/drives this task. Override only to test a different task. |
+| `from_spec` | the Franka-stack-two-cubes spec | The `/harbor:probe-task` reproduce spec for the fixture task; bounds §6 to one training (iter-0 convergence). Provide it on the benchmark host — probe it once (`/harbor:probe-task task=Isaac-Stack-Two-Cube-Franka-v0`) or commit it as a fixture, then pass its path. |
 | `resume` | `true` | Reuse the stage cache + existing worktree; re-run only changed/failed stages onward. |
 | `fresh` | `false` | Ignore the cache, recreate the worktree, run every stage. |
 
@@ -32,6 +32,8 @@ Report the pass/fail summary. If a layer fails, print the failing test ids + sto
 ## Layer 3 — e2e pipeline (subagent)
 
 Dispatch ONE `Agent(subagent_type="general-purpose")` with this section + the resolved args. It owns setup → resumable run → teardown and returns only the final verdict + (on failure) the failing stage, error, and suggested fix.
+
+**Fixed fixture:** L3 always drives the **same** task — a **Franka arm stacking two cubes** (`Isaac-Stack-Two-Cube-Franka-v0`), reproduced from its `from_spec` so the run is stable and `§6` converges at iter 0. A stable fixture is what makes the resumable cache meaningful (same task ⇒ same fingerprints across runs).
 
 ### Step 0 — Pre-flight
 ```bash
@@ -100,6 +102,6 @@ On **all stages pass**: the `reset` stage already restored `$WT`; remove the wor
 ```text
 /harbor:test                                  # L1→L2→L3 (needs repo/task for L3; errors if absent)
 /harbor:test layers=1,2                        # fast deterministic gate, no GPU
-/harbor:test layers=3 repo=/data/IsaacLab task=Isaac-Lift-Cube-Franka-v0 from_spec=harbor/create-task/lift-cube.md
-/harbor:test layers=3 repo=/data/IsaacLab task=... fresh=true     # ignore cache, full clean run
+/harbor:test layers=3 repo=/data/IsaacLab from_spec=harbor/create-task/stack-two-cube.md   # Franka stacks two cubes (the fixed fixture)
+/harbor:test layers=3 repo=/data/IsaacLab from_spec=... fresh=true                          # ignore cache, full clean run
 ```
