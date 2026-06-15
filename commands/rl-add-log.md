@@ -36,13 +36,13 @@ The keys are part of the **plug-compatibility contract**: T4 (plot smoke) writes
 **Naming rules** — non-negotiable:
 - Use `/` to namespace (`train/loss/policy`, NOT `train.loss.policy` or `train_loss_policy`).
 - `reward/<term>/episodic_return_mean` — the trailing `episodic_return_mean` makes it clear what's averaged (per-episode cumulative).
-- Loss keys for PPO live under `train/loss/<head>` (policy / value); for SAC/TD3 they're flat (`train/actor_loss`, `train/critic_loss`) — these are the established conventions in the literature, do not unify.
+- PPO loss keys live under `train/loss/<head>` (policy / value); for SAC/TD3 they're flat (`train/actor_loss`, `train/critic_loss`) — established literature conventions, do not unify.
 - `train/entropy` is the **positive** entropy. Some libraries (SB3) emit `train/entropy_loss = -entropy`; sign-flip when remapping.
 - `train/q_value` is the mean of `min(Q1, Q2)` on whatever batch the update touched (typical SAC/TD3 diagnostic).
 
 ## Implementation checklist
 
-When you author or patch an algorithm file under `harbor/scripts/rl/<impl>/algo/<name>.py` (custom_torch) or write the SB3 callback (stable_baseline3) or define a local_implementation shim's expected entry, ensure:
+When you author or patch an algorithm file under `harbor/scripts/rl/<impl>/algo/<name>.py` (custom_torch), write the SB3 callback (stable_baseline3), or define a local_implementation shim's expected entry, ensure:
 
 - [ ] `update_net(...)` (or equivalent) returns a dict whose keys are exactly the schema above.
 - [ ] `ac_base.update_tracker()` lazily inits `self._term_returns` + `self._term_trackers` from `info["detailed_reward"]` keys (if that field exists).

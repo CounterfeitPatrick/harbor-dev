@@ -5,7 +5,7 @@ argument-hint: name=<TaskID> (description="<spec>" | from=<spec.md>) [sections=<
 
 # /harbor:task-create — Author or Edit a Task
 
-The user wants to either (a) add a NEW task to the current benchmark repo, or (b) surgically edit a subset of an EXISTING task. The shape, file pointers, code templates, and per-phase smoke commands all live in `<repo>/harbor/create-task/task-implementation.md` — written by `benchmark-generator`. This command body parses the user's spec, bootstraps any missing prerequisite stage (dependency-generator → benchmark-generator → rl-integration-generator, checked in that order), and orchestrates the chain: `task-generator` (§1–§5) → the `/harbor:reward-tune` loop (§6, validated by actual training) → `dr-generator` (§7, **opt-in only** — skipped unless the user explicitly asks for DR).
+Shape, file pointers, code templates, and per-phase smoke commands live in `<repo>/harbor/create-task/task-implementation.md` (written by `benchmark-generator`). This command parses the user's spec, bootstraps any missing prerequisite stage, and orchestrates: `task-generator` (§1–§5) → the `/harbor:reward-tune` loop (§6, validated by actual training) → `dr-generator` (§7, **opt-in only** — skipped unless explicitly asked). `/create-task` takes no `repo_path` — it always operates on `$(pwd)`; run it from inside the benchmark repo.
 
 ## Required arguments
 
@@ -24,9 +24,7 @@ The user wants to either (a) add a NEW task to the current benchmark repo, or (b
 | `timesteps_per_iter` | (reward-tune default) | Forwarded to `/harbor:reward-tune` — per-iteration training budget. |
 | `success_threshold` | `0.5` | Forwarded to `/harbor:reward-tune` — the tune loop stops when `success_rate ≥` this. |
 
-**DR gate (§7)**: `dr-generator` runs ONLY when the user explicitly asked for DR — either `7 ∈ sections` (edit mode) or the `description` explicitly requests domain randomization (e.g. "add domain randomization", "randomize mass/friction", "DR for sim-to-real"). A bare task description never implies DR — the default is **skip**. (Reproduce mode is the exception: the spec's §7 block is part of the ground truth, so it is applied as-is unless it reads `<no DR>`.)
-
-`/create-task` does NOT take a `repo_path` — it always operates on `$(pwd)`. Run it from inside the benchmark repo.
+**DR gate (§7)**: `dr-generator` runs ONLY when the user explicitly asked for DR — either `7 ∈ sections` (edit mode), the `description` explicitly requests domain randomization (e.g. "add domain randomization", "randomize mass/friction", "DR for sim-to-real"), or (reproduce mode) the spec's §7 block is not `<no DR>`. The default is **skip**: a bare task description never implies DR.
 
 ## Mode determination
 
@@ -45,7 +43,7 @@ When `from=` is supplied, the orchestrator:
 3. Passes each section's Code block as a `spec_section` kwarg to the relevant subagent in addition to the family-level `task-implementation.md`. The subagents prefer the per-task spec over the family guide when both are present.
 4. `sections` defaults to **all 7** in reproduce mode (so the rebuilt task is byte-identical except for `name` / `assets` overrides). If the user passes `sections=...`, only the listed sections are reproduced; the rest are left at the family template's placeholder.
 
-The spec is treated as **ground truth** — subagents don't re-derive design choices from the description, they paste-then-adjust. Ground truth covers the *design*, not the outcome: §6's verbatim paste is still validated by the reward-tune training loop (Step 3) — the spec proves the reward worked in the source repo; training proves it still works here.
+The spec is **ground truth** — subagents don't re-derive design choices, they paste-then-adjust. Ground truth covers the *design*, not the outcome: §6's verbatim paste is still validated by the reward-tune training loop (Step 3) — the spec proves the reward worked in the source repo; training proves it still works here.
 
 ## Action
 
@@ -76,7 +74,7 @@ The spec is treated as **ground truth** — subagents don't re-derive design cho
      - `do_dr         = (7 ∈ sections)                                  # explicit sections arg (edit mode)`
        `             OR (create mode AND description explicitly requests DR)`
        `             OR (reproduce mode AND spec §7 != "<no DR>")`
-       — **default is false**: a create-mode description that doesn't mention domain randomization means `dr-generator` is skipped.
+       — **default is false** (DR gate).
    - `assets` → split on commas; verify each entry exists on disk OR is a fully-qualified URL. Drop missing entries with a one-line warning.
 
 3. Mode-specific check:
@@ -116,7 +114,7 @@ Write `${task_dir}/spec.json` (overwriting any prior run for this slug):
 }
 ```
 
-`status: skipped` is set up-front for any phase whose sections aren't requested (e.g. if `sections=2,5`, `reward_tune` and `dr_generator` start as `skipped`). `dr_generator` starts as `skipped` by default — it flips to `pending` only when the DR gate fired (explicit request).
+`status: skipped` is set up-front for any phase whose sections aren't requested (e.g. if `sections=2,5`, `reward_tune` and `dr_generator` start as `skipped`). `dr_generator` starts as `skipped` by default — it flips to `pending` only when the DR gate fired.
 
 Each phase's slot gets its final status when the phase ends — `task_generator` / `dr_generator` are updated by their subagents; `reward_tune` is persisted by the orchestrator from the tune outcome (all modes — reproduce included). The orchestrator reads the slot post-phase to decide whether to continue.
 
@@ -206,7 +204,7 @@ Persist the outcome into `${task_dir}/spec.json:phases.reward_tune` — `{"statu
 
 ### Step 4 — Dispatch `dr-generator` (§7) — opt-in only
 
-**Default is SKIP.** Dispatch only when `do_dr` is true (the user explicitly asked for DR — see the DR gate in Optional arguments) AND prior phases (whichever ran) returned pass. When skipped, record `phases.dr_generator = {"status": "skipped", "reason": "DR not requested"}` and move to Step 5 — do NOT dispatch the agent "just in case", and do NOT ask the user whether they want DR:
+**Default is SKIP.** Dispatch only when `do_dr` is true (the DR gate fired) AND prior phases (whichever ran) returned pass. When skipped, record `phases.dr_generator = {"status": "skipped", "reason": "DR not requested"}` and move to Step 5 — do NOT dispatch the agent "just in case", and do NOT ask the user whether they want DR:
 
 ```
 Agent(dr-generator, prompt={
@@ -266,42 +264,18 @@ Skipped phases (whose section was not in the request) read `skipped (not request
 /harbor:task-create name=Isaac-Push-Block-Franka-v0 \
   description="Franka panda pushes a small wooden block toward a target marker. Add domain randomization (mass, friction, observation noise) for sim-to-real."
 
-# Create mode with explicit asset override
-/harbor:task-create name=Isaac-Open-Drawer-Custom-v0 \
-  description="UR10 opens a drawer to a target opening angle. Use absolute joint position control." \
-  assets=assets/custom_drawer.usd
-
-# Edit mode — only swap action mode to delta-EE-pose on an existing task
+# Edit mode — only swap action mode on an existing task (single section)
 /harbor:task-create name=Isaac-Push-Block-Franka-v0 \
   description="Switch action mode to delta-EE-pose via DifferentialIK; keep the rest unchanged." \
   sections=2
-
-# Edit mode — re-author actions and observations together (e.g. add an obs term that the new action mode needs)
-/harbor:task-create name=Isaac-Push-Block-Franka-v0 \
-  description="Use delta-EE-pose actions and add ee_pose_in_robot_root_frame to the obs." \
-  sections=2,5
 
 # Edit mode — only re-work the reward (runs the reward-tune training loop, not a one-shot author)
 /harbor:task-create name=Isaac-Push-Block-Franka-v0 \
   description="Boost reaching weight to 5.0 and add a contact-bonus term." \
   sections=6
 
-# Edit mode — only wire DR after the rest is settled
-/harbor:task-create name=Isaac-Push-Block-Franka-v0 \
-  description="Add startup-mass and friction randomization for sim-to-real robustness." \
-  sections=7
-
-# Reproduce mode — clone an existing task into a new benchmark from a probe-task spec
-/harbor:task-create name=Isaac-Push-Block-UR10-v0 \
-  from=harbor/create-task/isaac-push-block-franka-v0-implementation.md
-
 # Reproduce mode with asset overrides (destination repo's assets live elsewhere)
 /harbor:task-create name=Isaac-Push-Block-UR10-v0 \
   from=harbor/create-task/isaac-push-block-franka-v0-implementation.md \
   assets=harbor/assets/ur10/ur10.usd,harbor/assets/cube_blue/cube.usd
-
-# Reproduce mode but only re-apply §6 (reward) from the spec; keep §1..§5 / §7 untouched
-/harbor:task-create name=Isaac-Push-Block-Franka-v0 \
-  from=harbor/create-task/isaac-push-block-franka-other-reward.md \
-  sections=6
 ```
