@@ -89,6 +89,7 @@ Commands are grouped by area via filename prefix (Claude Code commands have no t
 **utilities**
 - `commands/plot.md` — `/harbor:plot spec=<yaml>` — multi-panel mean±std W&B learning curves grouped by task × baseline
 - `commands/wandb-setup.md` — `/harbor:wandb-setup` — inspect / re-login / switch the host's W&B account
+- `commands/reset-workspace.md` — `/harbor:reset-workspace repo=<path> [clean_inbenchmark_tasks=true|false]` — **destructive**: remove ALL plugin output from a benchmark repo (`harbor/`, `.venv/`, `scripts/` carve-outs, caches) and (default) `git reset --hard` + `git clean -fdx` it back to its original cloned HEAD. Runs in a subagent with a dry-run + confirm gate and a git-based smoke (incl. hidden / ignored files) that must fully pass before reporting success
 - `commands/update-experience.md` — `/harbor:update-experience target=<name> (experience="..." | file=<path>)` — append a numbered bullet to an agent ledger (`reward-generator`/`task-generator`/`dr-generator`/`rl-tuning-agent`; hand-written bullets capped at 5 lines), OR file a `/harbor:probe-task` spec into the right `experiences/task-library/` embodiment folder (classify single/multi-arm manipulation vs humanoid/quadrupedal locomotion; short `<task>-<repo>.md` name, `-vN` on collision)
 
 ### L3 — Subagents (heavy, multi-step; main thread dispatches; no nesting)
