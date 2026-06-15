@@ -107,6 +107,7 @@ Commands are grouped by area via filename prefix (Claude Code commands have no t
 
 ```
 scripts/
+  common/                    resolve_suite.py  (canonical rl-suite-spec.json reader: slug / scripts_dir / parallel / config_name — single source so the key path can't drift across callers)
   dependency-generator/      render_uv.py, smoke_uv.py
   benchmark-generator/ capture_spec.py, list_tasks.py, render_task_overview.py
   rl-integration-generator/ render_rl_suite.py, render_data_logger.py, discover_rl_tasks.py,

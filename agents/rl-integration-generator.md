@@ -189,10 +189,10 @@ For each algorithm `<a>` (or once for local-impl):
 
 ```bash
 PY="<repo>/.venv/bin/python"
-SCRIPTS=$(jq -r .scripts_dir <repo>/harbor/rl-integration-generator/rl-suite-spec.json)   # harbor/scripts/rl/<slug>
+eval "$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/common/resolve_suite.py" --repo "<repo>" --algo <a>)"
+SCRIPTS="${SCRIPTS_DIR}"                                  # harbor/scripts/rl/<slug>
 TASK=$(jq -r '.tasks[0].id' <repo>/harbor/rl-integration-generator/rl-suite-spec.json)
-PARALLEL=$(jq -r .parallel <repo>/harbor/rl-integration-generator/rl-suite-spec.json)
-CONFIG_NAME=$([ "${PARALLEL}" = "true" ] && echo "<a>.parallel" || echo "<a>")
+# the reader above also set SLUG / PARALLEL / CONFIG_NAME=<a>[.parallel]
 TRIAL_DIR=""   # captured from T1 stdout
 
 # ---- T1: train (uses the /harbor:rl-run body verbatim) ----

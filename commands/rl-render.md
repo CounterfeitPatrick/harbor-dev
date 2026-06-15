@@ -38,23 +38,20 @@ Loads a checkpoint, runs the rendered `render.py` (which captures frames and wri
 
 3. **Auto-infer algorithm + task** from `<checkpoint_dir>/resolved_config.yaml` (same recipe as `/harbor:rl-eval`). If the user passed `task=`, use their value (cross-task render).
 
-4. **Load suite spec** to find `algorithm_slug` + `scripts_dir`:
-   ```python
-   import json
-   spec     = json.loads(open("harbor/rl-integration-generator/rl-suite-spec.json").read())
-   slug     = spec["algorithm_source"]["algorithm_slug"]
-   scripts  = spec.get("scripts_dir", f"harbor/scripts/rl/{slug}")
-   parallel = bool(spec.get("parallel", False))
+4. **Load suite spec** via the canonical reader:
+   ```bash
+   eval "$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/common/resolve_suite.py" --algo <algo>)"
+   # → SLUG, SCRIPTS_DIR, PARALLEL, CONFIG_NAME
    ```
 
-5. **Pick config name**: `<algo>.parallel` if `parallel=true` else `<algo>`.
+5. `CONFIG_NAME` (resolved above) is `<algo>.parallel` when `PARALLEL=true`, else `<algo>`.
 
 6. **Resolve run prefix**: `<repo>/.venv/bin/python`. Error if `.venv/` missing.
 
 7. **Build + run the render command**:
    ```bash
-   <prefix> "${scripts}/render.py" \
-       --config-name=<config_name> \
+   <prefix> "${SCRIPTS_DIR}/render.py" \
+       --config-name=${CONFIG_NAME} \
        task=<task> \
        checkpoint=<abs_checkpoint_path> \
        <user_overrides...>

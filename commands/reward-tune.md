@@ -168,7 +168,7 @@ The agent implements `reward_spec` on the clone, runs `smoke_s6.py`, and writes 
 
 The train+render command the script wraps:
 ```bash
-slug=$(jq -r '.algorithm_source.algorithm_slug' harbor/rl-integration-generator/rl-suite-spec.json)
+slug=$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/common/resolve_suite.py" --field slug)
 .venv/bin/python -u harbor/scripts/rl/${slug}/train.py --config-name=<algo>.parallel \
     task=<dest> seed=<seed> total_timesteps=<timesteps_per_iter> max_step=<timesteps_per_iter> \
     wandb=<wandb> wandb_run_name=iter_<NNN>
