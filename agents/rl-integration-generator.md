@@ -355,6 +355,8 @@ These are documented in full at `${CLAUDE_PLUGIN_ROOT}/references/task-generator
 
 ## References
 
+- `${CLAUDE_PLUGIN_ROOT}/references/common/agent-conventions.md` — shared conventions (smoke pass-criterion · diagnose-and-retry · process-log discipline · English-only / no-nested-dispatch); this body's specifics override the generic shape.
+
 - `${CLAUDE_PLUGIN_ROOT}/references/rl-integration-generator/rl-suite-spec.md` — schema for `harbor/rl-integration-generator/rl-suite-spec.json` + benchmark-spec RL extension
 - `${CLAUDE_PLUGIN_ROOT}/references/task-generator/isaaclab-code-reference.md` — IsaacLab API + traps (Fabric, shutdown hang, action-term semantics)
 - `${CLAUDE_PLUGIN_ROOT}/commands/{rl-run,rl-eval,rl-visualize,rl-sweep,rl-tune}.md` — calling-side surfaces that consume this scaffold

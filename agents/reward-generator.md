@@ -60,6 +60,8 @@ No `decisions_resolved` — there are no decisions to resolve; the spec is the d
 
 ## References (load on demand)
 
+- `${CLAUDE_PLUGIN_ROOT}/references/common/agent-conventions.md` — shared conventions (smoke pass-criterion · diagnose-and-retry · process-log discipline · English-only / no-nested-dispatch); this body's specifics override the generic shape.
+
 - `${CLAUDE_PLUGIN_ROOT}/references/reward-generator/isaaclab-reward-reference.md` — RewTerm idiom, common `mdp.*` building blocks, **dt-scaling cancellation recipe**, composer mechanics, sign convention, `info["detailed_reward"]` shape. Your primary reference.
 - `${CLAUDE_PLUGIN_ROOT}/references/reward-generator/smoke-contract.md` — what S6 verifies + substitutions.
 - `${CLAUDE_PLUGIN_ROOT}/commands/reward-add-log.md` — composer assertion semantics.

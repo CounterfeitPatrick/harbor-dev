@@ -56,6 +56,7 @@ Author or surgically re-author the requested subset of §1..§5. Smokes for thos
 
 ## References (load on demand)
 
+- `${CLAUDE_PLUGIN_ROOT}/references/common/agent-conventions.md` — shared conventions (smoke pass-criterion · diagnose-and-retry · process-log discipline · English-only / no-nested-dispatch); this body's specifics override the generic shape.
 - `${CLAUDE_PLUGIN_ROOT}/references/task-generator/isaaclab-code-reference.md` — IsaacLab API surface for action terms, scene state, observation manager, termination/command managers, forced reset/goal injection. Read this before authoring or rendering smokes.
 - `${CLAUDE_PLUGIN_ROOT}/references/task-generator/smoke-contracts.md` — what each smoke verifies + what each substitution slot expects.
 - `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/task-implementation-contract.md` — per-family conventions baked into the implementation guide.

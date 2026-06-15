@@ -73,6 +73,7 @@ When any of these quirks fire, **stop with a clear error**:
 
 ## References to load on demand
 
+- `${CLAUDE_PLUGIN_ROOT}/references/common/agent-conventions.md` — shared conventions (smoke pass-criterion · diagnose-and-retry · process-log discipline · English-only / no-nested-dispatch); this body's specifics override the generic shape.
 - `${CLAUDE_PLUGIN_ROOT}/references/dependency-generator/decision-protocol.md` — three-tier decision protocol (used in Step 4)
 - `${CLAUDE_PLUGIN_ROOT}/references/dependency-generator/install-plan-schema.md` — `InstallationPlan` JSON schema + worked examples (used in Step 2 / Step 3)
 

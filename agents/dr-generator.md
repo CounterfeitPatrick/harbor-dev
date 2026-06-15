@@ -76,6 +76,7 @@ ambiguity via the canonical example, then a single batched `AskUserQuestion`.
 
 ## References (load on demand)
 
+- `${CLAUDE_PLUGIN_ROOT}/references/common/agent-conventions.md` — shared conventions (smoke pass-criterion · diagnose-and-retry · process-log discipline · English-only / no-nested-dispatch); this body's specifics override the generic shape.
 - `${CLAUDE_PLUGIN_ROOT}/references/dr-generator/isaaclab-dr-reference.md` — the three groups, function surface, mode→operation map, discovery recipe, read-back recipes, once-per-episode (`reset`) rule.
 - `${CLAUDE_PLUGIN_ROOT}/references/dr-generator/smoke-contract.md` — what S7 verifies + substitution slot specs.
 - `${CLAUDE_PLUGIN_ROOT}/experiences/dr-generator/dr-experience.md` — cross-run heuristics (read at Phase 0).

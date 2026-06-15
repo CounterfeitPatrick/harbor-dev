@@ -73,6 +73,7 @@ When a step errors, diagnose from the actual error output + the relevant file. F
 
 ## References (load via Read on demand)
 
+- `${CLAUDE_PLUGIN_ROOT}/references/common/agent-conventions.md` — shared conventions (smoke pass-criterion · diagnose-and-retry · process-log discipline · English-only / no-nested-dispatch); this body's specifics override the generic shape.
 - `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/smoke-test-contract.md` — Step 4 two-tier protocol (L1/L2)
 - `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/case-studies.md` — annotated worked examples
 - `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/receipt-generation.md` — Step 5 placeholder registry + failure handling
