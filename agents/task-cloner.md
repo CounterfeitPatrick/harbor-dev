@@ -41,7 +41,7 @@ Produce a standalone copy of `<source_id>` registered as `<dest_id>` that builds
 - `${CLAUDE_PLUGIN_ROOT}/references/common/agent-conventions.md` — shared conventions (smoke pass-criterion · diagnose-and-retry · process-log discipline · English-only / no-nested-dispatch); this body's specifics override the generic shape.
 
 - `${CLAUDE_PLUGIN_ROOT}/references/task-cloner/clone-contract.md` — what each clone check verifies + the registration rule + smoke substitution slots.
-- `${CLAUDE_PLUGIN_ROOT}/harbor/create-task/task-implementation.md` (in the repo) — per-family file pointers: where env_cfg / mdp / registration live for THIS benchmark.
+- `<repo>/harbor/create-task/task-implementation.md` (in the benchmark repo, not the plugin) — per-family file pointers: where env_cfg / mdp / registration live for THIS benchmark.
 
 ## Smoke template
 

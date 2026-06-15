@@ -145,7 +145,7 @@ Detect: env registers via plain `gym.register` and inherits `gymnasium.Env`; no 
 - **Do not paste the canonical task verbatim** as a code template. The template is a minimal skeleton, not an example.
 - **Do not list every reward term** in §6 if the canonical task has 12. List the minimum set (one shaping term + one regularizer) and say "see canonical example file for full term list".
 - **Do not invent action modes the family does not support.** If isaaclab-direct has no DifferentialIK action class, mark §2's "Delta EE pose" row as `n/a`.
-- **Do not embed paths absolute to the user's machine** (`/home/steven/...`). All paths must be repo-relative.
+- **Do not embed paths absolute to the user's machine** (`/home/<user>/...`). All paths must be repo-relative.
 - **Do not promise smoke checks that require a file you haven't told the agent to create.** If the smoke needs `<NewTaskID>`, parameterise it; don't hardcode a name future-you can't predict.
 
 ## Authoring loop
