@@ -51,6 +51,7 @@ Grouped by prefix: `env-*` · task (`task-*`/`probe-*`) · `reward-*` · `rl-*` 
 | `/harbor:wandb-setup` | Inspect / re-login / logout the host's Weights & Biases credentials (`~/.netrc`). |
 | `/harbor:update-experience target=<name> (experience="…" \| file=<path>)` | Append a numbered bullet to an agent experience ledger (≤5-line hand-written bullets), or file a probe-task spec into the right `task-library/` embodiment folder. |
 | `/harbor:reset-workspace repo=<path> [clean_inbenchmark_tasks=true\|false]` | **Destructive.** Remove all plugin output from a benchmark repo (`harbor/`, `.venv/`, `scripts/` carve-outs, caches) and (default) git-reset it back to its original clone. Runs in a subagent; dry-run + confirm, then a git-based smoke (incl. hidden files) must fully pass. |
+| `/harbor:test [layers=1,2,3] [repo=<path>] [task=<id>]` | Plugin test runner. L1 contract + L2 unit = `pytest tests/`; L3 = e2e pipeline driving the task-create→train→reset chain module-by-module on an isolated clean worktree (resumable, fail-fast, per-module smokes + checks). |
 
 ## Subagents (heavy, multi-step work; main thread dispatches)
 

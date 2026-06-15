@@ -90,6 +90,7 @@ Commands are grouped by area via filename prefix (Claude Code commands have no t
 - `commands/plot.md` — `/harbor:plot spec=<yaml>` — multi-panel mean±std W&B learning curves grouped by task × baseline
 - `commands/wandb-setup.md` — `/harbor:wandb-setup` — inspect / re-login / switch the host's W&B account
 - `commands/reset-workspace.md` — `/harbor:reset-workspace repo=<path> [clean_inbenchmark_tasks=true|false]` — **destructive**: remove ALL plugin output from a benchmark repo (`harbor/`, `.venv/`, `scripts/` carve-outs, caches) and (default) `git reset --hard` + `git clean -fdx` it back to its original cloned HEAD. Runs in a subagent with a dry-run + confirm gate and a git-based smoke (incl. hidden / ignored files) that must fully pass before reporting success
+- `commands/test.md` — `/harbor:test [layers=1,2,3] [repo=<path>] [task=<id>] [from_spec=<path>]` — plugin test runner. L1 (contract) + L2 (unit) are deterministic `pytest tests/{contract,unit}` (main thread). L3 is an e2e pipeline (subagent) driving the task-create→train→reset chain module-by-module on an isolated clean benchmark **worktree**, §6 in reproduce mode. Resumable Docker-layer style via `scripts/test/pipeline.py` (per-module fingerprints → re-run only changed/failed stages onward); append-only `history.md`; fail-fast with suggested fix; skips dr-generator + headless modules
 - `commands/update-experience.md` — `/harbor:update-experience target=<name> (experience="..." | file=<path>)` — append a numbered bullet to an agent ledger (`reward-generator`/`task-generator`/`dr-generator`/`rl-tuning-agent`; hand-written bullets capped at 5 lines), OR file a `/harbor:probe-task` spec into the right `experiences/task-library/` embodiment folder (classify single/multi-arm manipulation vs humanoid/quadrupedal locomotion; short `<task>-<repo>.md` name, `-vN` on collision)
 
 ### L3 — Subagents (heavy, multi-step; main thread dispatches; no nesting)
@@ -109,6 +110,7 @@ Commands are grouped by area via filename prefix (Claude Code commands have no t
 ```
 scripts/
   common/                    resolve_suite.py  (canonical rl-suite-spec.json reader: slug / scripts_dir / parallel / config_name — single source so the key path can't drift across callers)
+  test/                      pipeline.py  (/harbor:test L3 stage engine: Docker-layer fingerprint cache → plan/mark/stages for resumable module-by-module e2e)
   dependency-generator/      render_uv.py, smoke_uv.py
   benchmark-generator/ capture_spec.py, list_tasks.py, render_task_overview.py
   rl-integration-generator/ render_rl_suite.py, render_data_logger.py, discover_rl_tasks.py,
