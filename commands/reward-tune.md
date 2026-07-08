@@ -9,11 +9,13 @@ The main agent is the controller. It decides each candidate's **complete** rewar
 
 ```
 DECIDE   (main agent, B1)  → next full reward spec, distinct from completed + in-flight designs
-CLONE    (task-cloner)     → isolated <task>-rewarditer<NNN> via /harbor:task-clone
-SUBMIT   (reward-generator)→ IMPLEMENT the spec on the clone, run S6 smoke, write run.sh/launch.sh (no train)
+CLONE    (task-cloner)     → pool_size>1 ONLY: isolated <task>-rewarditer<NNN> via /harbor:task-clone
+                             (pool_size=1 serial fast-path: SKIP — edit the source task directly)
+SUBMIT   (reward-generator)→ IMPLEMENT the spec on the clone (or the source at pool_size=1),
+                             run S6 smoke, write run.sh/launch.sh (no train)
 WAIT     (orchestrator)    → train.py && render.py on the COMPUTE side; .done signal
 SCORE    (reward-analyzer) → per-term curves + frames → success_rate; return distilled result
-CLEANUP  (orchestrator)    → /harbor:task-clone op=delete
+CLEANUP  (orchestrator)    → pool_size>1 ONLY: /harbor:task-clone op=delete
 ```
 
 **Async fixed-pool.** Keep `pool_size` candidates in flight. On each candidate's `.done`, score it, free its slot, and refill with a new candidate. `pool_size=1` degenerates exactly to a serial loop. There are NO generations — every DECIDE sees the freshest completed history plus the designs of whatever is still running.
@@ -48,19 +50,21 @@ A "candidate" and an "iteration" are the same thing — `iter_<NNN>` uses a glob
 
 ## Optional arguments
 
+**Rule: if an arg isn't passed, don't override the config — leave its default untouched.** Only build a train-command override (`seed=`, `total_timesteps=`, …) for args the user explicitly set. The loop-control args below (`pool_size`, `on_success`, `success_threshold`, `n_frames`, `prompt_every_n_stuck`) are reward-tune's own logic, not rl-config keys, so their defaults always apply.
+
 | Arg | Default | Effect |
 |---|---|---|
 | `algorithm` | `ppo` | Picks `harbor/configs/rl/<algo>.parallel.yaml`. |
-| `wandb` | `reward-tune-<task>` | W&B project. Run names `iter_000`, `iter_001`, ... |
-| `mode` | `local` | `local` (background bash trains) or `cluster` (SLURM trains). Same skeleton; only the WAIT differs. |
-| `pool_size` | `1` | Candidates in flight. `1` = serial. `>1` runs candidates in parallel, each on its own clone — **requires clone isolation proven** (see Constraints). |
-| `on_success` | `cancel` | On first convergence: `cancel` the other in-flight candidates, or `drain` (let them finish, maybe find a better reward). |
+| `wandb` | `reward-tune-<task>` | W&B project; run names `iter_000`, … |
+| `mode` | `local` | `local` (bg bash) or `cluster` (SLURM). |
+| `pool_size` | `1` | Candidates in flight (`1` = serial). |
+| `on_success` | `cancel` | First convergence: `cancel` or `drain` in-flight. |
 | `success_threshold` | `0.5` | Stop when `success_rate ≥` this. |
-| `timesteps_per_iter` | `20_000_000` | Per-candidate training budget. |
-| `seed` | `42` | Per-candidate RNG. |
-| `n_frames` | `12` | Frames read from each render for behavior analysis. |
-| `prompt_every_n_stuck` | `5` | After N consecutive non-improving COMPLETIONS, prompt the user (continue / abort / change strategy). No hard cap. |
-| `spec_section` | (none) | Full §6 Code block from a probe-task spec (reproduce mode, passed by `/harbor:task-create`). Seeds iter 0's design verbatim (outranks any library base). Later candidates tune by minimal modification only if training falls short. |
+| `timesteps_per_iter` | config | Per-candidate budget; unset → config default. |
+| `seed` | config | Unset → config default (random). |
+| `n_frames` | `12` | Frames read per render. |
+| `prompt_every_n_stuck` | `5` | Prompt after N non-improving completions. |
+| `spec_section` | (none) | §6 code block (reproduce mode); seeds iter 0 verbatim. |
 
 ## Step 0 — Pre-flight
 
@@ -129,14 +133,25 @@ The main agent owns ALL reward design. It reads the completed `iters[]` analyses
 ```
 
 Design rules the main agent applies (these MOVED here from reward-generator):
-- **Adapt-first** — run `${CLAUDE_PLUGIN_ROOT}/references/task-library-search.md`: when `library_refs` has a match, its §6 is the BASE; design by minimal modification, keeping the proven term ladder / weights / composer / gating. Pure de-novo only when `library_refs=[]`. Open iter 0's `reward-history.md` with the **Adaptation delta** (base, kept-as-is, per-change reason).
+- **[MUST — verify FIRST] Nominal weights, never pre-scaled by 1/dt.** Every `weight` in the spec is the term's NOMINAL per-step magnitude. Do NOT bake a `× 1/dt` (e.g. ×20 at 20 Hz) into weights to compensate for the IsaacLab `RewardManager.compute` `× step_dt`, and never instruct the implementer to skip dt-cancellation — that scaling is cancelled mechanically by reward-generator's `[MUST]` `weight /= step_dt` loop in `__post_init__` (see `isaaclab-reward-reference.md` `[MUST] Cancel the RewardManager dt scaling`). Before writing `design.json`, sanity-check that no one-shot/sparse bonus weight looks ~20× inflated (a `+200` latch reads `200`, not `4000`). This is the first thing to get right because it silently corrupts the whole magnitude budget and every cross-iteration comparison.
+- **Adapt-first** — run `${CLAUDE_PLUGIN_ROOT}/references/task-library-search.md`: when `library_refs` has a match, its §6 is the BASE; design by minimal modification, keeping the proven term ladder / weights / composer / gating. **All task-library reference specs declare NOMINAL weights (authored against a no-dt-scale fork) — carry their weights over as-is and rely on the `__post_init__` dt-cancellation; do NOT re-scale them for a fork that keeps `× dt`.** Pure de-novo only when `library_refs=[]`. Open iter 0's `reward-history.md` with the **Adaptation delta** (base, kept-as-is, per-change reason).
 - **Magnitude budget** — plan per-stage saturated per-step values FIRST (earlier stages small, later stages larger, sparse bonuses an order above the dense sum), then back-compute each concrete `weight = target / per_step_saturation`. Regularizers `|weight| ≤ 0.1`. Record the budget in `budget_rationale`. (When adapting a library base, keep its proven budget — don't re-plan.)
 - **Heuristics** — consult `${CLAUDE_PLUGIN_ROOT}/experiences/reward-generator/reward-experience.md` (staging, gating, scale ratios). Subordinate to a matched library base.
 - **Conventions** — composer-by-family + weight scales from `${CLAUDE_PLUGIN_ROOT}/references/reward-generator/isaaclab-reward-reference.md` (the *conventions*; the *code idioms* in that file are reward-generator's concern).
 - **Distinctness** — the new spec must differ from the best completed design AND every in-flight `design_summary` (don't burn a slot re-running what's already cooking).
 - **Reproduce iter 0** — `kind=verbatim`, `body` = the `spec_section` §6 Code block, no design.
 
-### 2.2 — CLONE
+### 2.2 — CLONE (SKIPPED at `pool_size=1` — serial fast-path)
+
+**Serial fast-path (`pool_size=1`, the default):** do NOT clone. With one candidate in flight there is nothing to isolate from — cloning only spends a task-cloner run + clone smokes per iteration. Instead:
+
+- SUBMIT (2.3) targets the **SOURCE task directly**: `task_id = <task>`, `reward_path = <source task's mdp/rewards.py>`; the train command uses `task=<task>` (run names `iter_<NNN>` keep W&B trials distinct).
+- Each iteration edits the source's §6 in place as a minimal diff from the previous iteration (the prior candidate's code is already there — no re-derivation, no `impl_snapshot` needed).
+- CLEANUP (2.6) is skipped too. On convergence the source already carries the winning reward — no apply-back step.
+- **If the loop ends NOT on the best iter** (abort, or best < last), re-implement `handoff-reward-generator.md` (latest BEST state) on the source before the final summary, so the source never ends carrying a worse-than-best candidate.
+- `in_flight[].dest_task = <task>` (the source id) for bookkeeping.
+
+**Pooled mode (`pool_size>1`) — clone per candidate:**
 
 ```
 /harbor:task-clone op=create source=<task> dest=<task with -rewarditer<NNN> before -vN> \
@@ -144,7 +159,7 @@ Design rules the main agent applies (these MOVED here from reward-generator):
 ```
 Cloning is serialized here (one at a time) even when trainings run in parallel. On clone fail: skip this slot, log it, count it as a completion toward `prompt_every_n_stuck`.
 
-**Hard check — `per_term_logging`.** Step 0 guaranteed the SOURCE is wired, so clones must inherit it. If `task-cloner` returns `per_term_logging: no`, the clone's import rewiring broke logging inheritance (a clone bug) — abort the tune with a remediation pointer rather than wasting a training run that scores blind. (The clone smoke itself keeps this soft, because `/harbor:task-clone` is also a standalone primitive for tasks that were never wired.)
+**Hard check — `per_term_logging` (pooled mode only).** Step 0 guaranteed the SOURCE is wired, so clones must inherit it. If `task-cloner` returns `per_term_logging: no`, first check the smoke's methodology: a plain `gym.make` build bypasses the repo-wide factory wrapper (e.g. IsaacLab's `scripts/_isaaclab_env.py`) and reads "no" even when training-path logging is fine — only abort when the FACTORY-built env lacks `info["detailed_reward"]` (a real clone bug), with a remediation pointer rather than wasting a training run that scores blind. (The clone smoke itself keeps this soft, because `/harbor:task-clone` is also a standalone primitive for tasks that were never wired.)
 
 ### 2.3 — SUBMIT (reward-generator, IMPLEMENT mode)
 
@@ -169,14 +184,22 @@ The agent implements `reward_spec` on the clone, runs `smoke_s6.py`, and writes 
 The train+render command the script wraps:
 ```bash
 slug=$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/common/resolve_suite.py" --field slug)
+# Build the override list from ONLY the args the user passed (per the Rule above);
+# bracketed tokens are included only when that arg was set — otherwise the config default applies.
 .venv/bin/python -u harbor/scripts/rl/${slug}/train.py --config-name=<algo>.parallel \
-    task=<dest> seed=<seed> total_timesteps=<timesteps_per_iter> max_step=<timesteps_per_iter> \
+    task=<dest> [seed=<seed>] [total_timesteps=<timesteps_per_iter> max_step=<timesteps_per_iter>] \
     wandb=<wandb> wandb_run_name=iter_<NNN>
 trial=<resolved latest trial dir>; echo "$trial" > iter_<NNN>/trial_dir.txt
 .venv/bin/python -u harbor/scripts/rl/${slug}/render.py checkpoint=$trial/checkpoint.pth task=<dest> +gpu_sim=true
 cp $trial/render.mp4 iter_<NNN>/render.mp4
 ```
-Do NOT pass `num_envs=` — use the algorithm default (PPO parallel = 2048).
+Do NOT pass `num_envs=` — use the config default.
+
+**[MUST] Completion-detection watchdog — NEVER wait for the trainer's natural exit.** Known bug (recurred 2/2 iterations on IsaacLab, 2026-07-05): GPU-sim trainers can complete training — final checkpoint saved, all output flushed — and then hang forever in simulator teardown (Isaac Sim Kit shutdown spins at 100% CPU; iter 0 lost ~3 h to this). Success is therefore signalled by the SENTINEL, not the exit code. run.sh must:
+1. Launch train.py in the background (`train_pid=$!`) and poll (~15 s) for the completion sentinel: the final `checkpoint.pth` exists / the "saved checkpoint" log line appears. Also bail out if the process dies without the sentinel (real crash → exit 1).
+2. On sentinel: give the process a SHORT grace (≤60 s) to exit on its own, then `kill -TERM` (escalate to `-KILL` after 30 s) and PROCEED immediately. A killed-after-sentinel trainer is a SUCCESS, not a failure — gate solely on the checkpoint artifact.
+3. Wrap render.py the same way (sentinel = `render.mp4` written / the `[render] wrote` line) — it boots the same simulator and can hang the same way after finishing.
+4. Reap any orphaned children (`pkill -P`) before exiting so no simulator process outlives the job.
 
 ### 2.4 — WAIT (orchestrator-owned; agent never blocks)
 
@@ -204,7 +227,7 @@ Agent(reward-analyzer, prompt={
 ```
 The analyzer is self-contained: it reads `<iter_dir>/design.json` for the `success_term` + weight, parses the per-term curves, reads the rendered frames vs `description`, writes `analysis.md`, and returns `success_rate`, `total_return`, `per_term`, `behavior`, `findings`. Append `findings` to `memories.jsonl`. Update `tune-state.json:iters[NNN]`. Remove this iter from `in_flight[]`.
 
-### 2.6 — CLEANUP
+### 2.6 — CLEANUP (SKIPPED at `pool_size=1` — nothing was cloned)
 
 ```
 /harbor:task-clone op=delete dest=<dest> info_out=<task_dir>/iter_<NNN>/clone-info.json
@@ -256,8 +279,8 @@ When the loop ends (converged / aborted):
 
 - **Main agent owns ALL design (B1-strict); reward-generator only implements.** Adapt-first / task-library search, magnitude-budget planning, concrete weights, composer choice, and reproduce-verbatim decisions all live HERE. The spec pins concrete numbers; the subagent translates it to IsaacLab code on the clone and smokes it, with zero freedom to reweight / re-gate / re-compose. A reward-generator `status: fail` means an IMPLEMENTATION gap (or a spec defect it surfaced) — the main agent decides any design change.
 - **DECIDE is in-flight-aware.** Every new candidate must be distinct from the best completed design AND every `in_flight[].design_summary`. This is the only coordination cost of `pool_size>1`.
-- **Each candidate trains on its own clone.** Never edit the source task's reward during the loop — only clones. Cleanup deletes the clone on success and failure.
-- **`pool_size>1` requires clone isolation proven.** Default is `1`. Raise it only after the clone's independence check (SC2) is trusted — at `pool_size=1` only one clone ever exists, so a clone bug cannot corrupt a sibling.
+- **Isolation matches the pool.** At `pool_size=1` (serial, the default) candidates edit the SOURCE task directly — no task-cloner, no cleanup (see 2.2 serial fast-path); the only invariant is that the loop must not END with a worse-than-best reward on the source. At `pool_size>1` each candidate trains on its own clone: never edit the source task's reward in pooled mode — only clones — and cleanup deletes the clone on success and failure.
+- **`pool_size>1` requires clone isolation proven.** Raise it above 1 only after the clone's independence check (SC2) is trusted.
 - **Train at default num_envs** (e.g. 2048 for PPO). Smoke uses fewer; training uses the production default.
 - **Render is folded into the train job** (compute-side); the orchestrator only renders as a fallback, and on cluster only via a render-only job — never inline on the login node.
 - **No hard cap.** Stop on `success_rate ≥ threshold` or user abort; prompt every `prompt_every_n_stuck` non-improving completions.

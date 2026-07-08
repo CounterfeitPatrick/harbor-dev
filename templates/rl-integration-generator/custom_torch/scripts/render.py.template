@@ -197,6 +197,10 @@ def main(cfg: DictConfig):
         print(f"[render] could not set viewer camera ({_camera_err}) — using default", flush=True)
 
     ep_return = 0.0
+    act_abs_sum = 0.0
+    act_abs_min = float("inf")
+    act_abs_max = 0.0
+    act_count = 0
     for step in range(max_steps):
         f = _grab_frame(env)
         if f is not None:
@@ -218,6 +222,19 @@ def main(cfg: DictConfig):
                     action = action[0]
             else:
                 action = agent.actor(obs_in)
+        # Track |action| stats so the summary line proves inference actually ran
+        # (a strictly-zero mean means the checkpoint state-dict didn't load and
+        # inference fell through to a default-init policy). rl-render Check #1
+        # parses `action|abs|.mean` from the `[render] wrote ...` line.
+        if isinstance(action, torch.Tensor):
+            _aabs = action.abs()
+            _m = float(_aabs.mean().item())
+            act_abs_sum += _m
+            act_abs_min = min(act_abs_min, float(_aabs.min().item()))
+            act_abs_max = max(act_abs_max, float(_aabs.max().item()))
+            act_count += 1
+            if step < 3:
+                print(f"[render] step={step}  action|abs|.mean={_m:.4f}", flush=True)
         next_obs, reward, done, info = env.step(action)
         if isinstance(reward, torch.Tensor):
             ep_return += float(reward.mean().item())   # mean across envs (works for n=1 too)
@@ -240,7 +257,10 @@ def main(cfg: DictConfig):
     sheet = out_dir / "render_contact_sheet.jpg"
     _write_mp4(frames, mp4, fps=fps)
     _write_contact_sheet(frames, sheet)
-    print(f"[render] wrote {mp4} ({len(frames)} frames, return={ep_return:.4f})", flush=True)
+    _act_mean = (act_abs_sum / act_count) if act_count else 0.0
+    _act_min = act_abs_min if act_count else 0.0
+    print(f"[render] wrote {mp4} ({len(frames)} frames, return={ep_return:.4f}, "
+          f"action|abs|.mean={_act_mean:.4f} max={act_abs_max:.4f} min={_act_min:.4f})", flush=True)
 
     # Hard-exit BEFORE Kit / sim shutdown. With some IsaacLab + Isaac Sim
     # combos (e.g. 5.1) `sim_app.close()` hangs on USD stage detach — render

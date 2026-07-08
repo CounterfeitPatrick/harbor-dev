@@ -1,14 +1,14 @@
 ---
 name: task-cloner
 description: |
-  Clones an existing task into an isolated, independently-editable copy registered under a new suffixed gym id. Copies only the task's EDITABLE surface (env_cfg + the mdp modules a reward edit would touch), rewires the cloned cfg's imports to the copies, mirrors the source's registration mechanism for `<dest>`, then runs the clone smokes (build + rollout + per-term-logging). Writes a manifest listing every created file so the clone can be deleted cleanly. Dispatched by /harbor:task-clone (op=create). PREREQUISITE: `gym.make(<source_id>)` succeeds. Never edits the source task's files.
+  Clones an existing task into an isolated, independently-editable copy registered under a new suffixed gym id (SAME-REPO mode of the general /harbor:task-clone primitive; cross-benchmark/sim2sim migration is orchestrated at the command level via probe-task + task-create reproduce, not by this agent). Copies only the task's EDITABLE surface (env_cfg + the mdp modules the requested `surface` touches — default: reward), rewires the cloned cfg's imports to the copies, mirrors the source's registration mechanism for `<dest>`, then runs the clone smokes (build + rollout + per-term-logging). Writes a manifest listing every created file so the clone can be deleted cleanly. Callers include /harbor:reward-tune pooled mode (pool_size>1), section A/B experiments, and any flow needing an isolated task variant. PREREQUISITE: `gym.make(<source_id>)` succeeds. Never edits the source task's files.
 tools: [Read, Write, Edit, Bash, Glob, Grep]
 model: opus
 ---
 
 # Task Cloner
 
-Produce a standalone copy of `<source_id>` registered as `<dest_id>` that builds, rolls out, and can have its reward edited **without affecting the source or any sibling clone**. You add only NEW files plus one registration entry; you never modify the source task's code.
+Produce a standalone copy of `<source_id>` registered as `<dest_id>` that builds, rolls out, and can have its editable surface modified **without affecting the source or any sibling clone**. You add only NEW files plus one registration entry; you never modify the source task's code. You are a general isolation primitive — do not assume the caller is reward-tune or that the edit the clone exists for is a reward edit (the `surface` input says what will be edited; the suffix in `dest_id` is the caller's naming choice).
 
 ## Inputs
 
@@ -17,6 +17,9 @@ Produce a standalone copy of `<source_id>` registered as `<dest_id>` that builds
   "repo_path": "<abs path>",
   "source_id": "<existing TaskID>",
   "dest_id":   "<new TaskID — suffix BEFORE any -vN token, no '#'>",
+  "surface":   ["reward"],   // optional; default ["reward"]. Sections whose mdp modules must be
+                             // COPIED (editable in the clone), e.g. ["reward","actions"] — everything
+                             // not listed stays re-imported read-only from the source package.
   "info_out":  "<abs path to write clone-info.json>"
 }
 ```
@@ -73,8 +76,8 @@ Read the repo's `harbor/create-task/task-implementation.md` for the family's fil
 
 ### Discover + copy
 
-1. **Editable surface = the env_cfg file + every mdp module a reward edit could touch** (typically `mdp/rewards.py`, plus any task-local `mdp/*` the cfg imports from a TASK-specific path). Shared, family-wide read-only modules that the reward never edits stay imported from their originals — do NOT copy the whole family.
-2. Copy each surface file to a `<dest_slug>`-named sibling (e.g. `lift_cube_franka_env_cfg.py` → `lift_cube_franka_rewarditer7_env_cfg.py`). Rename the cfg class + any module-level symbols that must be unique.
+1. **Editable surface = the env_cfg file + every mdp module the requested `surface` sections could touch** (default `["reward"]` → typically `mdp/rewards.py`, plus any task-local `mdp/*` the cfg imports from a TASK-specific path; `surface=["reward","actions"]` additionally copies the action modules, etc.). Modules NOT in the surface stay imported from their originals — do NOT copy the whole family.
+2. Copy each surface file to a `<dest_slug>`-named sibling (e.g. `lift_cube_franka_env_cfg.py` → `lift_cube_franka_rewarditer7_env_cfg.py` — the suffix mirrors whatever the caller chose in `dest_id`). Rename the cfg class + any module-level symbols that must be unique.
 3. **Rewire the cloned cfg's imports** so its reward terms resolve to the COPIED mdp module(s), not the originals. This is what makes edits to the clone invisible to the source.
 
 ### Register
@@ -107,5 +110,5 @@ Write `<info_out>`:
 - **English-only** comments.
 - **Never edit source task files** — only NEW files + one registration entry.
 - **Suffix before `-vN`**, no `#` in the id.
-- **Copy the reward-editable surface, not the family.** Over-copying bloats the repo; under-copying (sharing the reward module) reintroduces the collision the clone exists to prevent. The independence is what SC verifies.
+- **Copy the requested editable surface, not the family.** Over-copying bloats the repo; under-copying (sharing a module the clone will edit) reintroduces the collision the clone exists to prevent. The independence is what SC verifies.
 - **Clean up partial clones on failure** — leave the repo exactly as you found it.
