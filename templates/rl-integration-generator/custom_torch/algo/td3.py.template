@@ -1,4 +1,4 @@
-"""TD3 — twin-delayed DDPG. Adapted from PQL/DDiffPG SAC + TD3 patterns."""
+"""TD3 — twin-delayed DDPG. Self-contained."""
 from __future__ import annotations
 
 from copy import deepcopy

@@ -1,6 +1,6 @@
 # §6 smoke contract
 
-Loaded by `reward-generator`. Template at `${CLAUDE_PLUGIN_ROOT}/templates/reward-generator/smokes/smoke_s6.py.template`.
+Loaded by `reward-generator`. Template: `${CLAUDE_PLUGIN_ROOT}/templates/reward-generator/smokes/smoke_s6.py.template`.
 
 ## What it verifies
 

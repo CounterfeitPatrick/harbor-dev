@@ -1,7 +1,7 @@
 """
 {{PROJECT_NAME}} — RL training entry point (custom_torch).
 
-Single-process Hydra-driven train loop modeled on the PQL/DDiffPG `train_baselines.py`
+Single-process Hydra-driven train loop
 pattern. Picks an algorithm from algo/ via the cfg.algo.name field, builds env via
 env_wrapper.create_env(), and loops:
 
@@ -210,7 +210,10 @@ def main(cfg: DictConfig):
             memory.add_to_buffer(traj)
         global_steps += int(used)
 
-    max_step = int(cfg.get("total_timesteps", 1_000_000))
+    # `max_step` is the custom_torch alias (config declares max_step: ${.total_timesteps});
+    # honor an explicit max_step override first so `max_step=1000` actually caps the run,
+    # then fall back to total_timesteps.
+    max_step = int(cfg.get("max_step") or cfg.get("total_timesteps", 1_000_000))
     log_interval = int(cfg.get("log_interval", int(cfg.algo.horizon_len) * int(cfg.num_envs)))
     print(f"[train] algo={cfg.algo.name} task={task} num_envs={cfg.num_envs} max_step={max_step} "
           f"log_interval={log_interval} wandb={'on' if use_wandb else 'off'}", flush=True)

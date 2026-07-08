@@ -2,7 +2,7 @@
 #
 # Activated when the benchmark's gpu_sim=true. Same key schema is consumed by
 # all three algorithm sources:
-#   - custom_torch (PQL/DDiffPG-style PyTorch tree)
+#   - custom_torch (self-contained PyTorch tree)
 #   - custom_jax   (Flax/optax tree; reads the same keys + ignores act_class/cri_class)
 #   - stable_baseline3 (SB3 PPO; reads policy / policy_kwargs / learning_rate / n_steps / ...)
 #

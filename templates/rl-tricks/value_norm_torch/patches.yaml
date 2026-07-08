@@ -1,5 +1,5 @@
 # value_norm_torch — patches custom_torch ppo.py::_compute_adv so the value
-# head trains against normalized targets (PQL pattern).
+# head trains against normalized targets.
 
 file_patches:
   - file: harbor/scripts/rl/{slug}/algo/ppo.py

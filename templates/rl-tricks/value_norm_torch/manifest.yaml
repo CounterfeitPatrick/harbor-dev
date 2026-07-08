@@ -5,9 +5,9 @@ description: |
   wires `self.value_rms` (creates it + unnormalizes inside get_actions but
   forgets to unnormalize the bootstrap `next_value` and to renormalize
   `returns`/`values` before update_net). This trick fixes both gaps so the
-  critic trains against normalized targets — matching PQL's reference.
+  critic trains against normalized targets.
 
-  Reference: pql/algo/ppo.py — `compute_adv` lines that
+  Reference: the built-in custom_torch PPO — `compute_adv` lines that
   `self.value_rms.update(next_value)` + `next_value = self.value_rms.unnormalize(next_value)`,
   then later `b_returns = self.value_rms.normalize(returns)` + `b_values = self.value_rms.normalize(values)`.
 
@@ -15,7 +15,7 @@ algorithms: [ppo]
 backend: custom_torch
 
 references:
-  - /home/steven/code/pql/pql/algo/ppo.py            # canonical compute_adv pattern
+  - custom_torch PPO            # canonical compute_adv pattern
   - templates/rl-integration-generator/custom_torch/algo/ppo.py.template  # the file we patch (rendered copy under <repo>/harbor/...)
 
 caveats:

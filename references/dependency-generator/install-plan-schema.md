@@ -1,6 +1,6 @@
 # InstallationPlan schema
 
-`<repo>/harbor/dependency-generator/install_plan.json` is the agent's structured digest of every install-relevant instruction it found in `README.md` and friends. The renderer (`render_uv.py`) consumes it together with `probe.json` to emit the install block in `setup_uv.sh`. If `install_plan.json` is missing the renderer falls back to a heuristic install (uv.lock present → `uv sync --frozen`; else `uv pip install -r requirements.txt` and / or `uv pip install -e .`).
+`<repo>/harbor/dependency-generator/install_plan.json` is the agent's structured digest of install-relevant instructions from `README.md` and friends. The renderer (`render_uv.py`) consumes it together with `probe.json` to emit the install block in `setup_uv.sh`. If `install_plan.json` is missing the renderer falls back to a heuristic install (uv.lock present → `uv sync --frozen`; else `uv pip install -r requirements.txt` and / or `uv pip install -e .`).
 
 ## Top-level fields
 

@@ -35,7 +35,7 @@ Task summary: two FR3 + Franka-hand robots stand at world `y = ±0.49` facing ea
 | robot_0 init joint pose | `fr3_joint1=-0.785, joint2=-0.785, joint3=0.0, joint4=-2.655, joint5=0.0, joint6=1.87, joint7=0.0, fr3_finger_joint.*=0.04` |
 | robot_1 init joint pose | `fr3_joint1=+0.785, joint2=-0.785, joint3=0.0, joint4=-2.655, joint5=0.0, joint6=1.87, joint7=-1.57, fr3_finger_joint.*=0.04` |
 | Joint-pose flip rule | flip sign of joint1 (base yaw) + joint3 (forearm yaw) + joint5 (wrist yaw) + joint7 (final wrist roll). robot_0's joint7 user-overridden to 0 so gripper jaws align along world Y (closes ACROSS box's short y-face). |
-| Box asset | `/home/steven/Downloads/eurobox.stl` → converted via `isaaclab.sim.converters.MeshConverter` to `harbor/assets/eurobox/eurobox.usd`. Conversion script: `harbor/create-task/triton-lift-box/make_eurobox_usd.py`. Recentered: `translation=-centroid` so asset origin = box geometric center. Local extents: x=±0.20, y=±0.15, z=±0.11025. |
+| Box asset | `<downloads>/eurobox.stl` → converted via `isaaclab.sim.converters.MeshConverter` to `harbor/assets/eurobox/eurobox.usd`. Conversion script: `harbor/create-task/triton-lift-box/make_eurobox_usd.py`. Recentered: `translation=-centroid` so asset origin = box geometric center. Local extents: x=±0.20, y=±0.15, z=±0.11025. |
 | `BOX_INIT_Z` | `0.11025` (half z-extent — box bottom on table at world z=0) |
 | Box mass | `0.5 kg` (`MassPropertiesCfg(mass=0.5)`) |
 | Box init pose (env-local) | `pos=(0.0, 0.0, 0.11025)`, `rot=(0.7071068, 0.0, 0.0, 0.7071068)` (90° about +Z — long axis aligned to world Y) |
@@ -914,9 +914,9 @@ def success_bonus(
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/mdp/observations.py` | 1–81 | `ee_pose_in_robot_root_frame` (parameterized), `box_position_in_world`, `box_quat_in_world`. |
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/mdp/rewards.py` | 1–256 | 5 reward funcs + 2 helpers + latch registry + `placeholder_zero` legacy shim. |
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/mdp/terminations.py` | 1–60 | `lift_box_success`. |
-| `harbor/assets/eurobox/eurobox.usd` | (binary) | Converted from `/home/steven/Downloads/eurobox.stl` via `harbor/create-task/triton-lift-box/make_eurobox_usd.py`. Recentered: extents x=±0.20, y=±0.15, z=±0.11025. |
+| `harbor/assets/eurobox/eurobox.usd` | (binary) | Converted from `<downloads>/eurobox.stl` via `harbor/create-task/triton-lift-box/make_eurobox_usd.py`. Recentered: extents x=±0.20, y=±0.15, z=±0.11025. |
 | `harbor/assets/fr3/fr3_franka_hand.usd` | (binary) | FR3 + Franka hand articulation USD (imported via insert_drawer's `FR3_FRANKA_HAND_CFG`). |
-| `harbor/assets/table/lab_table_instanceable_colored_rotated.usd` | (binary) | Lab table (bidex rotated variant, kinematic), surface at z≈0. |
+| `harbor/assets/table/lab_table_instanceable_colored_rotated.usd` | (binary) | Lab table (the source repo rotated variant, kinematic), surface at z≈0. |
 
 External imports the task relies on:
 - `isaaclab_tasks.manager_based.manipulation.insert_drawer.config.franka.joint_pos_env_cfg.FR3_FRANKA_HAND_CFG` — the FR3 articulation cfg with actuator stiffness/damping.

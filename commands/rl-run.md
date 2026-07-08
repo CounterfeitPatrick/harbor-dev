@@ -35,16 +35,13 @@ Any other `key=value` token after the required two is forwarded **verbatim** as 
    test -f harbor/rl-integration-generator/rl-suite-spec.json || { echo "no rl-suite-spec.json — run rl-integration-generator first"; exit 1; }
    ```
 
-2. **Load suite spec** to discover `algorithm_slug`, `scripts_dir`, and `parallel`:
-   ```python
-   import json
-   spec = json.loads(open("harbor/rl-integration-generator/rl-suite-spec.json").read())
-   slug      = spec["algorithm_source"]["algorithm_slug"]   # "custom_jax" / "custom_torch" / ...
-   scripts   = spec.get("scripts_dir", f"harbor/scripts/rl/{slug}")
-   parallel  = bool(spec.get("parallel", False))
+2. **Load suite spec** via the canonical reader (resolves slug / scripts dir / parallel / config name from `algorithm_source.slug` + `algorithm_source.parallel` — the single place that key path lives):
+   ```bash
+   eval "$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/common/resolve_suite.py" --algo <algo>)"
+   # → SLUG, SCRIPTS_DIR, PARALLEL, CONFIG_NAME=<algo>[.parallel]
    ```
 
-3. **Pick config name**: `<algo>.parallel` if `parallel=true` else `<algo>`.
+3. `CONFIG_NAME` (resolved above) is `<algo>.parallel` when `PARALLEL=true`, else `<algo>`.
 
 4. **Reward-logger pre-flight**. Before launching training, check that the chosen task has the per-term reward wrapper wired (so W&B will show per-term curves, and so the user has the diagnostic signal `/harbor:reward-add-log` was meant to provide):
 
@@ -67,8 +64,8 @@ Any other `key=value` token after the required two is forwarded **verbatim** as 
 
 6. **Build + run the training command**:
    ```bash
-   <prefix> harbor/scripts/rl/<slug>/train.py \
-       --config-name=<config_name> \
+   <prefix> ${SCRIPTS_DIR}/train.py \
+       --config-name=${CONFIG_NAME} \
        task=<task> \
        <user_overrides...>
    ```

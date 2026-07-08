@@ -6,13 +6,13 @@ description: |
   ppo/sac/td3 parallel.yaml configs (so it survives subsequent edits) and
   verifies the RunningMeanStd numerics through a self-contained smoke.
 
-  Reference: pql/algo/ppo.py — `if self.cfg.algo.obs_norm: obs = self.obs_rms.normalize(obs)`.
+  Reference: the built-in custom_torch PPO — `if self.cfg.algo.obs_norm: obs = self.obs_rms.normalize(obs)`.
 
 algorithms: [ppo, sac, td3]
 backend: custom_torch
 
 references:
-  - /home/steven/code/pql/pql/algo/ppo.py            # `obs_norm` cfg flag
+  - custom_torch PPO            # `obs_norm` cfg flag
   - templates/rl-integration-generator/custom_torch/utils/torch_util.py.template   # RunningMeanStd
   - templates/rl-integration-generator/custom_torch/algo/ac_base.py.template       # builds self.obs_rms
 

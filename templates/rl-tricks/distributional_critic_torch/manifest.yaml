@@ -5,7 +5,7 @@ description: |
   fixed support [v_min, v_max]. The Bellman update is implemented via the
   Bellemare projection (no MSE), and the critic loss is cross-entropy.
 
-  TD3 (modeled after DDiffPG's critic update):
+  TD3 (distributional critic update):
       target_dist = pick min-expected-value distribution between Q1, Q2
       target_dist = projection(next_dist, reward, done, gamma^nstep, v_min, v_max, num_atoms, support)
       loss = BCE(current_Q1, target_dist) + BCE(current_Q2, target_dist)
@@ -18,15 +18,15 @@ description: |
   with the support shift baked into the reward, so the projection routine
   is unchanged.
 
-  Reference: ddiffpg/algo/ddiffpg.py::update_critic + ddiffpg/utils/distl_util.py::projection.
+  Reference: the built-in custom_torch distributional-critic update + categorical projection.
 
 algorithms: [td3, sac]
 backend: custom_torch
 
 references:
-  - /home/steven/code/ddiffpg-official/ddiffpg/algo/ddiffpg.py        # canonical critic update
-  - /home/steven/code/ddiffpg-official/ddiffpg/utils/distl_util.py    # projection
-  - /home/steven/code/ddiffpg-official/ddiffpg/models/mlp.py          # DistributionalDoubleQ network
+  - custom_torch distributional-critic update        # canonical critic update
+  - custom_torch categorical projection    # projection
+  - custom_torch DistributionalDoubleQ network          # DistributionalDoubleQ network
 
 caveats:
   - "Actor unchanged — for both TD3 and SAC the actor loss reads get_q1 / get_q_min, which DistributionalDoubleQ implements as expected values (Σ p(z)·z). The distributional head (get_q1_q2_dist) is consumed only by the C51 critic branch."

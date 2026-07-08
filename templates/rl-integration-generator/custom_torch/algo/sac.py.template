@@ -1,4 +1,4 @@
-"""SAC — soft actor-critic. Adapted from PQL/DDiffPG; bidex / equivariant deps stripped."""
+"""SAC — soft actor-critic. Self-contained; equivariant deps stripped."""
 from __future__ import annotations
 
 from copy import deepcopy

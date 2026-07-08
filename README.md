@@ -58,8 +58,9 @@ Grouped by filename prefix (the prefix is the group — Claude Code commands hav
 | `probe-task task=<id> [output=<p>]` | Emit a portable per-task spec `<task-slug>-implementation.md` with verbatim §1–§7 code. Runs in a subagent (context-saving). Feed back into `task-create from=<path>` to clone the task into another benchmark. |
 | `task-create name=<TaskID> (description=… \| from=<spec.md>)` | Author a NEW task (free-form via `description=`) OR reproduce one byte-identical from a `probe-task` spec (`from=`). Runs `task-generator` (§1–§5, smoke gates) → the `reward-tune` training loop (§6 — reward validated by actual training in all modes; reproduce seeds iter 0 with the spec's reward verbatim) → `dr-generator` (§7, opt-in — skipped unless DR is explicitly requested). |
 | `task-list [<task-id>]` | List / inspect tasks in the cwd-local benchmark; falls back to the registry-side spec via the `list_tasks` MCP tool. |
+| `task-clone op=create source=<id> dest=<id>` | Clone a task into an isolated, independently-editable copy under a new suffixed gym id (`op=delete` removes it). The collision-free isolation primitive behind parallel `reward-tune` candidates. |
 | **reward — reward engineering** | |
-| `reward-tune task=<id> [algorithm=<algo>] [success_threshold=0.5]` | Iterate on the §6 reward of an existing task — each iter the `reward-generator` edits, the orchestrator trains + renders + analyzes per-term log + visual frames vs the task description, loops until success_rate ≥ threshold. |
+| `reward-tune task=<id> [algorithm=<algo>] [pool_size=N] [mode=local\|cluster]` | Async-pool §6 reward tuning. The **main agent** decides each candidate's full reward spec (B1); `reward-generator` implements it on an isolated task clone; the orchestrator trains + renders, `reward-analyzer` scores per-term log + frames → success_rate. Keeps `pool_size` candidates in flight (default 1 = serial; >1 = parallel clones), loops until success_rate ≥ threshold. |
 | `reward-add-log` | Wire per-reward-term decomposition into a benchmark repo without changing the env's reward — exposes per-term values via `info["detailed_reward"]` and asserts `composer(terms) == reward` every step. |
 | **rl — train / eval / policy** | |
 | `rl-run task=<id> algorithm=<ppo\|sac\|td3> [k=v…]` | Single-trial training; wraps the rendered `harbor/scripts/rl/<impl>/train.py` with Hydra overrides. Auto-renders the final checkpoint on rc=0. |
@@ -84,13 +85,15 @@ Grouped by filename prefix (the prefix is the group — Claude Code commands hav
 | `benchmark-generator` | Adds the env-sanity layer to a repo whose env is already set up. Renders `scripts/run_random.py` (random rollout) + `scripts/render_random.py` (render-to-MP4). Runs 2-tier smoke (L1 random / L2 render). RL-only. |
 | `rl-integration-generator` | Renders the RL training tree: `harbor/scripts/rl/{train,eval,render,visualize}.py`, `harbor/configs/rl/{ppo,sac,td3}{,.parallel}.yaml`, `rl-suite-spec.json`. Smokes each algorithm against `<repo>/.venv/bin/python` via the production T1–T5 tiers (mirroring `rl-run` / `rl-eval` / `rl-render` exactly). |
 | `task-generator` | Authors §1–§5 of a new task (register/scene · actions · reset · goal+termination · observation) with per-section smokes plus an actuator-tracking check (S2.5) and a render-stability + visual check (S6); iterates up to 2× per smoke before escalating. |
-| `reward-generator` | Authors §6 (reward) — `RewardsCfg` + `mdp/rewards.py` functions. Required to write a planned per-stage magnitude budget into the docstring before setting weights (per `experiences/reward-generator/reward-experience.md` entry #2). |
+| `reward-generator` | **Implements** §6 (reward) from a fully-specified spec — no design. Receives `reward_spec={kind,body}` from the reward-tune main agent and writes it into `RewardsCfg` + `mdp/rewards.py` on the task clone (idiom + dt-scaling + numerical safety + S6 smoke). Never reweights / re-gates / re-composes. |
+| `reward-analyzer` | The score phase of `reward-tune`. Read-only over one finished trial: per-term curves + rendered frames → `analysis.md` (behavior + success_rate), returns to the main agent. No design decisions. |
+| `task-cloner` | Clones a task's editable surface (env_cfg + reward `mdp/`) into a new suffixed gym id with rewired imports + clone smokes, for collision-free parallel editing. Dispatched by `task-clone`. |
 | `dr-generator` | Authors §7 (domain randomization) — `EventCfg` startup / interval terms. `skipped` is a valid success when DR isn't required. |
 | `rl-tuning-agent` | Per-cell tuning loop: train → eval → render → analyze metrics + behavior → suggest next config. Per-cell state under `harbor/rl_experiments/tunes/<tune_id>/`. |
 
 ### Experiences (numbered, append-only cross-run ledgers)
 
-Each subagent has a `experiences/<role>/` ledger that survives across runs. Entries are numbered for stable cross-reference; **[MUST]** entries are binding requirements the subagent is required to follow (e.g. reward-generator entry #2: magnitude-budget discipline).
+Each subagent has a `experiences/<role>/` ledger that survives across runs. Entries are numbered for stable cross-reference; **[MUST]** entries are binding requirements their reader follows (e.g. the reward-tune main agent applies `reward-experience` entry #2: magnitude-budget discipline when designing a reward).
 
 ```
 experiences/rl-tuning-agent/tuning-experience.md      (25 entries: hp heuristics, tricks, failure signatures, …)
@@ -183,7 +186,7 @@ Once a benchmark is set up:
 /harbor:reward-tune task=Triton-Franka-StackCube algorithm=ppo wandb=Triton-Franka-StackCube
 ```
 
-Each iter: `reward-generator` edits §6 (and may surgically edit §1–§5 if needed) → train at the algorithm's default `num_envs` → render rollout → orchestrator analyzes per-term reward log + visual frames vs the task description → decides continue / success / stuck. Findings accumulate across iterations under `<repo>/harbor/create-task/<task_slug>/`. Loops until `success_rate ≥ 0.5` (or the user interrupts) — no hard cap.
+Each candidate: the **main agent** decides the full reward spec (B1) → `reward-generator` implements it on an isolated task clone (`task-clone`) → the orchestrator trains (default `num_envs`) + renders → `reward-analyzer` scores per-term log + frames vs the task description → the main agent decides the next candidate. An async pool keeps `pool_size` candidates in flight (default 1 = serial; >1 = parallel clones). Findings accumulate under `<repo>/harbor/create-task/<task_slug>/`. Loops until `success_rate ≥ threshold` (or the user interrupts at a stuck-prompt) — no hard cap.
 
 ## Layout
 

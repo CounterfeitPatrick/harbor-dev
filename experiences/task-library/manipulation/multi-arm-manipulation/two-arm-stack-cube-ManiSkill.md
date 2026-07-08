@@ -110,7 +110,7 @@ class TwoRobotStackCube(BaseEnv):
 
 **Smoke.**
 ```bash
-cd /home/steven/code/agentic/ManiSkill
+cd <ManiSkill-repo>
 .venv/bin/python -c "import gymnasium as gym, mani_skill; e=gym.make('TwoRobotStackCube-v1'); print(e.observation_space, e.action_space); e.close()"
 ```
 Expected stdout:

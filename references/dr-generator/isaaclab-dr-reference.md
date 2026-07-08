@@ -1,9 +1,9 @@
 # IsaacLab domain randomization reference
 
-Loaded by `dr-generator` on demand. Describes the **three randomization groups**, the available
-function surface per group, the mode→operation mapping, the discovery recipe, the defaults, and the
-read-back recipes the smoke uses to verify each effective term. If a non-IsaacLab family is in play,
-`task-implementation.md` documents the family-equivalent surface (e.g. loco-mujoco's `CustomRandomizer`).
+Loaded by `dr-generator` on demand: the **three randomization groups**, function surface per group,
+mode→operation mapping, discovery recipe, defaults, and read-back recipes the smoke uses to verify each
+effective term. If a non-IsaacLab family is in play, `task-implementation.md` documents the
+family-equivalent surface (e.g. loco-mujoco's `CustomRandomizer`).
 
 ---
 

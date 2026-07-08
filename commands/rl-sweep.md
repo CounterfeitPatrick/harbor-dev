@@ -5,14 +5,12 @@ argument-hint: task=<id1>[,id2,...] algorithm=<ppo,sac,...> [key=v1,v2,...] [par
 
 # /harbor:rl-sweep — Multi-Trial Hyperparameter Sweep
 
-Cartesian-product sweep over arbitrary `key=value` arguments. Any value containing a `,` is treated as a list (Hydra dict/list literals starting with `{`/`[`/`(` are kept whole and not split). One sub-agent per trial; each calls `/harbor:rl-run` for that trial's config. All trials share a single `sweep_id` directory.
-
-Two execution modes:
+Cartesian-product sweep over arbitrary `key=value` arguments. Any value containing a `,` is a list (Hydra literals starting with `{`/`[`/`(` are kept whole, not split). All trials share one `sweep_id` directory.
 
 | Mode | Trigger | Behavior |
 |---|---|---|
-| **local** (default) | `cluster=` not passed | Spawns one sub-agent per trial; agent invokes `/harbor:rl-run`. Sequential by default; `parallelism=N` runs N concurrently. |
-| **cluster** | `cluster=true` or `cluster=<path>` | Renders a SLURM-array `launch.sh` under `<sweep_dir>/launch.sh`. Does NOT dispatch sub-agents; the user submits with `sbatch`. |
+| **local** (default) | `cluster=` not passed | One sub-agent per trial; agent invokes `/harbor:rl-run`. Sequential by default; `parallelism=N` runs N concurrently. |
+| **cluster** | `cluster=true` or `cluster=<path>` | Renders a SLURM-array `launch.sh` under `<sweep_dir>/launch.sh`. No sub-agents; user submits with `sbatch`. |
 
 ## Required arguments
 
@@ -23,7 +21,7 @@ Two execution modes:
 
 ## Optional arguments
 
-Any other `key=value` is forwarded to `/harbor:rl-run`. Lists (comma-separated values, NOT inside `{...}`/`[...]`) participate in the Cartesian product. Examples:
+Any other `key=value` is forwarded to `/harbor:rl-run`. Comma-separated lists (NOT inside `{...}`/`[...]`) participate in the Cartesian product.
 
 | Arg | Effect |
 |---|---|
@@ -55,7 +53,7 @@ Split each `key=value`:
 - Else if `value` contains `,` → list (split on commas, strip)
 - Else → scalar (still wrapped as a 1-element list internally so the product math is uniform)
 
-Pop these sweep-control knobs BEFORE the Cartesian product (they are NOT forwarded to `/harbor:rl-run`):
+Pop these sweep-control knobs BEFORE the Cartesian product (NOT forwarded to `/harbor:rl-run`):
 `parallelism`, `cluster`, `time_limit`, `gpu_type`, `proxy`, `smoke`.
 
 ### Step 1 — Cartesian product
@@ -102,9 +100,7 @@ Each trial dir holds: `config.json` (the trial config). In **local mode** it als
 
 ### Step 3.5 — Pre-dispatch smoke per (algorithm, task) cell
 
-Skipped when `smoke=false`. Default: enabled. Purpose: catch typos, missing
-Mjx variants, broken `env_params`, optimizer/JIT failures **before** committing
-to a long sweep or burning cluster quota.
+Skipped when `smoke=false`; enabled by default. Catches typos, missing Mjx variants, broken `env_params`, optimizer/JIT failures **before** committing to a long sweep or burning cluster quota.
 
 Build the smoke matrix:
 
@@ -112,9 +108,7 @@ Build the smoke matrix:
 unique_cells = sorted({(t["algorithm"], t["task"]) for t in trial_configs})
 ```
 
-For a 3 algos × 6 tasks × N seeds × ... sweep this is 18 smokes — each takes
-~30–60s once JAX is warm. Sweeps with no `algorithm` or `task` axis (e.g.
-seed-only) collapse to one smoke per unique value.
+A 3 algos × 6 tasks × N seeds sweep is 18 smokes — each ~30–60s once JAX is warm. Sweeps with no `algorithm` or `task` axis (e.g. seed-only) collapse to one smoke per unique value.
 
 For each `(algo, task)` cell, invoke `/harbor:rl-run`:
 
@@ -128,18 +122,16 @@ For each `(algo, task)` cell, invoke `/harbor:rl-run`:
 
 Forwarded scalar overrides:
 - All scalars from `parsed_args` EXCEPT the sweep dimensions themselves (`task`, `algorithm`, `seed`, anything else with `len(values) > 1`).
-- The Hydra dict literals like `++env_params={...}` MUST be forwarded so the smoke runs against the same env config the real trial would.
+- Hydra dict literals like `++env_params={...}` MUST be forwarded so the smoke runs against the same env config the real trial would.
 
-Forced overrides (small enough to compile + run a couple of iters in seconds, not minutes):
+Forced overrides (small enough to compile + run a couple of iters in seconds):
 - `seed=0`
 - `num_envs=64`
 - `total_timesteps=5000`
 - `batch_size=256` — keeps SAC/TD3 replay batch small enough for the warmup window
 - `wandb=null`
 
-Capture stdout/stderr to `<sweep_dir>/smoke/<algo>_<task>.log`. **Pass marker**:
-the line `[train] saved checkpoint to ...`. **Fail markers**: any traceback,
-`Error: ...`, or process exit ≠ 0.
+Capture stdout/stderr to `<sweep_dir>/smoke/<algo>_<task>.log`. **Pass marker**: the line `[train] saved checkpoint to ...`. **Fail markers**: any traceback, `Error: ...`, or process exit ≠ 0.
 
 ```python
 failures = []  # (algo, task, last_n_lines_of_log)
@@ -153,7 +145,7 @@ for algo, task in unique_cells:
 - All pass → print `✓ smoke OK: <N>/<N> cells passed`, delete `<sweep_dir>/smoke/`, proceed to Step 4.
 - Any fail → print one block per failed cell with the last lines of its log, delete `<sweep_dir>/` (no half-baked sweep on disk), exit non-zero. Do NOT dispatch sub-agents and do NOT render `launch.sh`.
 
-The user can pass `smoke=false` to skip — recommended only when re-rendering an already-validated matrix (e.g. flipping `total_timesteps` between two cluster runs).
+`smoke=false` skips this — recommended only when re-rendering an already-validated matrix (e.g. flipping `total_timesteps` between two cluster runs).
 
 ### Step 4a — Dispatch (local mode, default)
 
@@ -184,7 +176,7 @@ Per-trial agent prompt template:
 Triggered when `cluster=` is in args. **No sub-agents are spawned.**
 
 1. **Resolve template path:**
-   - `cluster=<path>` → that path (absolute, or repo-relative, or `~`-expanded). Wins over auto-detection.
+   - `cluster=<path>` → that path (absolute, repo-relative, or `~`-expanded). Wins over auto-detection.
    - `cluster=true` (or `cluster=default`):
      - **IsaacLab auto-detect**: read `harbor/benchmark-generator/benchmark-spec.json:benchmark.name`. If it equals `"IsaacLab"` (case-insensitive), OR if `harbor/apptainer/isaaclab.def` exists, pick `${CLAUDE_PLUGIN_ROOT}/templates/rl-sweep/launch.sh.isaaclab.template`. The IsaacLab variant runs the trial inside an apptainer image (handles glibc 2.34+ requirement, NVIDIA Vulkan ICD injection, Kit cache writes via `--writable-tmpfs`, FAU NHR proxy).
      - Otherwise → `${CLAUDE_PLUGIN_ROOT}/templates/rl-sweep/launch.sh.template` (bare-metal venv flavor).

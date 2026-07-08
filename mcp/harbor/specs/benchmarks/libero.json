@@ -3,7 +3,7 @@
   "schema_version": 1,
   "captured_at": "2026-04-27T08:47:13+00:00",
   "captured_from": {
-    "repo_path": "/home/yjin/repos/LIBERO",
+    "repo_path": "<local checkout>",
     "env_id": "libero_spatial",
     "make_expr": "OffScreenRenderEnv(bddl_file_name=_bddl, controller='OSC_POSE', camera_heights=128, camera_widths=128)",
     "category": "IL"

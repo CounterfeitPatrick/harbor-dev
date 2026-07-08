@@ -5,9 +5,7 @@ argument-hint: task=<id1>[,id2,...] algorithm=<a1>[,a2,...] [mode=local|cluster]
 
 # /harbor:rl-tune — Grid Hyperparameter Tuning
 
-Cartesian product of `task × algorithm` → one `rl-tuning-agent` subagent per cell. Each subagent runs the open-ended tuning loop documented in `agents/rl-tuning-agent.md` (default-config baseline → tricks → log-driven hyperparameter edits → comparison plot). The orchestrator (this command body) maintains a tune-level `history.md`, gathers per-cell results, and writes a final summary.
-
-Two execution modes:
+Cartesian product of `task × algorithm` → one `rl-tuning-agent` subagent per cell. Each subagent runs the open-ended tuning loop in `agents/rl-tuning-agent.md` (default-config baseline → tricks → log-driven hyperparameter edits → comparison plot). The orchestrator (this command body) maintains a tune-level `history.md`, gathers per-cell results, and writes a final summary.
 
 | Mode | Trigger | Behavior |
 |---|---|---|
@@ -31,7 +29,7 @@ Two execution modes:
 | `max_iterations` | `10` | Hard cap on per-cell iterations (including iter_000 baseline). Whichever of `stuck_threshold` / `max_iterations` fires first ends the cell. |
 | `smoke` | `true` | Pre-dispatch fast train per (algo, task); abort the whole tune on any failure. Set `smoke=false` only when the matrix is already verified. |
 
-**W&B is always on.** Each cell auto-derives its project name as `tuning-<benchmark>-<task>-<algorithm>` (read `benchmark_name` from `harbor/benchmark-generator/benchmark-spec.json`). Run names within a cell's project are sequential `v1`, `v2`, ... (one per tuning iteration). Verify `wandb login` is set on the host before dispatching — the orchestrator checks once in Step 0 and surfaces `/harbor:wandb-setup` if missing.
+**W&B is always on.** Each cell auto-derives its project name as `tuning-<benchmark>-<task>-<algorithm>` (read `benchmark_name` from `harbor/benchmark-generator/benchmark-spec.json`). Run names within a cell's project are sequential `v1`, `v2`, ... (one per tuning iteration). The orchestrator verifies `wandb login` once in Step 0 and surfaces `/harbor:wandb-setup` if missing.
 
 ## Action
 
@@ -54,7 +52,7 @@ tune_dir="harbor/rl_experiments/tunes/${tune_id}"
 mkdir -p "${tune_dir}"
 ```
 
-Each cell will live at `<tune_dir>/<wandb_project>/`, where `<wandb_project> = tuning-<benchmark_name>-<task>-<algorithm>` is derived deterministically (read `benchmark_name` from `harbor/benchmark-generator/benchmark-spec.json`). The orchestrator pre-creates each cell's folder so the subagent can drop files into a known path:
+Each cell lives at `<tune_dir>/<wandb_project>/`, where `<wandb_project> = tuning-<benchmark_name>-<task>-<algorithm>` is derived deterministically (read `benchmark_name` from `harbor/benchmark-generator/benchmark-spec.json`). The orchestrator pre-creates each cell's folder so the subagent can drop files into a known path:
 
 ```bash
 for algo in "${ALGOS[@]}"; do
@@ -113,7 +111,7 @@ Pass marker: line containing `[train] saved checkpoint`. Fail markers: any trace
 
 ### Step 3a — Local dispatch (orchestrator-driven phase machine)
 
-Local-mode `python train.py …` calls block for the duration of training, often longer than the Bash tool's 10-minute cap. So local mode uses the SAME 2-phase machine as cluster, with the `sbatch + squeue wait` substituted for `bash run.sh + bg-process wait`. Subagents NEVER block on training; the orchestrator owns the wait.
+Local-mode `python train.py …` calls block for the duration of training, often longer than the Bash tool's 10-minute cap. So local mode uses the SAME 2-phase machine as cluster, with `sbatch + squeue wait` substituted for `bash run.sh + bg-process wait`. Subagents NEVER block on training; the orchestrator owns the wait.
 
 Per cell, maintain `<tune_dir>/<wandb_project>/state.json` with the same schema as cluster mode (see Step 3b). Cells in local mode run **sequentially** (one cell's loop completes before the next starts) — local-mode parallelism is bounded by GPU count, not the orchestrator.
 
@@ -167,7 +165,7 @@ If a cell errors out (subagent returns errors OR a phase agent fails fatally), l
 
 ### Step 3b — Cluster dispatch (orchestrator-driven phase machine)
 
-Cluster-mode trials run for HOURS — far longer than any subagent should remain alive. The orchestrator (this command body) drives a state machine per cell, dispatching the rl-tuning-agent ONLY for atomic phases (`submit` / `score` / `finalize`), each lasting seconds-to-minutes. The SLURM wait is owned by the orchestrator via background Bash. Subagents NEVER block on SLURM.
+Cluster-mode trials run for HOURS — far longer than any subagent should remain alive. The orchestrator drives a state machine per cell, dispatching the rl-tuning-agent ONLY for atomic phases (`submit` / `score` / `finalize`), each lasting seconds-to-minutes. The SLURM wait is owned by the orchestrator via background Bash. Subagents NEVER block on SLURM.
 
 **Per cell, maintain `<tune_dir>/<wandb_project>/state.json`:**
 ```json
@@ -299,7 +297,4 @@ The cross-algorithm comparison sweep + plot was previously Steps 5–6 of this c
 
 # Custom metric weighting (favor final return over sample efficiency 70/30)
 /harbor:rl-tune task=UnitreeH1 algorithm=ppo,sac metric_weights='{"sample_efficiency":0.3,"final_return":0.7}'
-
-# Cap each cell at 6 iterations instead of the default 10 (faster turnaround, less compute)
-/harbor:rl-tune task=UnitreeH1 algorithm=ppo,sac max_iterations=6
 ```

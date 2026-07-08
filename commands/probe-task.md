@@ -11,16 +11,14 @@ Distinct from `/harbor:probe-benchmark`, which authors the *family-level* guide 
 
 ## Execution model — run in a subagent (REQUIRED)
 
-Probing reads a large volume of source (registration entry, env_cfg, the whole `mdp/` tree, asset paths) and pastes it verbatim into the spec. **The main thread MUST NOT do this work inline** — it would bloat the main conversation context with file dumps that are never needed again.
-
-Instead, the main thread:
+Probing reads a large volume of source and pastes it verbatim into the spec. **The main thread MUST NOT do this work inline** — it would bloat the main conversation context with file dumps never needed again. Instead, the main thread:
 
 1. Resolves the args (`task`, `repo`, `output`) and runs nothing else.
-2. Dispatches **one** subagent (`Agent(subagent_type="general-purpose")`) whose prompt is: this command body (Pre-flight + Action + Hard rules) plus the resolved args. The subagent does all reading/extraction, writes the spec to `<output>`, and self-verifies.
+2. Dispatches **one** subagent (`Agent(subagent_type="general-purpose")`) whose prompt is this command body (Pre-flight + Action + Hard rules) plus the resolved args. The subagent does all reading/extraction, writes the spec to `<output>`, and self-verifies.
 3. The subagent returns **only** the one-line summary from step 8 (path + section/func/obs counts + the reproduce hint) — never the spec contents.
 4. The main thread relays that one line to the user.
 
-So the heavy reads live and die in the subagent's isolated context; the main thread keeps only the file path and the summary. The steps below are written for that subagent to follow.
+The heavy reads live and die in the subagent's isolated context. The steps below are written for that subagent to follow.
 
 ## Required argument
 
@@ -60,7 +58,7 @@ test -x "<repo>/.venv/bin/python"                         || { echo ".venv/ miss
 
    - **§1 Registration + Scene**
      - `gym.register(id, entry_point, kwargs)` block.
-     - `SceneCfg`: robot articulation cfg (USD path, prim_path, init joint pose, actuator stiffness/damping), objects (`RigidObjectCfg`, `ArticulationCfg`), all `FrameTransformerCfg` / `ContactSensorCfg` / camera defs, table + ground + lights. List the resolved USD/asset paths verbatim.
+     - `SceneCfg`: robot articulation cfg (USD path, prim_path, init joint pose, actuator stiffness/damping), objects (`RigidObjectCfg`, `ArticulationCfg`), all `FrameTransformerCfg` / `ContactSensorCfg` / camera defs, table + ground + lights. List resolved USD/asset paths verbatim.
    - **§2 Actions**
      - `ActionsCfg`: arm_action class + ctor params (scale, alpha, body_offset, IK controller cfg, pos/joint limits, forbidden zones); gripper_action class + commands.
    - **§3 Reset**
@@ -116,7 +114,7 @@ test -x "<repo>/.venv/bin/python"                         || { echo ".venv/ miss
 
    Within each section, include subblocks:
    - **Description** — one-paragraph plain-English summary of what this section does.
-   - **Decisions resolved** — the concrete values chosen (e.g. `action.scale = (0.02, 0.02, 0.02)`, `episode_length_s = 9.0`).
+   - **Decisions resolved** — concrete values chosen (e.g. `action.scale = (0.02, 0.02, 0.02)`, `episode_length_s = 9.0`).
    - **Code** — verbatim source blocks pulled from the repo.
    - **Smoke** — the §N smoke command + expected stdout (literal copy from a passing run; for §2..§7 the agents will run these when reproducing).
 
@@ -140,6 +138,7 @@ test -x "<repo>/.venv/bin/python"                         || { echo ".venv/ miss
 
 - **Verbatim code, not paraphrased.** Every reward / observation / action function in §6 / §5 / §2 is pasted as-is. The spec must be self-contained enough that a downstream agent can recreate the file without re-reading the source repo.
 - **Resolve asset paths.** Where the env_cfg uses `Path(__file__).resolve().parents[N] / "..."`, resolve to the actual path (relative to `<source_repo>`) so the downstream agent can locate equivalent assets in the destination repo.
+- **No machine-specific or absolute paths.** The spec must be self-contained: every path is relative to `<source_repo>` or a clearly-marked `<placeholder>`. Never emit a personal home path (`/home/...`, `/Users/...`) — a reader on another machine must be able to follow the spec verbatim.
 - **English-only.**
 - **Read-only.** probe-task never modifies the source repo — it only reads + writes the output file.
 
@@ -147,7 +146,7 @@ test -x "<repo>/.venv/bin/python"                         || { echo ".venv/ miss
 
 - Task doesn't build (`gym.make` raises) → refuse, do not emit a partial spec.
 - Family undetectable → ask user (one `AskUserQuestion` listing the six family options).
-- A reward function references a helper that probe-task can't locate → emit the spec with a `WARN:` annotation in §6 noting the missing helper; the user will need to fix this before `/harbor:task-create from=...` can succeed.
+- A reward function references a helper that probe-task can't locate → emit the spec with a `WARN:` annotation in §6 noting the missing helper; the user must fix this before `/harbor:task-create from=...` can succeed.
 
 ## Constraints
 

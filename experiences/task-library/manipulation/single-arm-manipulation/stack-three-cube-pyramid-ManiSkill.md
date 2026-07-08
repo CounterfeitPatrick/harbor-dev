@@ -360,5 +360,5 @@ See §3 (`UniformPlacementSampler` + `random_quaternions` + `robot_init_qpos_noi
 
 ## Reproduce
 ```
-/harbor:task-create name=<NewTaskID> from=/home/steven/code/agentic/ManiSkill/harbor/create-task/stackpyramid-v1-implementation.md
+/harbor:task-create name=<NewTaskID> from=<ManiSkill-repo>/harbor/create-task/stackpyramid-v1-implementation.md
 ```

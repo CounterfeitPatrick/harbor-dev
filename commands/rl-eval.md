@@ -43,14 +43,18 @@ Loads a checkpoint, runs unbiased eval (steady-state aggregate over `eval_total_
    ```
    If `task` was not passed by the user, use `inferred_task`.
 
-4. **Load suite spec** to find `algorithm_slug` + `scripts_dir` (same as `/harbor:rl-run`).
+4. **Load suite spec** via the canonical reader (same as `/harbor:rl-run`):
+   ```bash
+   eval "$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/common/resolve_suite.py" --algo <algo>)"
+   # → SLUG, SCRIPTS_DIR, PARALLEL, CONFIG_NAME
+   ```
 
-5. **Pick config name**: `<algo>.parallel` when `parallel=true` else `<algo>`.
+5. `CONFIG_NAME` (resolved above) is `<algo>.parallel` when `PARALLEL=true` else `<algo>`.
 
 6. **Build + run**:
    ```bash
-   <prefix> harbor/scripts/rl/<slug>/eval.py \
-       --config-name=<config_name> \
+   <prefix> ${SCRIPTS_DIR}/eval.py \
+       --config-name=${CONFIG_NAME} \
        task=<task> \
        checkpoint=<abs_path> \
        eval_total_steps=<value> \

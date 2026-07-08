@@ -26,7 +26,7 @@ Task summary: Franka FR3 (single arm) starts with a drawer ALREADY OPEN (joint p
 | Cube | DexCube (Nucleus USD, scaled 0.86 → 4.3 cm edge), 55 g mass |
 | Drawer | No-handle prismatic drawer at `harbor/assets/drawer_no_handle/drawer_no_handle.usd`; pre-scaled URDF → spawn scale (1,1,1); joint `base_drawer_joint` axis +X-local, range [0, 0.3] m |
 | Drawer init pose | `pos=(0, 0, 0.10)`, `rot=(0.7071, 0, 0, 0.7071)` (90° about +Z so prismatic +X-local maps to world +Y) |
-| Table | `harbor/assets/table/lab_table_instanceable_colored_rotated.usd` (rotated bidex lab table), surface at z≈0 |
+| Table | `harbor/assets/table/lab_table_instanceable_colored_rotated.usd` (rotated the source repo lab table), surface at z≈0 |
 | Ground plane | `z = -0.82` |
 | ee_frame target | `fr3_hand` with `+Z` offset 0.2 m (fingertip TCP) |
 | drawer_drop_frame target | `Drawer/drawer` body with offset `(0, 0, 0.25)` drawer-local (≈ above the open tray rim) |
@@ -651,7 +651,7 @@ print('obs smoke OK')
 
 ### Description
 
-Composer = **sum**, sign = **positive = good**. 8 active reward terms organized into 5 phases (per [reward-experience.md entry #2](../../../claude-harbor/experiences/reward-generator/reward-experience.md): the per-step magnitudes strictly increase across stages, and dense terms ≤ steady-state budget while sparse one-shot bonuses sit an order of magnitude above the dense sum).
+Composer = **sum**, sign = **positive = good**. 8 active reward terms organized into 5 phases (per [reward-experience.md entry #2](../../../reward-generator/reward-experience.md): the per-step magnitudes strictly increase across stages, and dense terms ≤ steady-state budget while sparse one-shot bonuses sit an order of magnitude above the dense sum).
 
 Critical mechanism: a **per-(env, key) latch buffer** (`_LATCH_BUFFERS["cube_inside_once"]`) is written when `cube_inside_bonus_once_per_episode` fires (cube geometrically inside drawer + EE far). Phase 2 dense terms (`reach_cube`, `is_lifted`, `lift_distance`, `align`) multiply by `(1 - latch_active)` so they ZERO OUT once the cube is inserted, freeing the policy to focus on retract + close without dense distractions. Phase 3 `ee_retract_to_front_face` and Phase 4 `close_drawer` multiply by `latch_active` (fires only after cube inserted). Phase 5 `success_bonus` fires once when latch + drawer-closed, paired with the §4 `success` DoneTerm for terminal collection.
 

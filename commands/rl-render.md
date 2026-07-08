@@ -8,7 +8,7 @@ argument-hint: checkpoint=<path> [task=<id>] [render_max_steps=N] [key=value ...
 Loads a checkpoint, runs the rendered `render.py` (which captures frames and writes `<checkpoint_dir>/render.mp4`), then performs two sanity checks:
 
 1. **Checkpoint loaded + inference produced actions** (not stuck on init / NaN / silent failure).
-2. **Frames at different timesteps actually differ** (i.e. the rendered policy is not a static image — a common failure when obs normalization isn't restored or the IK target is frozen).
+2. **Frames at different timesteps actually differ** (the rendered policy is not a static image — a common failure when obs normalization isn't restored or the IK target is frozen).
 
 ## Required argument
 
@@ -22,7 +22,7 @@ Loads a checkpoint, runs the rendered `render.py` (which captures frames and wri
 |---|---|---|
 | `task` | inferred from `<trial_dir>/resolved_config.yaml` | Task ID. Override for cross-task render. |
 | `render_max_steps` | inferred (suite spec default; usually 1000) | Number of env steps to capture. |
-| `frame_diff_threshold` | 1.0 | Minimum mean per-pixel L1 between two sampled frames to count as "moving". Lower if rendering very-low-amplitude policies; raise to be stricter. |
+| `frame_diff_threshold` | 1.0 | Minimum mean per-pixel L1 between two sampled frames to count as "moving". Lower for very-low-amplitude policies; raise to be stricter. |
 | any other `key=value` | — | Forwarded to `render.py` as a Hydra override. |
 
 ## Action
@@ -34,34 +34,31 @@ Loads a checkpoint, runs the rendered `render.py` (which captures frames and wri
    test -e "<resolved_checkpoint_path>"  || { echo "checkpoint not found"; exit 1; }
    ```
 
-2. **Resolve checkpoint path** to absolute. If a relative path is given, treat as relative to `$(pwd)`.
+2. **Resolve checkpoint path** to absolute (relative → relative to `$(pwd)`).
 
 3. **Auto-infer algorithm + task** from `<checkpoint_dir>/resolved_config.yaml` (same recipe as `/harbor:rl-eval`). If the user passed `task=`, use their value (cross-task render).
 
-4. **Load suite spec** to find `algorithm_slug` + `scripts_dir`:
-   ```python
-   import json
-   spec     = json.loads(open("harbor/rl-integration-generator/rl-suite-spec.json").read())
-   slug     = spec["algorithm_source"]["algorithm_slug"]
-   scripts  = spec.get("scripts_dir", f"harbor/scripts/rl/{slug}")
-   parallel = bool(spec.get("parallel", False))
+4. **Load suite spec** via the canonical reader:
+   ```bash
+   eval "$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/common/resolve_suite.py" --algo <algo>)"
+   # → SLUG, SCRIPTS_DIR, PARALLEL, CONFIG_NAME
    ```
 
-5. **Pick config name**: `<algo>.parallel` if `parallel=true` else `<algo>`.
+5. `CONFIG_NAME` (resolved above) is `<algo>.parallel` when `PARALLEL=true`, else `<algo>`.
 
 6. **Resolve run prefix**: `<repo>/.venv/bin/python`. Error if `.venv/` missing.
 
 7. **Build + run the render command**:
    ```bash
-   <prefix> "${scripts}/render.py" \
-       --config-name=<config_name> \
+   <prefix> "${SCRIPTS_DIR}/render.py" \
+       --config-name=${CONFIG_NAME} \
        task=<task> \
        checkpoint=<abs_checkpoint_path> \
        <user_overrides...>
    ```
    Capture stdout to `/tmp/rl-render-<ts>.log`. Stream live so the user sees `[render] step= N` progress.
 
-8. **Sanity Check #1 — checkpoint loaded + inference produced actions.** The render scripts already print one or more of these lines on success:
+8. **Sanity Check #1 — checkpoint loaded + inference produced actions.** The render scripts already print one or more of these on success:
    - `[render] restored obs_rms from checkpoint` (custom_torch w/ obs normalization)
    - `[render] step= N  action.mean|abs|=X.XXXX  action[0]=[...]`
    - `[render] wrote <path>/render.mp4 (<N> frames, return=<R>, action|abs|.mean=X max=Y min=Z)`
@@ -116,7 +113,7 @@ Loads a checkpoint, runs the rendered `render.py` (which captures frames and wri
 
    - Exit 0 → pass.
    - Exit 2 → MP4 too short (< 5 frames); the render likely crashed mid-rollout.
-   - Exit 3 → too many static pairs; the policy is not moving (silently-zero action, frozen IK target, obs_rms not restored, etc.) — same root causes the no-action signal in Check #1 catches at the action-level.
+   - Exit 3 → too many static pairs; the policy is not moving (silently-zero action, frozen IK target, obs_rms not restored, etc.) — same root causes Check #1 catches at the action level.
 
    On any failure, surface stdout and stop.
 

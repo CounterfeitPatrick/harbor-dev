@@ -99,9 +99,7 @@ A trial whose post-run scan finds traceback / NaN / Error → `status: failed`. 
 
 ## Run-to-completion policy
 
-Every trial runs to its full `total_timesteps`. The agent does NOT poll mid-flight — every probe adds an assistant turn that re-replays full context. Wait for the SLURM job (cluster) or `train.py` (local) to exit; then read the curve ONCE from `metrics.jsonl` or the saved `curves/` plot. Score, decide, propose next.
-
-Iter 0 + Phase 1 trick iterations + Phase 2 iterations all run to completion.
+Every trial (iter 0 + Phase 1 tricks + Phase 2) runs to its full `total_timesteps`. The agent does NOT poll mid-flight — every probe re-replays full context. Wait for the SLURM job (cluster) or `train.py` (local) to exit; then read the curve ONCE from `metrics.jsonl` or the saved `curves/` plot. Score, decide, propose next.
 
 ## Token efficiency
 

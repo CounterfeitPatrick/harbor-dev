@@ -372,5 +372,5 @@ cd <repo>
 
 ## Reproduce
 ```
-/harbor:task-create name=<NewTaskID> from=/home/steven/code/agentic/ManiSkill/harbor/create-task/pokecube-v1-implementation.md
+/harbor:task-create name=<NewTaskID> from=<ManiSkill-repo>/harbor/create-task/pokecube-v1-implementation.md
 ```

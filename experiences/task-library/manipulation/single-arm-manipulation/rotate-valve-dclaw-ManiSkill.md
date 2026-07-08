@@ -360,4 +360,4 @@ Helper `self.agent.tip_poses` (DClaw): stacks the 3 fingertip 7-D poses → `(b,
 - `mani_skill/utils/structs/types.py:78-87` — `SimConfig` defaults (`sim_freq=100`, `control_freq=20`, `spacing=5`).
 
 ## Reproduce
-`/harbor:task-create name=<new_task_id> from=/home/steven/code/agentic/ManiSkill/harbor/create-task/rotatevalvelevel1-v1-implementation.md`
+`/harbor:task-create name=<new_task_id> from=<ManiSkill-repo>/harbor/create-task/rotatevalvelevel1-v1-implementation.md`

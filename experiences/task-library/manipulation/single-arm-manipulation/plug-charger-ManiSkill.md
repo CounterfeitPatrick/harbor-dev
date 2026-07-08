@@ -179,7 +179,7 @@ class PlugChargerEnv(BaseEnv):
 
 ### Smoke
 ```bash
-cd /home/steven/code/agentic/ManiSkill
+cd <ManiSkill-repo>
 .venv/bin/python -c "import gymnasium as gym, mani_skill; e=gym.make('PlugCharger-v1'); print(e.observation_space, e.action_space)"
 # Box(-inf, inf, (1, 46), float32) Box(-1.0, 1.0, (8,), float32)
 ```

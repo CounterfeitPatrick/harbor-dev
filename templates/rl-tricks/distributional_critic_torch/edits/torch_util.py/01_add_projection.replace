@@ -13,7 +13,7 @@ def projection(next_dist, reward, done, gamma, v_min=-10.0, v_max=10.0,
     forward by the Bellman operator T*z = reward + (1-done)*gamma*z, then
     redistributes the probability mass back onto the fixed support.
 
-    Reference: ddiffpg/utils/distl_util.py::projection.
+    Reference: built-in categorical projection.
     """
     delta_z = (v_max - v_min) / (num_atoms - 1)
     batch_size = reward.shape[0]

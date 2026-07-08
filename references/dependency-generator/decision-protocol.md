@@ -1,6 +1,6 @@
 # Decision protocol (dependency-generator)
 
-Common pattern used in `agents/dependency-generator.md` Step 4 (InstallationPlan confirmation). It follows a three-tier resolution order.
+Three-tier resolution order used in `agents/dependency-generator.md` Step 4 (InstallationPlan confirmation).
 
 ## The three tiers
 

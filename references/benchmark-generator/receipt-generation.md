@@ -17,7 +17,7 @@ Both files are **regenerated on every re-run**. Commit them to keep the build de
 
 ## Why two files, not one
 
-Earlier versions of this skill rendered a single kitchen-sink doc that mixed "what the skill did this run" with "what tasks does this benchmark even have". Splitting by audience gives each question a file sized for it:
+Split by audience — each question gets its own file:
 
 - A reviewer checking what the skill decided reads `history.md` — probe evidence, smoke logs.
 - A researcher picking a task or wiring a random rollout reads `benchmark.md` — task identifiers, action dim, reward semantics, the random+render worked example.

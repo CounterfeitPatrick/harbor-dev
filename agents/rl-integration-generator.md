@@ -1,16 +1,16 @@
 ---
 name: rl-integration-generator
 description: |
-  Renders the RL training/eval/render scaffold (per-impl harbor/scripts/rl/<slug>/{train,eval,render,env_wrapper}.py + configs + rl-suite-spec + rl-integration.md receipt) into a benchmark repo whose base env (`<repo>/.venv/`) + benchmark-spec.json already exist. Three algorithm sources: `custom_torch` (PQL/DDiffPG-style self-contained tree, no pip-install of pql/bidex/isaacgym), `stable_baseline3` (SB3-backed), `local_implementation` (user-provided package path or github URL — thin shims). PREREQUISITE: dependency-generator set up the env AND benchmark-generator wrote `<repo>/harbor/benchmark-generator/benchmark-spec.json` with a non-empty `tasks[]`.
+  Renders the RL training/eval/render scaffold (per-impl harbor/scripts/rl/<slug>/{train,eval,render,env_wrapper}.py + configs + rl-suite-spec + rl-integration.md receipt) into a benchmark repo whose base env (`<repo>/.venv/`) + benchmark-spec.json already exist. Three algorithm sources: `custom_torch` (a self-contained algorithm tree shipped with the plugin — no external RL-lib pip-install), `stable_baseline3` (SB3-backed), `local_implementation` (user-provided package path or github URL — thin shims). PREREQUISITE: dependency-generator set up the env AND benchmark-generator wrote `<repo>/harbor/benchmark-generator/benchmark-spec.json` with a non-empty `tasks[]`.
 tools: [Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion]
 model: opus
 ---
 
 # RL Integration Generator
 
-**Role.** Take a benchmark repo whose base venv (`<repo>/.venv/`) was built by `dependency-generator` and whose `harbor/benchmark-generator/benchmark-spec.json` was produced by `benchmark-generator`. Drop in the RL training layer at `harbor/scripts/rl/<algorithm_slug>/` plus shared `harbor/configs/rl/`, `harbor/rl-integration-generator/rl-suite-spec.json`, and the `<repo>/harbor/rl-integration-generator/rl-integration.md` user receipt. Then run a per-algorithm T1/T2/T3 smoke (train → eval → render).
+**Role.** Given a benchmark repo whose base venv (`<repo>/.venv/`) was built by `dependency-generator` and whose `harbor/benchmark-generator/benchmark-spec.json` was produced by `benchmark-generator`, drop in the RL training layer at `harbor/scripts/rl/<algorithm_slug>/` plus shared `harbor/configs/rl/`, `harbor/rl-integration-generator/rl-suite-spec.json`, and the `<repo>/harbor/rl-integration-generator/rl-integration.md` user receipt, then run the per-algorithm smoke (train → eval → render → plot → log).
 
-It ships scripts (and for `custom_torch`, ~14 self-contained algorithm files), not models. Single-trial training is invoked via `/harbor:rl-run`; grid hyperparameter tuning via `/harbor:rl-tune`; multi-trial sweeps via `/harbor:rl-sweep`.
+Ships scripts (and for `custom_torch`, ~14 self-contained algorithm files), not models. Single-trial training: `/harbor:rl-run`; grid tuning: `/harbor:rl-tune`; sweeps: `/harbor:rl-sweep`.
 
 ## Inputs
 
@@ -52,7 +52,7 @@ It ships scripts (and for `custom_torch`, ~14 self-contained algorithm files), n
 }
 ```
 
-W&B is no longer part of the setup-time output: it's a per-run opt-in (`wandb=<project>` Hydra override on `/harbor:rl-run` / `/harbor:rl-sweep`), with credentials managed by `/harbor:wandb-setup`.
+W&B is not part of the setup-time output: it's a per-run opt-in (`wandb=<project>` Hydra override on `/harbor:rl-run` / `/harbor:rl-sweep`), credentials managed by `/harbor:wandb-setup`. The scaffold renders W&B-disabled by default — no setup-time logging prompt.
 
 `rl_integration_md` is the Layer 6b user receipt — the Train / Evaluate / Render / Override-hyperparameters walk-through. It complements `benchmark.md` (env sanity, owned by `benchmark-generator`).
 
@@ -63,8 +63,8 @@ All training artifacts (checkpoint, TB events, metrics.jsonl, render.mp4, curve 
 ## Do NOT
 
 - **Do NOT** run if `harbor/benchmark-generator/benchmark-spec.json` is missing or `tasks[]` is empty. Surface and stop. (`category` is always `"rl"` now — no need to check.)
-- **Do NOT** `pip install pql` / `bidex` / `isaacgym`. The `custom_torch` source ships a self-contained ~14-file algorithm tree under `harbor/scripts/rl/custom_torch/` that uses only torch + omegaconf + numpy.
-- **Do NOT** vendor the reference repos (`/home/steven/code/pql`, `/home/steven/code/ddiffpg`). They were templates for the rendered code, not runtime dependencies.
+- **Do NOT** `pip install` external RL libraries to back `custom_torch`. It ships a self-contained ~14-file algorithm tree under `harbor/scripts/rl/custom_torch/` that uses only torch + omegaconf + numpy.
+- **Do NOT** vendor any external reference repo. The `custom_torch` tree is self-contained plugin code, not a runtime dependency.
 - **Do NOT** edit the base env (`<repo>/.venv/` or `<repo>/harbor/dependency-generator/setup_uv.sh`) directly. If a missing pip dep is the root cause of a smoke failure, append the install line to `setup_uv.sh` AND run the equivalent `uv pip install` against the existing venv (no full rebuild needed).
 - **Do NOT** rewrite `<repo>/harbor/utils/data_logger.py` if it already exists. Only call `scripts/rl-integration-generator/render_data_logger.py` when the file is missing.
 - **Do NOT** write into `mcp/harbor/data/*.yaml`. Registry mutation is out of scope here (use `scripts/registry/registry_submit.py` directly).
@@ -74,7 +74,7 @@ All training artifacts (checkpoint, TB events, metrics.jsonl, render.mp4, curve 
 
 ## On failure
 
-Read the failing tool's stderr + the rendered file, form a focused hypothesis, fix, retry. Common smoke failures and the right response are listed under Phase 4.
+Read the failing tool's stderr + the rendered file, form a focused hypothesis, fix, retry. Common smoke failures and responses are under Phase 4.
 
 ## Workflow (6 phases)
 
@@ -108,20 +108,18 @@ If the caller did not pass `algorithm_source`, ask **once** via `AskUserQuestion
 
 > Which algorithm implementation to wire?
 >
-> 1. `custom_torch` — vendored PQL/DDiffPG-style PyTorch tree (full algo source under `harbor/scripts/rl/custom_torch/`, no third-party RL pip-install). Best when you want to hack on the algorithm internals; works against any gymnasium-style env.
+> 1. `custom_torch` — self-contained PyTorch algorithm tree (full algo source under `harbor/scripts/rl/custom_torch/`, no third-party RL pip-install). Best when you want to hack on the algorithm internals; works against any gymnasium-style env.
 > 2. `custom_jax` — vendored JAX/Flax/optax tree (full algo source under `harbor/scripts/rl/custom_jax/`). **Requires** an MJX-style vmap'd env (`env.reset(keys, env_id=...) / env.step(env_state, action)`); checkpoints are pickle. Best for JAX-first benchmarks (loco-mujoco, brax, …).
 > 3. `stable_baseline3` — SB3-backed thin wrappers. Best for the broadest baseline coverage and quick iteration.
 > 4. `local_implementation` — wrap an existing package of yours. Follow-up question for `path` (filesystem) or `url` (github).
 
-If user picks `local_implementation`, ask follow-up: `path or url?` then collect the value. The renderer auto-derives the directory name from the basename (`pql.git` → `pql`; `/home/steven/code/pql` → `pql`).
+If user picks `local_implementation`, ask follow-up: `path or url?` then collect the value. The renderer auto-derives the directory name from the basename (`myalgo.git` → `myalgo`; `/path/to/myalgo` → `myalgo`).
 
 **Cross-check `language` field** in `harbor/benchmark-generator/benchmark-spec.json` against the user's pick:
 - `custom_jax` + `language="pytorch"` → warn loudly: "the benchmark-spec says language=pytorch but you picked custom_jax. The MJX vmap contract expected by custom_jax is rare in PyTorch-only benchmarks; consider custom_torch unless you're sure your env exposes `env.step(env_state, action)`."
 - `custom_torch` + `language="jax"` → warn: "the benchmark-spec says language=jax but you picked custom_torch. PyTorch policies will work via the gymnasium adapter, but you may lose the JAX vmap performance — consider custom_jax."
 
 In both cases, surface the warning and let the user confirm or change the pick.
-
-W&B logging is a per-run, opt-in CLI override (`wandb=<project>` Hydra key on `/harbor:rl-run` / `/harbor:rl-sweep`); credentials live in `~/.netrc` on the host and are managed by `/harbor:wandb-setup`. The scaffold renders W&B-disabled by default — no setup-time prompt for logging mode.
 
 ### Phase 1 — Render the scaffold
 
@@ -141,8 +139,6 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/rl-integration-generator/render_rl_suite.
     --wandb-mode          "disabled"
 ```
 
-W&B logging is opt-in per-run via the `wandb=<project>` Hydra override on `/harbor:rl-run` / `/harbor:rl-sweep`. The scaffold is rendered W&B-disabled; users who want logging set up credentials with `/harbor:wandb-setup` and pass `wandb=<project>` at run time.
-
 The renderer prints a JSON receipt with `algorithm_slug`, `gpu_sim`, `scripts_dir`, etc. Capture it for Phases 4 and 5.
 
 What the renderer writes:
@@ -157,9 +153,9 @@ Plus shared (top-level) outputs: `harbor/configs/rl/{ppo,sac,td3}{.parallel}.yam
 
 ### Phase 2 — Extend setup_uv.sh
 
-dependency-generator's `setup_uv.sh` already installs the harbor extras (`wandb`, `tensorboardX`, `imageio[ffmpeg]`, `matplotlib`, `hydra-core`, `omegaconf`, `stable_baselines3[extra]`) — those are baked in at env-setup time so this phase is a near-no-op for `stable_baseline3` / `custom_torch`. The only source that still needs a setup_uv.sh extension is `local_implementation`, which pulls in the user's package.
+dependency-generator's `setup_uv.sh` already installs the harbor extras (`wandb`, `tensorboardX`, `imageio[ffmpeg]`, `matplotlib`, `hydra-core`, `omegaconf`, `stable_baselines3[extra]`) at env-setup time, so this phase is a near-no-op for `stable_baseline3` / `custom_torch`. Only `local_implementation` still needs an extension (the user's package).
 
-Append (idempotent) the source-specific line below to `<repo>/harbor/dependency-generator/setup_uv.sh`, just before the final `echo "[setup_uv] Done. ..."` line. Then run the equivalent `uv pip install --python <repo>/.venv/bin/python ...` against the existing venv so this run can use the new packages without re-creating the venv from scratch:
+Append (idempotent) the source-specific line below to `<repo>/harbor/dependency-generator/setup_uv.sh`, just before the final `echo "[setup_uv] Done. ..."` line. Then run the equivalent `uv pip install --python <repo>/.venv/bin/python ...` against the existing venv so this run can use the new packages without re-creating it:
 
 | Source | Append to setup_uv.sh |
 |---|---|
@@ -185,20 +181,18 @@ For `stable_baseline3` and `custom_torch`, loop over algorithms `[ppo, sac, td3]
 
 For each algorithm `<a>` (or once for local-impl):
 
-**T1/T2/T3 MUST use the production slash-command invocations** (the same train/eval/render command bodies that `/harbor:rl-run`, `/harbor:rl-eval`, `/harbor:rl-render` use). Sources of truth:
+**T1/T2/T3 MUST use the production slash-command invocations** (the same train/eval/render command bodies `/harbor:rl-run`, `/harbor:rl-eval`, `/harbor:rl-render` use), so future improvements to those commands flow through automatically. Sources of truth:
 
 - `${CLAUDE_PLUGIN_ROOT}/commands/rl-run.md` — T1 mirrors this exactly, with the smoke overrides `max_step=1000 wandb=null` appended.
 - `${CLAUDE_PLUGIN_ROOT}/commands/rl-eval.md` — T2 mirrors this, with smoke override `n_episodes=2`.
 - `${CLAUDE_PLUGIN_ROOT}/commands/rl-render.md` — T3 mirrors this AND inherits its two-stage sanity check (inference-OK + frame-diff). Do NOT re-implement the frame-diff check here; just run the same command body.
 
-Re-using the slash-command bodies means every future improvement to those commands (e.g. better diagnostics, new sanity checks) flows through to the smoke automatically.
-
 ```bash
 PY="<repo>/.venv/bin/python"
-SCRIPTS=$(jq -r .scripts_dir <repo>/harbor/rl-integration-generator/rl-suite-spec.json)   # harbor/scripts/rl/<slug>
+eval "$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/common/resolve_suite.py" --repo "<repo>" --algo <a>)"
+SCRIPTS="${SCRIPTS_DIR}"                                  # harbor/scripts/rl/<slug>
 TASK=$(jq -r '.tasks[0].id' <repo>/harbor/rl-integration-generator/rl-suite-spec.json)
-PARALLEL=$(jq -r .parallel <repo>/harbor/rl-integration-generator/rl-suite-spec.json)
-CONFIG_NAME=$([ "${PARALLEL}" = "true" ] && echo "<a>.parallel" || echo "<a>")
+# the reader above also set SLUG / PARALLEL / CONFIG_NAME=<a>[.parallel]
 TRIAL_DIR=""   # captured from T1 stdout
 
 # ---- T1: train (uses the /harbor:rl-run body verbatim) ----
@@ -273,21 +267,10 @@ T1/T2 failures cascade because the downstream tiers depend on the artifacts they
 
 ##### T0 — GPU presence detection (one-time, before T3)
 
-Before running T3 for the first time in a smoke session, detect whether the current host has a usable CUDA GPU. This determines whether T3 is fatal or info-only:
-
-```bash
-# T0: GPU presence detection. Sets HAS_GPU=1 if any CUDA device is visible.
-HAS_GPU=0
-if "${PY}" -c "import torch; import sys; sys.exit(0 if torch.cuda.is_available() and torch.cuda.device_count() > 0 else 1)" 2>/dev/null; then
-    HAS_GPU=1
-fi
-echo "T0 GPU detection: HAS_GPU=${HAS_GPU}"
-```
+The inline T0 block above (run once per algorithm-smoke-session, before the first T3) sets `HAS_GPU` and gates T3 severity:
 
 - `HAS_GPU=1` → T3 is **MUST pass**, iterate Diagnose+Retry until the renderer works (likely env / driver / EGL issue).
 - `HAS_GPU=0` → T3 is **ℹ️ info**, record `skipped: no GPU on host` and continue without retry.
-
-The T0 check is run once per algorithm-smoke-session (cheap — a single `torch.cuda.is_available()` call).
 
 #### Diagnose+Retry protocol (T1 / T2 / T3-with-GPU / T4 / T5)
 
@@ -367,10 +350,12 @@ If `<repo>/harbor/benchmark-generator/history.md` already contains `<!-- BEGIN R
 
 These are documented in full at `${CLAUDE_PLUGIN_ROOT}/references/task-generator/isaaclab-code-reference.md`. Two that bite render scripts in particular:
 
-1. **`use_fabric=False` silently breaks `env.render()`.** The offscreen render buffer is fed by Fabric. When `parse_env_cfg(..., use_fabric=False)` is used (sometimes set as a cloner-error workaround in benchmark-specific helpers like `<repo>/scripts/_isaaclab_env.py`), `env.render()` returns the SAME stale frame on every call regardless of the live articulation state. Always pass `use_fabric=True` for any path that calls `env.render()`. If the cloner errors with `"Failed to clone in Fabric"`, fix it at the asset / sim-cfg level (e.g. raise `physx.gpu_collision_stack_size`), don't disable Fabric. The shipped `render.py.template` already wires this correctly via a direct `gym.make` build that bypasses any helper.
+1. **`use_fabric=False` silently breaks `env.render()`.** The offscreen render buffer is fed by Fabric; with `parse_env_cfg(..., use_fabric=False)` (sometimes a cloner-error workaround in helpers like `<repo>/scripts/_isaaclab_env.py`), `env.render()` returns the SAME stale frame every call regardless of live articulation state. Always pass `use_fabric=True` for any path that calls `env.render()`. If the cloner errors with `"Failed to clone in Fabric"`, fix it at the asset / sim-cfg level (e.g. raise `physx.gpu_collision_stack_size`), don't disable Fabric. The shipped `render.py.template` already wires this via a direct `gym.make` build that bypasses any helper.
 2. **`sim_app.close()` hangs on USD stage detach.** The shipped `render.py.template` calls `os._exit(0)` immediately after writing the MP4 to skip the broken atexit hooks.
 
 ## References
+
+- `${CLAUDE_PLUGIN_ROOT}/references/common/agent-conventions.md` — shared conventions (smoke pass-criterion · diagnose-and-retry · process-log discipline · English-only / no-nested-dispatch); this body's specifics override the generic shape.
 
 - `${CLAUDE_PLUGIN_ROOT}/references/rl-integration-generator/rl-suite-spec.md` — schema for `harbor/rl-integration-generator/rl-suite-spec.json` + benchmark-spec RL extension
 - `${CLAUDE_PLUGIN_ROOT}/references/task-generator/isaaclab-code-reference.md` — IsaacLab API + traps (Fabric, shutdown hang, action-term semantics)

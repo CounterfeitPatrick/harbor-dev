@@ -3,7 +3,7 @@
   "schema_version": 1,
   "captured_at": "2026-04-26T19:40:27+00:00",
   "captured_from": {
-    "repo_path": "/home/yjin/repos/ManiSkill",
+    "repo_path": "<local checkout>",
     "env_id": "PickCube-v1",
     "make_expr": "gym.make('PickCube-v1', num_envs=1, render_mode='rgb_array', obs_mode='rgbd')",
     "category": "IL"

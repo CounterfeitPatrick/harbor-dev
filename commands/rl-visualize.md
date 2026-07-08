@@ -34,7 +34,7 @@ Loads a trained checkpoint and opens a live MuJoCo GLFW window showing the polic
 
 3. **Confirm visualize.py exists**:
    ```bash
-   slug=$(jq -r '.algorithm_source.algorithm_slug' harbor/rl-integration-generator/rl-suite-spec.json)
+   slug=$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/common/resolve_suite.py" --field slug)
    test -f "harbor/scripts/rl/${slug}/visualize.py" || { \
      echo "no visualize.py in harbor/scripts/rl/${slug}/. Available only for algorithm_source=custom_jax."; \
      exit 1; }

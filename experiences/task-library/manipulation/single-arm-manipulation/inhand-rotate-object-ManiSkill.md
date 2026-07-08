@@ -172,7 +172,7 @@ class RotateSingleObjectInHand(BaseEnv):
 
 ### Smoke (§1 build)
 ```bash
-cd /home/steven/code/agentic/ManiSkill
+cd <ManiSkill-repo>
 .venv/bin/python -c "import gymnasium as gym, mani_skill; e=gym.make('RotateSingleObjectInHandLevel1-v1'); print(e.observation_space, e.action_space); e.close()"
 ```
 Expected stdout:
@@ -517,4 +517,4 @@ Expected: `True`.
 - No external assets required for Level1 (procedural box). YCB assets (levels 2/3 only) absent on host — WARN, irrelevant to Level1.
 
 ## Reproduce
-`/harbor:task-create name=<NewTaskId> from=/home/steven/code/agentic/ManiSkill/harbor/create-task/rotatesingleobjectinhandlevel1-v1-implementation.md`
+`/harbor:task-create name=<NewTaskId> from=<ManiSkill-repo>/harbor/create-task/rotatesingleobjectinhandlevel1-v1-implementation.md`

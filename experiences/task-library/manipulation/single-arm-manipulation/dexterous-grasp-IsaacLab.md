@@ -6,7 +6,7 @@
 - probed_at: 2026-05-24T16:48:52Z
 - canonical_build: `gym.make("Isaac-Dex-Grasp")` succeeds inside `isaaclab.app.AppLauncher`; `action_space.shape[-1] == 22`, `observation_space == Box(47,)`, `num_envs == 4096` (train) / `50` (PLAY), `episode_length_s = 8.3333` → 166 control steps @ 20 Hz. The repo's `pxr` module is only importable through AppLauncher, so a bare-shell `gym.make(...)` pre-flight does NOT work; the canonical-build proof is `.venv/bin/python harbor/create-task/isaac-dex-grasp/smokes/smoke_s1.py` (exit 0).
 
-Task summary: a single UFactory 850 + Allegro right hand (22-DoF: 6 arm + 16 hand) sits at env-local `(-0.274, -0.475, 0.01)` and must grasp + lift a small "dog" rigid object (0.11 kg, dynamic) sitting at env-local `(0.05, -0.35, 0.0)` on a lab table. Goal: drive the dog to env-local target `(0.05, -0.35, 0.30)` — same xy as spawn, +30 cm in z — within 10 cm tolerance before the 8.33-s horizon expires. Scene + actuator stack + init pose mirror bidex `InsertDrawer`'s right-robot half byte-for-byte (USD, init pos, joint qpos, 9-group ImplicitActuatorCfg blocks). Controller is the **joint-space** EMA cumulative-relative action vendored verbatim from bidex into `mdp/actions.py` + `mdp/actions_cfg.py` (no runtime cross-repo import). Reward composer is `sum` over 6 dense-then-sparse terms. No DR is wired (`EventCfg` only has reset terms).
+Task summary: a single UFactory 850 + Allegro right hand (22-DoF: 6 arm + 16 hand) sits at env-local `(-0.274, -0.475, 0.01)` and must grasp + lift a small "dog" rigid object (0.11 kg, dynamic) sitting at env-local `(0.05, -0.35, 0.0)` on a lab table. Goal: drive the dog to env-local target `(0.05, -0.35, 0.30)` — same xy as spawn, +30 cm in z — within 10 cm tolerance before the 8.33-s horizon expires. Scene + actuator stack + init pose mirror the source repo `InsertDrawer`'s right-robot half byte-for-byte (USD, init pos, joint qpos, 9-group ImplicitActuatorCfg blocks). Controller is the **joint-space** EMA cumulative-relative action vendored verbatim from the source repo into `mdp/actions.py` + `mdp/actions_cfg.py` (no runtime cross-repo import). Reward composer is `sum` over 6 dense-then-sparse terms. No DR is wired (`EventCfg` only has reset terms).
 
 ---
 
@@ -14,7 +14,7 @@ Task summary: a single UFactory 850 + Allegro right hand (22-DoF: 6 arm + 16 han
 
 ### Description
 
-`gym.register` exposes `Isaac-Dex-Grasp` (training) and `Isaac-Dex-Grasp-Play` (eval-friendly: 50 envs, obs corruption disabled). Both use `isaaclab.envs:ManagerBasedRLEnv` with the abstract `DexGraspEnvCfg` base + `UF850DexGraspEnvCfg` subclass that fills in the UF850 + Allegro right-hand articulation and the palm `ee_frame` FrameTransformer. The dog (RigidObjectCfg, dynamic, 0.11 kg), the lab table (RigidObjectCfg, kinematic=True — fixed-base body that participates in collision but no rigid-body dynamics), the four fingertip contact sensors (filtered against the dog), the lift-target frame marker, the ground plane, and the dome light all live on the abstract scene. The `_TARGET_MARKER_CFG` module constant is a small (1 cm scale) frame marker rendered at env-local `DOG_TARGET_LOCAL = (0.05, -0.35, 0.30)` via a `FrameTransformerCfg` anchored on the (kinematic) table. Sim timing and physx knobs mirror bidex InsertDrawer (`sim.dt = 1/120`, `decimation = 6` → 20 Hz control, `episode_length_s = 8.3333` → 166 steps; `gpu_max_rigid_contact_count = 2**24`, `gpu_max_rigid_patch_count = 2**24` for the 16-finger hand at 4096 envs).
+`gym.register` exposes `Isaac-Dex-Grasp` (training) and `Isaac-Dex-Grasp-Play` (eval-friendly: 50 envs, obs corruption disabled). Both use `isaaclab.envs:ManagerBasedRLEnv` with the abstract `DexGraspEnvCfg` base + `UF850DexGraspEnvCfg` subclass that fills in the UF850 + Allegro right-hand articulation and the palm `ee_frame` FrameTransformer. The dog (RigidObjectCfg, dynamic, 0.11 kg), the lab table (RigidObjectCfg, kinematic=True — fixed-base body that participates in collision but no rigid-body dynamics), the four fingertip contact sensors (filtered against the dog), the lift-target frame marker, the ground plane, and the dome light all live on the abstract scene. The `_TARGET_MARKER_CFG` module constant is a small (1 cm scale) frame marker rendered at env-local `DOG_TARGET_LOCAL = (0.05, -0.35, 0.30)` via a `FrameTransformerCfg` anchored on the (kinematic) table. Sim timing and physx knobs mirror the source repo InsertDrawer (`sim.dt = 1/120`, `decimation = 6` → 20 Hz control, `episode_length_s = 8.3333` → 166 steps; `gpu_max_rigid_contact_count = 2**24`, `gpu_max_rigid_patch_count = 2**24` for the 16-finger hand at 4096 envs).
 
 ### Decisions resolved
 
@@ -23,7 +23,7 @@ Task summary: a single UFactory 850 + Allegro right hand (22-DoF: 6 arm + 16 han
 | Task ID (train / play) | `Isaac-Dex-Grasp` / `Isaac-Dex-Grasp-Play` |
 | Family | `isaaclab-manager-based` (`ManagerBasedRLEnv`) |
 | Robot | UF850 + Allegro right hand (`harbor/assets/ufactory850/uf850_allegro_right.usd`), single instance at `{ENV_REGEX_NS}/Robot` |
-| Robot init pos (env-local) | `(-0.274, -0.475, 0.01)` (bidex right-robot verbatim) |
+| Robot init pos (env-local) | `(-0.274, -0.475, 0.01)` (the source repo right-robot verbatim) |
 | Robot init joint pose | arm: `joint1=0.8, joint2=0.3, joint3=-0.6, joint4=0.0, joint5=-0.8, joint6=-1.57`; hand index/middle/pinky proximal=0.0, mid=0.4, distal=0.4, tip=0.0; thumb `jth1=1.3, jth2=0.0, jth3=0.2, jth4=0.0` |
 | Robot DoF | 22 = 6 arm (joint1..joint6) + 16 hand (4 fingers × 4 joints; index/middle/pinky/thumb each j*f1..j*f4) |
 | Actuator groups | 9 ImplicitActuatorCfg groups, per-joint-group stiffness/damping (see §1 verbatim) |
@@ -52,9 +52,9 @@ Task summary: a single UFactory 850 + Allegro right hand (22-DoF: 6 arm + 16 han
 """Dex-Grasp manipulation task -- UFactory 850 + Allegro right hand.
 
 Single-arm 22-DoF (6 arm + 16 hand) robot grasps and lifts a `dog` object off
-the lab table. Scene + actuator stack + init pose mirror the bidex
+the lab table. Scene + actuator stack + init pose mirror the source repo
 `InsertDrawer` task RIGHT-ROBOT half byte-for-byte (USD, init pos, joint qpos,
-stiffness/damping per joint group). The left robot and drawer from the bidex
+stiffness/damping per joint group). The left robot and drawer from the source repo
 scene are dropped.
 """
 
@@ -127,7 +127,7 @@ class DexGraspSceneCfg(InteractiveSceneCfg):
     # Palm EE frame transformer -- filled by per-robot subclass.
     ee_frame: FrameTransformerCfg = MISSING
 
-    # Dog: the object to grasp+lift. Bidex verbatim: kinematic_enabled=False
+    # Dog: the object to grasp+lift. the source repo verbatim: kinematic_enabled=False
     # (dynamic), mass=0.11 kg, scale=(1,1,1), activate_contact_sensors=True.
     # The reset event teleports it to env-local (0.05, -0.35, 0.0) with random
     # yaw on every episode reset.
@@ -156,7 +156,7 @@ class DexGraspSceneCfg(InteractiveSceneCfg):
     )
 
     # Four fingertip contact sensors filtered against the dog
-    # (bidex InsertDrawer right-robot variant: if5 / mf5 / pf5 / th5).
+    # (the source repo InsertDrawer right-robot variant: if5 / mf5 / pf5 / th5).
     contact_sensors_0 = ContactSensorCfg(
         prim_path="{ENV_REGEX_NS}/Robot/if5",  # index
         update_period=0.0,
@@ -182,7 +182,7 @@ class DexGraspSceneCfg(InteractiveSceneCfg):
         filter_prim_paths_expr=["{ENV_REGEX_NS}/Dog"],
     )
 
-    # Lab table -- bidex convention: RigidObjectCfg with kinematic_enabled=True
+    # Lab table -- the source repo convention: RigidObjectCfg with kinematic_enabled=True
     # so physx treats it as a fixed-base body (collision shapes participate in
     # contact, but no rigid-body dynamics — contact forces from the dog or the
     # robot fingers cannot push the table). Surface at z ~ 0.
@@ -218,7 +218,7 @@ class DexGraspSceneCfg(InteractiveSceneCfg):
         ],
     )
 
-    # Ground plane -- bidex convention: 0.82 m below the table top.
+    # Ground plane -- the source repo convention: 0.82 m below the table top.
     plane = AssetBaseCfg(
         prim_path="/World/GroundPlane",
         init_state=AssetBaseCfg.InitialStateCfg(pos=[0.0, 0.0, -0.82]),
@@ -260,8 +260,8 @@ _ROBOT_USD_PATH = str(
 )
 
 
-# Bidex right-robot init joint pose (verbatim from
-# `bidex/env/tasks/InsertDrawer/env_cfg.py:InsertDrawerSceneCfg.robot.init_state.joint_pos`).
+# the source repo right-robot init joint pose (verbatim from
+# `<source-repo>/env/tasks/InsertDrawer/env_cfg.py:InsertDrawerSceneCfg.robot.init_state.joint_pos`).
 ROBOT_INIT_JOINT_POS = {
     "joint1": 0.8,
     "joint2": 0.3,
@@ -290,7 +290,7 @@ ROBOT_INIT_JOINT_POS = {
 }
 
 
-# UF850 + Allegro right hand articulation cfg -- bidex right-robot verbatim.
+# UF850 + Allegro right hand articulation cfg -- the source repo right-robot verbatim.
 UF850_ALLEGRO_RIGHT_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
         usd_path=_ROBOT_USD_PATH,
@@ -368,7 +368,7 @@ class UF850DexGraspEnvCfg(DexGraspEnvCfg):
     def __post_init__(self):
         super().__post_init__()
 
-        # Robot -- UF850 + Allegro right hand at bidex's exact pose.
+        # Robot -- UF850 + Allegro right hand at the source repo's exact pose.
         self.scene.robot = UF850_ALLEGRO_RIGHT_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
         # Palm EE frame sensor (analog of stack_cube/lift_box ee_frame). Anchored
@@ -405,14 +405,14 @@ EnvCfg `__post_init__` (sim/physx):
 
 ```python
 def __post_init__(self):
-    """Timing: bidex InsertDrawer canonical (120 Hz physics / decimation 6
+    """Timing: the source repo InsertDrawer canonical (120 Hz physics / decimation 6
     -> 20 Hz control / ~8.33 s episode)."""
     self.decimation = 6
     self.episode_length_s = 8.3333
-    # Simulation -- bidex canonical
+    # Simulation -- the source repo canonical
     self.sim.dt = 1.0 / 120.0
     self.sim.render_interval = self.decimation
-    # Physics knobs -- bidex canonical (large rigid-contact / patch caps for
+    # Physics knobs -- the source repo canonical (large rigid-contact / patch caps for
     # the 16-finger hand at 4096 envs).
     self.sim.physx.gpu_max_rigid_contact_count = 2 ** 24
     self.sim.physx.gpu_max_rigid_patch_count = 2 ** 24
@@ -437,7 +437,7 @@ def __post_init__(self):
 
 ### Description
 
-Single action term `arm_hand_action` — 22-D EMA cumulative-relative joint position controller, vendored verbatim from `bidex/env/action_managers/actions.py:EMACumulativeRelativeJointPositionAction` into this task's `mdp/actions.py` (so there is **no runtime import from `/home/steven/code/bidex`**). One scalar per joint, regex `.*` captures all 22 joints in USD canonical order (6 arm `joint1..joint6` followed by 16 hand joints in the order encoded by `JOINT_LOWER_LIMIT` / `JOINT_UPPER_LIMIT` — see §2 lists). Controller is joint-space (NOT IK / NOT task-space). Per-step rule (raw `a_t`, scale `s = 0.03`, alpha `α = 0.2`, init joint pose `q_init` captured at reset, cumulative delta `del_t`, previous applied `prev_t`):
+Single action term `arm_hand_action` — 22-D EMA cumulative-relative joint position controller, vendored verbatim from `<source-repo>/env/action_managers/actions.py:EMACumulativeRelativeJointPositionAction` into this task's `mdp/actions.py` (so there is **no runtime import from `<source-repo>`**). One scalar per joint, regex `.*` captures all 22 joints in USD canonical order (6 arm `joint1..joint6` followed by 16 hand joints in the order encoded by `JOINT_LOWER_LIMIT` / `JOINT_UPPER_LIMIT` — see §2 lists). Controller is joint-space (NOT IK / NOT task-space). Per-step rule (raw `a_t`, scale `s = 0.03`, alpha `α = 0.2`, init joint pose `q_init` captured at reset, cumulative delta `del_t`, previous applied `prev_t`):
 
 ```
 1. processed_t = s * a_t              # JointPositionAction (offset disabled, use_default_offset=False)
@@ -462,7 +462,7 @@ At t=0 (post-reset, `prev_0 == q_init`, `del_{-1} == 0`, offset == 0): `target_0
 | `scale` | `0.03` (scalar) |
 | `use_default_offset` | `False` |
 | `alpha` (EMA weight on new target) | `0.2` (scalar; cfg supports per-joint dict too) |
-| `joint_lower_limit` / `joint_upper_limit` | bidex right-hand 22-entry lists (see verbatim block below) |
+| `joint_lower_limit` / `joint_upper_limit` | the source repo right-hand 22-entry lists (see verbatim block below) |
 | Composer | Single action term — total action vector = `arm_hand_action` (22-D) |
 
 ### Code (verbatim)
@@ -474,7 +474,7 @@ At t=0 (post-reset, `prev_0 == q_init`, `del_{-1} == 0`, offset == 0): `target_0
 class ActionsCfg:
     """Action specs -- one term, 22-D EMA cumulative-relative joint position.
 
-    Matches bidex `InsertDrawerActionsCfg.arm_hand_action` for the right robot.
+    Matches the source repo `InsertDrawerActionsCfg.arm_hand_action` for the right robot.
     Joint regex `.*` picks up all 22 joints (6 arm + 16 hand) in the USD
     canonical order.
     """
@@ -490,13 +490,13 @@ class ActionsCfg:
     )
 ```
 
-`mdp/actions.py` (full source — vendored from bidex):
+`mdp/actions.py` (full source — vendored from the source repo):
 
 ```python
 """EMA cumulative-relative joint position action.
 
-Vendored verbatim from `bidex/env/action_managers/actions.py:EMACumulativeRelativeJointPositionAction`.
-We do NOT import from `bidex` at runtime; the class lives here so the task has
+Vendored verbatim from `<source-repo>/env/action_managers/actions.py:EMACumulativeRelativeJointPositionAction`.
+We do NOT import from `the source repo` at runtime; the class lives here so the task has
 no cross-repo dependency.
 
 Per-step processing (raw action `a_t`, scale `s`, offset `o`, alpha `α`,
@@ -626,9 +626,9 @@ class EMACumulativeRelativeJointPositionAction(JointPositionAction):
 """Action cfg + per-joint limit constants for the dex_grasp task.
 
 `EMACumulativeRelativeJointPositionActionCfg` is vendored verbatim from
-`bidex/env/action_managers/actions_cfg.py`. `JOINT_LOWER_LIMIT` and
+`<source-repo>/env/action_managers/actions_cfg.py`. `JOINT_LOWER_LIMIT` and
 `JOINT_UPPER_LIMIT` are the right-hand variants from
-`bidex/env/tasks/manager_based_env_cfg.py`. The order matches the USD joint
+`<source-repo>/env/tasks/manager_based_env_cfg.py`. The order matches the USD joint
 order:
     joint1..joint6 (arm)
     jif1, jmf1, jpf1, jth1   (proximal)
@@ -644,8 +644,8 @@ from isaaclab.utils import configclass
 from .actions import EMACumulativeRelativeJointPositionAction
 
 
-# Bidex right-hand joint limits (vendored verbatim from
-# `bidex/env/tasks/manager_based_env_cfg.py:JOINT_LOWER_LIMIT`).
+# the source repo right-hand joint limits (vendored verbatim from
+# `<source-repo>/env/tasks/manager_based_env_cfg.py:JOINT_LOWER_LIMIT`).
 JOINT_LOWER_LIMIT = [
     -6.283, -2.304, -4.224, -6.283, -2.164, -6.283,
     # jif1, jmf1, jpf1, jth1
@@ -758,9 +758,9 @@ class EventCfg:
         },
     )
 
-    # Dog: bidex `reset_object_right` verbatim -- teleport to env-local
+    # Dog: the source repo `reset_object_right` verbatim -- teleport to env-local
     # (0.05, -0.35, 0.0). Yaw range pinned to (0, 0) so §3 reset is
-    # deterministic; dr-generator may widen to [-pi, pi] later (the bidex
+    # deterministic; dr-generator may widen to [-pi, pi] later (the source repo
     # default).
     reset_dog = EventTerm(
         func=mdp.reset_root_state_uniform,
@@ -969,10 +969,10 @@ def joint_pos_right_normalized(
     robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
 ) -> torch.Tensor:
     """Robot joint positions normalized to [-1, 1] using the explicit per-joint
-    `joint_lower_limit` / `joint_upper_limit` lists (vendored from bidex).
+    `joint_lower_limit` / `joint_upper_limit` lists (vendored from the source repo).
 
     Falls back to the asset's `soft_joint_pos_limits` when either list is None.
-    Mirrors bidex's `joint_pos_limit_normalized` helper (right-hand variant).
+    Mirrors the source repo's `joint_pos_limit_normalized` helper (right-hand variant).
     """
     asset: Articulation = env.scene[robot_cfg.name]
     joint_ids = asset_cfg_to_joint_ids(asset, robot_cfg)
@@ -993,7 +993,7 @@ def dog_position_in_world(
 ) -> torch.Tensor:
     """Dog xyz in env-local world coordinates (`root_pos_w - env_origin`).
 
-    Mirrors bidex `object_pos`. The reset event teleports the dog to env-local
+    Mirrors the source repo `object_pos`. The reset event teleports the dog to env-local
     `(0.05, -0.35, 0.0)`, so this signal is referenced to that same origin.
     """
     dog: RigidObject = env.scene[object_cfg.name]
@@ -1030,7 +1030,7 @@ Composer = **sum**. 6 active terms in a strictly-increasing per-stage magnitude 
 
 **Fork-specific note (CRITICAL for reproduction):** this IsaacLab fork has REMOVED the per-weight `* dt` multiplier inside `RewardManager.compute` (verified at `isaaclab/managers/reward_manager.py:149-153`). Weights below are therefore the **raw per-step magnitudes** that show up in `episodic_return_mean`. If reproducing into a stock IsaacLab fork that still multiplies by `dt = sim.dt * decimation = 0.05`, multiply every weight by `1/0.05 = 20` to recover the same effective magnitudes.
 
-**Grasp predicate** (used by `grasp_contact`, gated inside `lift_height` and `dog_to_target`): the bidex Allegro convention — `thumb AND (index OR middle OR pinky)` — both fingertips must register force ≥ `contact_force_threshold` newtons on the dog (the only filtered prim).
+**Grasp predicate** (used by `grasp_contact`, gated inside `lift_height` and `dog_to_target`): the source repo Allegro convention — `thumb AND (index OR middle OR pinky)` — both fingertips must register force ≥ `contact_force_threshold` newtons on the dog (the only filtered prim).
 
 **Recent change** (per orchestrator brief): `dog_to_target` was gated on `grasp_contact AND lifted` (both must hold) — previously this term was gated on `lifted` alone, and PPO learned to knock the dog up with the back of the hand and dwell over the target xy. Requiring `grasp_contact` AND `lifted` forces the policy to grip-then-lift before the dense xyz attractor fires.
 
@@ -1169,7 +1169,7 @@ Five-stage manipulation shaping ladder (composer = sum):
   1. palm_to_dog       dense palm -> dog attractor (Allegro palm via FrameTransformer)
   2. fingertip_to_dog  weighted-mean per-fingertip attractor (thumb 1.5x others)
   3. grasp_contact     binary "thumb + at least one of {idx, mid, pinky} in
-                       contact with the dog" (bidex Allegro convention)
+                       contact with the dog" (the source repo Allegro convention)
   4. lift_height       linear ramp on dog.z, gated on grasp_contact
   5. dog_to_target     tanh attractor on ||dog - DOG_TARGET||, gated on
                        dog.z > init_z + 0.05 (dog actually lifted)
@@ -1280,7 +1280,7 @@ def fingertip_to_dog(
         per_finger_i = 1 - tanh(||fingertip_i - dog|| / std)
     Return `sum(w_i * per_finger_i) / sum(w_i)` -- a weighted MEAN so the
     saturation is still 1.0 per step (regardless of how many fingers / what
-    the weights sum to). Thumb is 1.5x others (bidex `object_robot_distance`
+    the weights sum to). Thumb is 1.5x others (the source repo `object_robot_distance`
     convention for the Allegro right hand).
 
     Tighter std (0.10 m) than `palm_to_dog` (0.20 m): the fingertips matter
@@ -1309,7 +1309,7 @@ def fingertip_to_dog(
 
 ```python
 # ---------------------------------------------------------------------------
-# Stage 3 -- bidex Allegro grasp predicate (thumb + any of {idx, mid, pinky}).
+# Stage 3 -- the source repo Allegro grasp predicate (thumb + any of {idx, mid, pinky}).
 # ---------------------------------------------------------------------------
 
 
@@ -1320,7 +1320,7 @@ def _allegro_grasp_predicate(
     """Boolean (num_envs,) -- True iff `thumb` AND at least one of {index,
     middle, pinky} fingertips are in contact with the dog above threshold.
 
-    Mirrors bidex `get_allegro_contact` (for 4 sensors): "thumb opposable, any
+    Mirrors the source repo `get_allegro_contact` (for 4 sensors): "thumb opposable, any
     other finger gripping" -- the right predicate for a 4-finger Allegro hand
     grasping a small object like the 0.11 kg dog.
 
@@ -1351,7 +1351,7 @@ def grasp_contact(
     """1.0 when the Allegro hand is grasping the dog (thumb opposing any
     non-thumb finger above `contact_force_threshold` newtons), else 0.0.
 
-    Default threshold = 1.0 N matches bidex `get_allegro_contact` exactly. The
+    Default threshold = 1.0 N matches the source repo `get_allegro_contact` exactly. The
     dog is light (0.11 kg) so this is loose enough to fire on gentle grasps
     but tight enough that brushing against the dog with one finger does not
     spuriously count.
@@ -1501,7 +1501,7 @@ def placeholder_zero(env: "ManagerBasedRLEnv") -> torch.Tensor:
 
 ## §7 DR
 
-`<no DR>` — `EventCfg` contains only the two reset terms (`reset_robot_joints`, `reset_dog`). There are NO `mode="startup"` or `mode="interval"` randomization terms. The `dr-generator` was not run; the bidex source has a wider yaw range `[-pi, pi]` on the dog reset which has been pinned here to `(0, 0)` for deterministic smoke. To add later: `/harbor:create-task name=Isaac-Dex-Grasp description="add startup mass + friction + dog yaw DR" sections=7`.
+`<no DR>` — `EventCfg` contains only the two reset terms (`reset_robot_joints`, `reset_dog`). There are NO `mode="startup"` or `mode="interval"` randomization terms. The `dr-generator` was not run; the source repo source has a wider yaw range `[-pi, pi]` on the dog reset which has been pinned here to `(0, 0)` for deterministic smoke. To add later: `/harbor:create-task name=Isaac-Dex-Grasp description="add startup mass + friction + dog yaw DR" sections=7`.
 
 ---
 
@@ -1520,15 +1520,15 @@ def placeholder_zero(env: "ManagerBasedRLEnv") -> torch.Tensor:
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dex_grasp/mdp/observations.py` | 1–72 | `joint_pos_right_normalized`, `dog_position_in_world`, `asset_cfg_to_joint_ids` helper. |
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dex_grasp/mdp/rewards.py` | 1–310 | 6 reward funcs + `_allegro_grasp_predicate` helper + `_get_latch_buffer` + `_LATCH_BUFFERS` module-level registry + `placeholder_zero` legacy shim. |
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dex_grasp/mdp/terminations.py` | 1–36 | `dog_reached_target`. |
-| `harbor/assets/ufactory850/uf850_allegro_right.usd` | (binary) | UF850 + Allegro right hand articulation USD. **Copied from bidex during task creation** — no runtime dependency on `/home/steven/code/bidex`. Verified `test -e`. |
-| `harbor/assets/grasp/dog.usd` | (binary) | "Dog" rigid object USD (0.11 kg target mass). **Copied from bidex during task creation** — no runtime dependency on `/home/steven/code/bidex`. Verified `test -e`. |
+| `harbor/assets/ufactory850/uf850_allegro_right.usd` | (binary) | UF850 + Allegro right hand articulation USD. **Copied from the source repo during task creation** — no runtime dependency on `<source-repo>`. Verified `test -e`. |
+| `harbor/assets/grasp/dog.usd` | (binary) | "Dog" rigid object USD (0.11 kg target mass). **Copied from the source repo during task creation** — no runtime dependency on `<source-repo>`. Verified `test -e`. |
 | `harbor/assets/table/lab_table_instanceable_colored_rotated.usd` | (binary) | Lab table (shared with `lift_box` / `insert_drawer`; kinematic). Verified `test -e`. |
 
 External imports the task relies on:
 - `isaaclab.envs.mdp` — re-exported via `mdp/__init__.py` to provide `reset_joints_by_scale`, `reset_root_state_uniform`, `time_out`, `joint_pos`, `last_action`, `JointPositionAction`, `JointPositionActionCfg`.
 - `isaaclab.utils.math.scale_transform` — used in `joint_pos_right_normalized` (obs).
 - `isaaclab.assets`, `isaaclab.managers`, `isaaclab.sensors`, `isaaclab.markers.config.FRAME_MARKER_CFG`, `isaaclab.sim`, `isaaclab.actuators.ImplicitActuatorCfg`, `isaaclab.envs.ManagerBasedRLEnvCfg`, `isaaclab.scene.InteractiveSceneCfg` — standard IsaacLab API.
-- **No runtime import from `bidex`.** The vendored `EMACumulativeRelativeJointPositionAction` (`mdp/actions.py`) + its cfg + the `JOINT_LOWER_LIMIT` / `JOINT_UPPER_LIMIT` lists eliminate the cross-repo dependency. The robot USD (`uf850_allegro_right.usd`) and dog USD (`dog.usd`) were copied into `harbor/assets/` during task creation.
+- **No runtime import from `the source repo`.** The vendored `EMACumulativeRelativeJointPositionAction` (`mdp/actions.py`) + its cfg + the `JOINT_LOWER_LIMIT` / `JOINT_UPPER_LIMIT` lists eliminate the cross-repo dependency. The robot USD (`uf850_allegro_right.usd`) and dog USD (`dog.usd`) were copied into `harbor/assets/` during task creation.
 
 ---
 

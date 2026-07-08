@@ -1,6 +1,6 @@
 # Smoke Test Contract
 
-Step 3 (formerly Step 4) runs after the env is ready (`<repo>/.venv/` populated). It proves the runtime is not just importable but actually exercises the env step + render pipeline. **Two tiers, both fatal.**
+Step 3 (formerly Step 4) runs after the env is ready (`<repo>/.venv/` populated). It proves the runtime is not just importable but exercises the env step + render pipeline. **Two tiers, both fatal.**
 
 Both tiers run via `<repo>/.venv/bin/python scripts/{run_random,render_random}.py ...`.
 
