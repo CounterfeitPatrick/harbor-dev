@@ -78,6 +78,91 @@ def _grab_frame(env) -> np.ndarray | None:
     return None
 
 
+# ---------------------------------------------------------------------------
+# Follow-cam (benchmark-agnostic).
+#
+# For MOVING tasks (e.g. locomotion) the tracked body translates away from a
+# fixed camera and walks out of frame. The follow-cam tracks it so it stays
+# framed. It is NOT IsaacLab-specific: it probes the APIs of each benchmark
+# family for the two primitives it needs — read the tracked body's world
+# position, and move the viewer/render camera — and simply NO-OPS (keeps the
+# default/static camera) on any sim that exposes neither. Fixed-base tasks
+# (e.g. manipulation) never trigger it because the body never moves past the
+# engage radius, so their renders are unchanged. Disable with camera_follow=false.
+# Add a new family by extending _track_body_pos_w() / _set_viewer_camera().
+# ---------------------------------------------------------------------------
+
+def _cam_unwrapped(env):
+    raw = getattr(env, "_raw_env", env)
+    return getattr(raw, "unwrapped", raw)
+
+
+def _env_origin_w(env) -> np.ndarray:
+    """World-frame origin of env 0 (for the initial framing). Zeros if unknown."""
+    u = _cam_unwrapped(env)
+    try:
+        return u.scene.env_origins[0].detach().cpu().numpy().astype(float)
+    except Exception:
+        return np.zeros(3, dtype=float)
+
+
+def _track_body_pos_w(env):
+    """Best-effort world position (x, y, z) of the body to follow (env 0), across sims.
+
+    Returns np.ndarray shape (3,), or None if no known API applies (→ follow-cam
+    won't engage and the default camera is kept). Extend with more families as needed.
+    """
+    u = _cam_unwrapped(env)
+    # IsaacLab / IsaacGym managed envs: an Articulation named "robot" with root_pos_w.
+    try:
+        pos = u.scene["robot"].data.root_pos_w[0]
+        return pos.detach().cpu().numpy().astype(float)
+    except Exception:
+        pass
+    # ManiSkill / SAPIEN: the controlled agent's root pose.
+    try:
+        p = u.agent.robot.pose.p
+        p = p.detach().cpu().numpy() if hasattr(p, "detach") else np.asarray(p)
+        return np.asarray(p, dtype=float).reshape(-1)[:3]
+    except Exception:
+        pass
+    return None
+
+
+def _set_viewer_camera(env, eye, target) -> bool:
+    """Best-effort: point the render/viewer camera from ``eye`` at ``target`` (world m).
+
+    Returns True if a known camera API accepted it; unknown sims keep their default
+    camera (follow-cam no-ops there).
+    """
+    u = _cam_unwrapped(env)
+    eye = [float(v) for v in eye]
+    target = [float(v) for v in target]
+    # IsaacLab: the sim exposes a viewer camera setter.
+    try:
+        u.sim.set_camera_view(eye=eye, target=target)
+        return True
+    except Exception:
+        pass
+    # ManiSkill / SAPIEN: move a human-render camera with the canonical look_at() helper.
+    # (Best-effort — API surface varies by ManiSkill version; guarded so failure falls back.)
+    try:
+        from mani_skill.utils.sapien_utils import look_at
+
+        pose = look_at(eye, target)
+        cams = getattr(u.scene, "human_render_cameras", None)
+        cam = next(iter(cams.values())) if isinstance(cams, dict) and cams else None
+        setter = None
+        if cam is not None:
+            setter = getattr(cam, "set_pose", None) or getattr(getattr(cam, "camera", None), "set_local_pose", None)
+        if setter is not None:
+            setter(pose)
+            return True
+    except Exception:
+        pass
+    return False
+
+
 def _write_mp4(frames: list[np.ndarray], path: Path, fps: int = 30) -> None:
     if not frames:
         print("[render] no frames captured — skipping mp4 write", file=sys.stderr); return
@@ -180,19 +265,32 @@ def main(cfg: DictConfig):
     frames: list[np.ndarray] = []
     obs, _ = env.reset()
 
-    # Position the IsaacLab viewer camera for a wide isometric view that shows
-    # the full robot + table + workspace. Default eye=(2.5, 2.5, 1.6) m diagonal
-    # from workspace center, looking slightly down at target=(0.30, 0, 0.40).
-    # Override per-task via cfg.viewer_eye / cfg.viewer_target.
+    # Position the viewer camera for a wide isometric view of the robot + workspace.
+    # Default eye=(2.5, 2.5, 1.6) m diagonal from the workspace, looking slightly down at
+    # target=(0.30, 0, 0.40). Override per-task via cfg.viewer_eye / cfg.viewer_target.
+    #
+    # For MOVING tasks (locomotion) also arm a follow-cam: once the tracked body drifts past
+    # a small radius, track it every frame keeping this initial framing offset, so it stays
+    # in view. Benchmark-agnostic (see _track_body_pos_w / _set_viewer_camera); fixed-base
+    # tasks never trigger it → their renders are unchanged. Disable with camera_follow=false.
+    camera_follow = bool(cfg.get("camera_follow", True))
+    follow_cam: dict = {}
     try:
-        viewer_eye    = list(cfg.get("viewer_eye",    [2.5, 2.5, 1.6]))
-        viewer_target = list(cfg.get("viewer_target", [0.30, 0.0, 0.4]))
-        raw_env = getattr(env, "_raw_env", env)
-        env_origin = raw_env.unwrapped.scene.env_origins[0].cpu().numpy().tolist()
-        eye    = [viewer_eye[i]    + env_origin[i] for i in range(3)]
-        target = [viewer_target[i] + env_origin[i] for i in range(3)]
-        raw_env.unwrapped.sim.set_camera_view(eye=eye, target=target)
-        print(f"[render] viewer camera   eye={eye}  target={target}", flush=True)
+        viewer_eye    = np.asarray(cfg.get("viewer_eye",    [2.5, 2.5, 1.6]), dtype=float)
+        viewer_target = np.asarray(cfg.get("viewer_target", [0.30, 0.0, 0.4]), dtype=float)
+        env_origin = _env_origin_w(env)
+        eye    = viewer_eye + env_origin
+        target = viewer_target + env_origin
+        if _set_viewer_camera(env, eye, target):
+            print(f"[render] viewer camera   eye={eye.tolist()}  target={target.tolist()}", flush=True)
+        if camera_follow:
+            start = _track_body_pos_w(env)
+            if start is not None:
+                # maintain the initial camera pose RELATIVE to the tracked body.
+                follow_cam = {
+                    "eye_off": eye - start, "target_off": target - start,
+                    "start_xy": start[:2].copy(), "active": False, "trigger": 0.3,
+                }
     except Exception as _camera_err:
         print(f"[render] could not set viewer camera ({_camera_err}) — using default", flush=True)
 
@@ -202,6 +300,20 @@ def main(cfg: DictConfig):
     act_abs_max = 0.0
     act_count = 0
     for step in range(max_steps):
+        # Follow-cam: once the tracked body moves past the trigger radius, track it so a
+        # moving robot stays framed. No-op for fixed-base tasks (never trigger).
+        if follow_cam:
+            try:
+                root = _track_body_pos_w(env)
+                if root is not None:
+                    if not follow_cam["active"] and \
+                            np.linalg.norm(root[:2] - follow_cam["start_xy"]) > follow_cam["trigger"]:
+                        follow_cam["active"] = True
+                        print(f"[render] follow-cam engaged at step {step}", flush=True)
+                    if follow_cam["active"]:
+                        _set_viewer_camera(env, root + follow_cam["eye_off"], root + follow_cam["target_off"])
+            except Exception:
+                pass
         f = _grab_frame(env)
         if f is not None:
             frames.append(f)

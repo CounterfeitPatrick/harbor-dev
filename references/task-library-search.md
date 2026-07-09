@@ -48,6 +48,13 @@ ls "$LIB"                                   # short accurate names: stack-three-
 grep -ril "<verb|object|robot keywords>" "$LIB"   # e.g. "stack", "drawer", "cube", "franka"
 ```
 
+**Review EVERY result — never truncate this discovery search.** Do NOT pipe the `ls` / `grep`
+through `head`, `tail`, or any `| head -N` / limit, and do not stop reading at the first plausible
+hit. The folder is small (tens of specs) and the filenames are short by design, so read the full
+list every time. The best match is often alphabetically adjacent to a near-miss (e.g.
+`dexterous-grasp-*` sits right after `dexsuite-reorient-*`); a truncated search silently drops it and
+reads as "I looked" when you didn't. If you must sort for readability, `| sort` — never `| head`.
+
 Rank by overlap with the new task's verb (stack / insert / lift / grasp / walk …), object class, and
 robot. Pick the **1–3 best matches**. Skim each match's `Task summary` + the sections you own
 (`task-generator` → §1–§5; the reward-tune main agent → §6) — don't read whole files you don't need.

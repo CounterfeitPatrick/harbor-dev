@@ -133,7 +133,7 @@ These logs are **append-only within one agent's run**, written as work progresse
 Before dispatching the chain, run the protocol in `${CLAUDE_PLUGIN_ROOT}/references/task-library-search.md` **once** for the whole task:
 
 1. Classify the task's embodiment from `<description>` + `<name>` → pick the `experiences/task-library/<folder>/`.
-2. `ls` + `grep -ril <verb/object/robot keywords>` that folder; pick the 1–3 most relevant `*-implementation.md` specs. Set `library_refs = [<abs paths>]`.
+2. `ls` + `grep -ril <verb/object/robot keywords>` that folder, then **read EVERY result** — never pipe this discovery search through `head`/`tail`/limit and never stop at the first plausible hit (the best match is often alphabetically adjacent to a near-miss). Pick the 1–3 most relevant `*-implementation.md` specs. Set `library_refs = [<abs paths>]`.
 3. If a match is **byte-identical** to what's wanted, recommend `/harbor:task-create from=<that spec>` (reproduce mode) and ask the user whether to switch before authoring from scratch.
 4. Record the matches (or "no match") in `spec.json` and the final summary.
 
