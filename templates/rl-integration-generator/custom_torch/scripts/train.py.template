@@ -266,6 +266,14 @@ def main(cfg: DictConfig):
         (log_dir / "resolved_config.yaml").write_text(OmegaConf.to_yaml(cfg, resolve=True))
         # Plot training curves to outputs/<run>/curves/<key>.png
         _plot_curves(metrics_log, log_dir / "curves", title_prefix=trial_id)
+        # Isaac Sim (gpu_sim) teardown hangs on USD stage detach at process exit.
+        # Checkpoint + metrics + curves are all flushed above, so force-exit past
+        # the hang once a checkpoint was actually written (skip on early failure so
+        # real errors still surface with a non-zero exit).
+        if bool(cfg.get("gpu_sim", False)) and (log_dir / "checkpoint.pth").exists():
+            import os as _os
+            _os.sync()
+            _os._exit(0)
 
 
 def _render_and_log_video(agent, cfg: DictConfig, log_dir: Path, step: int,

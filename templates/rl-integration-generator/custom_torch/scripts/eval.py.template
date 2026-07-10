@@ -171,6 +171,12 @@ def main(cfg: DictConfig):
     print(f"[eval] mean_return={metrics['mean_return']:.4f} ± {metrics['std_return']:.4f} "
           f"(n={metrics['n_episodes_completed']})", flush=True)
     (ckpt.parent / "metrics.json").write_text(json.dumps(metrics, indent=2))
+    # Isaac Sim (gpu_sim) teardown hangs on USD stage detach at process exit;
+    # metrics.json + the mean_return marker are flushed above, so force-exit.
+    if bool(cfg.get("gpu_sim", False)):
+        import os as _os
+        _os.sync()
+        _os._exit(0)
 
 
 def _default_act_class(algo: str) -> str:
