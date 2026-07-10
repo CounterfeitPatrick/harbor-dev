@@ -409,7 +409,7 @@ Obs funcs (`base_lin_vel`, `base_ang_vel`, `projected_gravity`, `generated_comma
 - `flat_orientation_l2`: weight=**-5.0** (flat override; base 0.0)
 - `dof_pos_limits` (joint_pos_limits): weight=0.0 (disabled)
 
-**Planning budget (per-step saturated magnitudes, retro-computed; pre-dt-scale weights).** Positive ceiling: `track_lin_vel_xy_exp` ∈ [0,1] (saturates at perfect tracking → ~1.0), `track_ang_vel_z_exp` ∈ [0,0.5] (→ ~0.5), `feet_air_time` is a sparse first-contact bonus `(air_time−0.5)·first_contact·0.5` (small positive when stepping under nonzero command). Penalties grow with the squared/abs quantity and are unbounded above; the dominant ones at training start are `flat_orientation_l2` (-5.0) and `lin_vel_z_l2` (-2.0). The task is solved when the two exp-tracking terms saturate near their ceilings while penalties stay near zero. NOTE: IsaacLab RewardManager multiplies every weight by dt (~0.02) — all magnitudes above are per-control-step pre-dt; effective per-step contributions are ~50× smaller.
+**Planning budget (per-step saturated nominal magnitudes, retro-computed).** Positive ceiling: `track_lin_vel_xy_exp` ∈ [0,1] (saturates at perfect tracking → ~1.0), `track_ang_vel_z_exp` ∈ [0,0.5] (→ ~0.5), `feet_air_time` is a sparse first-contact bonus `(air_time−0.5)·first_contact·0.5` (small positive when stepping under nonzero command). Penalties grow with the squared/abs quantity and are unbounded above; the dominant ones at training start are `flat_orientation_l2` (-5.0) and `lin_vel_z_l2` (-2.0). The task is solved when the two exp-tracking terms saturate near their ceilings while penalties stay near zero.
 
 **Code (RewardsCfg, abstract base — flat override changes 3 weights as noted above).**
 ```python

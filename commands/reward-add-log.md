@@ -95,7 +95,7 @@ def _<task>_term_specs(sparse: bool) -> tuple[list[tuple[str, callable]], str]:
 
 Register under the dispatch table `_REWARD_TERM_SPECS = {"<prefix>/": _<task>_term_specs, ...}`. The wrapper does NOT weight or override the env's reward. Weights, if any, must already be embedded inside the term `fn`s for the composer equation to hold.
 
-**Path B:** no per-task spec needed. `RewardManager` already computes per-term values during `compute(dt)` and stores them at `manager._step_reward[:, i]` (shape `(num_envs, num_terms)`). Per-term per-step value is `manager._step_reward[:, i] * env.step_dt`; composer is always `"sum"` (since `env_reward = Σ_i func_i × weight_i × dt`). The template at `${CLAUDE_PLUGIN_ROOT}/templates/reward-add-log/isaaclab_env_helper.py.template` reads this dynamically — drop it in unmodified.
+**Path B:** no per-task spec needed. `RewardManager` already computes per-term values and stores the real per-step reward at `manager._step_reward[:, i]` (shape `(num_envs, num_terms)`) — read it directly. Composer is always `"sum"` (`env_reward = Σ_i func_i × weight_i`). The template at `${CLAUDE_PLUGIN_ROOT}/templates/reward-add-log/isaaclab_env_helper.py.template` reads this dynamically — drop it in unmodified.
 
 For Direct envs (no `reward_manager`), the template falls through to passthrough mode: `info["detailed_reward"] = {"total": env_reward}`, no decomposition. Confirm with the user before patching that they understand Direct tasks won't get per-term curves.
 

@@ -64,20 +64,7 @@ Common `mdp.*` building blocks:
 - Regularizers: |weight| ≤ 0.1, negative for penalties
 - Zero-weight diagnostic indicators (e.g. binary success flag) are fine — they show up in `info["detailed_reward"]` for logging without distorting optimization
 
-## [MUST] Cancel the RewardManager dt scaling
-
-IsaacLab's `RewardManager.compute()` multiplies every term by `step_dt` (`reward += weight × term × dt`) — at the common 20 Hz control rate that silently shrinks every payment 20× (a `+200` one-shot latch contributes `10` to the episodic return; metrics, budget docstrings, and cross-task comparisons all get confusing). **Always cancel it** so each term pays its NOMINAL weight per step. Recipe — one loop at the END of the env cfg's `__post_init__` (after `decimation` / `sim.dt` are final):
-
-```python
-# Cancel RewardManager's dt scaling: each term pays its nominal weight/step.
-step_dt = self.decimation * self.sim.dt
-for _name in vars(self.rewards):
-    _term = getattr(self.rewards, _name)
-    if isinstance(_term, RewTerm):
-        _term.weight /= step_dt
-```
-
-Declared weights and the magnitude-budget docstring then read in nominal units. The reward-add-log `_DetailedRewardWrapper` is unaffected (it reads the manager's actual per-term output, so the composer-sum invariant still holds). Note `metrics.jsonl`/W&B values scale up 1/dt vs un-cancelled tasks — document the cancellation in the §6 docstring.
+Weights are **nominal per-step magnitudes, applied directly** — a `+200` one-shot latch reads `200`. Declare them at the value each term should pay per step; `info["detailed_reward"]` / metrics show exactly that.
 
 ## Sign convention
 

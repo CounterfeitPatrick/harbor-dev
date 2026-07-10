@@ -355,8 +355,7 @@ against the `ee_pose` command plus regularization penalties:
 4. action rate L2 penalty, weight -0.0001 (curriculum → -0.005 after 4500 steps)
 5. joint velocity L2 penalty, weight -0.0001 (curriculum → -0.001 after 4500 steps)
 
-**Composer: sum.** (IsaacLab `RewardManager` sums all weighted RewTerms; each weight is silently
-multiplied by control dt ≈ 1/30 s per step — see reward-experience dt-scaling note.)
+**Composer: sum.** (IsaacLab `RewardManager` sums all weighted RewTerms.)
 
 **Decisions resolved (weights).**
 - end_effector_position_tracking: func `position_command_error`, weight **-0.2**, body `panda_hand`
@@ -365,7 +364,7 @@ multiplied by control dt ≈ 1/30 s per step — see reward-experience dt-scalin
 - action_rate: func `action_rate_l2`, weight **-0.0001** → curriculum -0.005 @ 4500 steps
 - joint_vel: func `joint_vel_l2` (asset robot), weight **-0.0001** → curriculum -0.001 @ 4500 steps
 
-**Planning budget (retro-computed, per-step un-dt-scaled magnitudes).** Position penalty dominates
+**Planning budget (retro-computed, per-step nominal magnitudes).** Position penalty dominates
 early (distance up to ~0.7 m → up to ~-0.14/step before dt); tanh fine-grained reward saturates to
 +0.1/step as distance → 0; orientation penalty up to ~-0.1·π. Regularization terms are ~1e-4 scale
 initially, rising 5–50× under curriculum once the policy is roughly tracking. No sparse success

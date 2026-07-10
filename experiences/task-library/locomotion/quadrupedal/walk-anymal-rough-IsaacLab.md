@@ -396,7 +396,7 @@ def height_scan(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg, offset: float 
 
 **Description.** Sum-composed (additive) velocity-tracking reward with regularization penalties. Two positive tracking terms (exp-kernel lin-xy and ang-z velocity tracking), one positive gait shaping term (feet air time, gated on a non-zero command), and a stack of negative penalties (vertical/roll-pitch velocity, joint torque/accel, action rate, undesired thigh contacts). Two penalties are present but disabled (weight 0) in rough and are the ones flat retunes.
 
-**Composer: SUM** (IsaacLab `RewardManager` sums weighted terms; each weight is internally multiplied by control `dt`≈0.02 per step — see CLAUDE memory `feedback_isaaclab_reward_dt_scaling`).
+**Composer: SUM** (IsaacLab `RewardManager` sums weighted terms).
 
 **Decisions resolved (term : func : weight : params).**
 - `track_lin_vel_xy_exp` : `mdp.track_lin_vel_xy_exp` : **+1.0** : command="base_velocity", std=√0.25=0.5
@@ -411,7 +411,7 @@ def height_scan(env: ManagerBasedEnv, sensor_cfg: SceneEntityCfg, offset: float 
 - `flat_orientation_l2` : `mdp.flat_orientation_l2` : **0.0** (disabled in rough)  *(flat: -5.0)*
 - `dof_pos_limits` : `mdp.joint_pos_limits` : **0.0** (disabled)
 
-**Planning-budget (retro-computed, per-step saturated magnitudes; weights are dt-scaled by ~0.02).** Tracking ceiling: lin-xy exp → max +1.0·dt ≈ +0.02/step; ang-z exp → +0.5·dt ≈ +0.01/step; feet_air_time (per foot exceeding 0.5 s threshold) → +0.125·dt per qualifying first-contact. Penalties scale with the squared magnitudes of vel-z / roll-pitch-vel / torque / accel / action-rate and the count of thigh contacts (×-1.0·dt each). The reward is dominated by the two exp tracking terms saturating near 1.0 once the policy tracks the command; penalties keep motion smooth and posture upright. No sparse success bonus exists (continuous task).
+**Planning-budget (retro-computed, per-step saturated nominal magnitudes).** Tracking ceiling: lin-xy exp → max +1.0/step; ang-z exp → +0.5/step; feet_air_time (per foot exceeding 0.5 s threshold) → +0.125 per qualifying first-contact. Penalties scale with the squared magnitudes of vel-z / roll-pitch-vel / torque / accel / action-rate and the count of thigh contacts (weight −1.0 each). The reward is dominated by the two exp tracking terms saturating near 1.0 once the policy tracks the command; penalties keep motion smooth and posture upright. No sparse success bonus exists (continuous task).
 
 **Code — local reward func `feet_air_time` (velocity `mdp/rewards.py`).**
 ```python

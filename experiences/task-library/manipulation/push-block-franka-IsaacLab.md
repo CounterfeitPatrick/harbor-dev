@@ -419,15 +419,13 @@ def object_position_in_robot_root_frame(
 5. `action_rate` (w=-1e-4): action-rate L2 penalty (library `action_rate_l2`).
 6. `joint_vel` (w=-1e-4): joint-velocity L2 penalty (library `joint_vel_l2`).
 
-**NOTE on dt-scaling (per reward-experience #2 / MEMORY):** IsaacLab `RewardManager` multiplies every weight by `dt` (= sim.dt × decimation = 1/60 × 2 ≈ 0.0333 s) per step. Effective per-step contributions below are pre-dt-scale.
-
-**Planning-budget (retro-computed; no explicit docstring budget in source).** Per-step saturated maxima (before dt-scale):
+**Planning-budget (retro-computed; no explicit docstring budget in source).** Per-step saturated maxima (nominal weights):
 - `reaching_block`: weight 1.0 × max 1.0 = **1.0** when hand touches block.
 - `block_to_goal_tracking`: 16.0 × max 1.0 = **16.0** when block at goal (coarse).
 - `block_to_goal_tracking_fine_grained`: 5.0 × max 1.0 = **5.0** when block at goal (sharp).
 - `success`: 0.0 (logging-only).
 - `action_rate` / `joint_vel`: small negative regularizers (≈ -1e-4 × ‖·‖², near 0 for smooth motion).
-- Saturated max per-step reward ≈ 22.0 (before dt-scale) when block sits at goal and hand is in contact.
+- Saturated max per-step reward ≈ 22.0 when block sits at goal and hand is in contact.
 
 **Decisions resolved.** See `RewardsCfg` below for exact func/params/weight per term.
 

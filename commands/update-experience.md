@@ -81,12 +81,11 @@ Read the `Task summary:` paragraph + the `## §1` description (that's enough —
 
 | Destination | When |
 |---|---|
-| `manipulation/single-arm-manipulation/` | one arm / hand manipulating objects (pick, place, insert, lift, stack, in-hand). "a single <robot>" |
-| `manipulation/multi-arm-manipulation/`  | two or more arms / bimanual / multi-robot manipulation ("two <robot>", dual-arm, bimanual) |
-| `locomotion/humanoid/`                   | bipedal humanoid locomotion |
-| `locomotion/quadrupedal/`                | quadruped / 4-legged locomotion |
+| `manipulation/` | any arm / hand manipulating objects — single-arm or multi-arm/bimanual (pick, place, insert, lift, stack, in-hand) |
+| `locomotion/humanoid/`   | bipedal humanoid locomotion |
+| `locomotion/quadrupedal/` | quadruped / 4-legged locomotion |
 
-Decision cues, in order: (1) explicit count of arms/robots in the Task summary ("a single …" → single; "two …" → multi); (2) robot morphology named in §1 (Franka/UR/Allegro arm → manipulation; Anymal/Go2/Spot → quadrupedal; H1/G1/humanoid → humanoid). If genuinely ambiguous (e.g. a mobile manipulator, or a category not covered by the four folders), **ask the user once** with `AskUserQuestion` listing the four destinations.
+Decision cues, in order: (1) robot morphology named in §1 (Franka/UR/Allegro arm, dual-arm, bimanual → manipulation; Anymal/Go2/Spot → quadrupedal; H1/G1/humanoid → humanoid). If genuinely ambiguous (e.g. a mobile manipulator, or a category not covered by the three folders), **ask the user once** with `AskUserQuestion` listing the three destinations.
 
 Base path: `${CLAUDE_PLUGIN_ROOT}/experiences/task-library/<destination>`.
 

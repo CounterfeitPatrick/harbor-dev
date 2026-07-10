@@ -1028,7 +1028,7 @@ def asset_cfg_to_joint_ids(asset: Articulation, cfg: SceneEntityCfg):
 
 Composer = **sum**. 6 active terms in a strictly-increasing per-stage magnitude ladder: 2 dense reach attractors (palm + per-fingertip), 1 binary grasp-predicate gate, 1 lift-progress ramp gated on grasp, 1 dense dog→target attractor gated on `(grasp_contact AND lifted)`, and 1 one-shot success bonus mirroring the termination predicate. No regularizers (no `action_rate`, no `joint_vel`). No failure-mode penalties (sign convention: positive=good, no penalties iter 0).
 
-**Fork-specific note (CRITICAL for reproduction):** this IsaacLab fork has REMOVED the per-weight `* dt` multiplier inside `RewardManager.compute` (verified at `isaaclab/managers/reward_manager.py:149-153`). Weights below are therefore the **raw per-step magnitudes** that show up in `episodic_return_mean`. If reproducing into a stock IsaacLab fork that still multiplies by `dt = sim.dt * decimation = 0.05`, multiply every weight by `1/0.05 = 20` to recover the same effective magnitudes.
+Weights below are **nominal per-step magnitudes** — the declared weight is exactly what each term pays per step (and what shows up in `episodic_return_mean`).
 
 **Grasp predicate** (used by `grasp_contact`, gated inside `lift_height` and `dog_to_target`): the source repo Allegro convention — `thumb AND (index OR middle OR pinky)` — both fingertips must register force ≥ `contact_force_threshold` newtons on the dog (the only filtered prim).
 
@@ -1045,7 +1045,7 @@ Composer = **sum**. 6 active terms in a strictly-increasing per-stage magnitude 
 | dog_to_target | `mdp.dog_to_target` | `std=0.15, target_local=DOG_TARGET_LOCAL, lift_threshold=0.05, init_z=0.0` (function defaults `contact_force_threshold=1.0`) | **0.50** | × `(grasp_contact AND dog.z > init_z + 0.05)` |
 | success_bonus | `mdp.success_bonus` | `target_local=DOG_TARGET_LOCAL, threshold=DOG_TARGET_TOL` | **100.0** | one-shot latch (first frame predicate fires) |
 
-#### Per-stage saturated per-step magnitude budget (raw weights, no dt-multiplier)
+#### Per-stage saturated per-step magnitude budget (nominal weights)
 
 | Stage | Term | Per-step saturated | 166-step ep ceiling |
 |---|---|---:|---:|
@@ -1060,7 +1060,7 @@ Dense ceiling ≈ 199 (all stages saturated for the full episode); sparse succes
 
 #### Composer
 
-`sum`. The IsaacLab `RewardManager` default composer is sum-of-weighted-terms; this fork has additionally removed the `* dt` multiplier so weights are raw per-step values.
+`sum`. The IsaacLab `RewardManager` default composer is sum-of-weighted-terms; weights are nominal per-step values.
 
 ### Code (verbatim)
 
@@ -1071,9 +1071,8 @@ Dense ceiling ≈ 199 (all stages saturated for the full episode); sparse succes
 class RewardsCfg:
     """Reward ladder (composer = sum, sign = positive=good, no penalties iter 0).
 
-    All weights are RAW per-step magnitudes -- the dt-multiplier has been
-    REMOVED inside `RewardManager.compute` in this fork (verified at
-    `isaaclab/managers/reward_manager.py:149-153`).
+    All weights are nominal per-step magnitudes -- the declared weight is what
+    each term pays per step.
 
     Per-stage saturated per-step magnitude budget (composer = sum):
 
@@ -1176,9 +1175,8 @@ Five-stage manipulation shaping ladder (composer = sum):
   6. success_bonus     one-shot latch the first frame the dog is within 10 cm
                        of the target (mirrors the `success` termination)
 
-dt-scaling: This fork of IsaacLab has REMOVED the per-weight `* dt` multiplier
-inside `RewardManager.compute` (see `isaaclab/managers/reward_manager.py:149`).
-Weights below are therefore RAW per-step magnitudes the user sees at runtime.
+Weights below are nominal per-step magnitudes -- the declared weight is what
+each term pays per step (and what the user sees at runtime).
 
 Per-stage saturated per-step magnitude budget (composer = sum, raw weights):
 

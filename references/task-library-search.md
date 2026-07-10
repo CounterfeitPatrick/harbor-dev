@@ -18,8 +18,8 @@ priors, but never proof. When the two disagree, the precedence is:
 2. **The matched library base spec** — its settled design choices (term ladders, weights, gating,
    init poses, action modes, …) are copied as-is.
 3. **Destination-repo mechanics** — the in-repo canonical example / `task-implementation.md` for
-   *how* to express things, plus mechanically-forced repo differences (e.g. a RewardManager that
-   dt-scales weights when the base's fork didn't). These adapt the base's *expression*, never its
+   *how* to express things, plus mechanically-forced repo differences (e.g. a renamed cfg field or
+   a different import path between repo versions). These adapt the base's *expression*, never its
    *design*.
 4. **Experience-ledger heuristics** — apply ONLY to (a) choices the base spec leaves open,
    (b) pure-creation mode (no library match), or (c) a base choice that training evidence from the
@@ -33,10 +33,9 @@ folder under `${CLAUDE_PLUGIN_ROOT}/experiences/task-library/`:
 
 | Folder | When |
 |---|---|
-| `manipulation/single-arm-manipulation/` | one arm/hand manipulating objects (pick, place, insert, lift, stack, in-hand) |
-| `manipulation/multi-arm-manipulation/`  | two+ arms / bimanual / multi-robot manipulation |
-| `locomotion/humanoid/`                   | bipedal humanoid locomotion |
-| `locomotion/quadrupedal/`                | quadruped locomotion |
+| `manipulation/` | any arm/hand manipulating objects — single-arm or multi-arm/bimanual (pick, place, insert, lift, stack, in-hand) |
+| `locomotion/humanoid/`   | bipedal humanoid locomotion |
+| `locomotion/quadrupedal/` | quadruped locomotion |
 
 If the task spans/straddles categories, search the closest folder first, then the sibling.
 

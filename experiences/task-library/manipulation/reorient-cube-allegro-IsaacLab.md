@@ -759,12 +759,12 @@ Composer = **sum** (IsaacLab `RewardManager` sums weighted terms; each weight is
   - `action_rate_l2`: weight `-0.01`.
 - Disabled (commented out in source): `track_pos_l2` (weight −10.0), `object_away_penalty` (`is_terminated_term`, weight 0.0).
 - Composer = sum of `weight * term` (RewardManager).
-- **Planning-budget (retro-computed, per-control-step magnitudes, before the manager's `dt` multiply — note IsaacLab silently multiplies each weight by the env step `dt`; here decimation=4, sim dt=1/120 → policy step dt ≈ 1/30 ≈ 0.0333 s):**
-  - `track_orientation_inv_l2`: `1/(dtheta+0.1)`, so per-step ∈ ≈[`1/(π+0.1)`≈0.31, `1/0.1`=10.0]. At success (dtheta≈0.1) ≈ +5.0; far ≈ +0.31. After dt-scale: ≈ [0.01, 0.33].
-  - `success_bonus`: +250 per step while inside threshold; after dt-scale ≈ +8.33/step. Dominant signal that pins the policy at the goal.
-  - `joint_vel_l2` (−2.5e-5): with 16 joints and modest vel, magnitude ≈ −1e-3..−1e-2 pre-dt; negligible.
-  - `action_l2` (−1e-4): with 16-D action of O(1), ≈ −1.6e-3 pre-dt; negligible.
-  - `action_rate_l2` (−1e-2): main smoothness penalty; with EMA-smoothed targets, ≈ −1e-3..−1e-1 pre-dt.
+- **Planning-budget (retro-computed, per-step nominal magnitudes):**
+  - `track_orientation_inv_l2`: `1/(dtheta+0.1)`, so per-step ∈ ≈[`1/(π+0.1)`≈0.31, `1/0.1`=10.0]. At success (dtheta≈0.1) ≈ +5.0; far ≈ +0.31.
+  - `success_bonus`: +250 per step while inside threshold. Dominant signal that pins the policy at the goal.
+  - `joint_vel_l2` (−2.5e-5): with 16 joints and modest vel, magnitude ≈ −1e-3..−1e-2; negligible.
+  - `action_l2` (−1e-4): with 16-D action of O(1), ≈ −1.6e-3; negligible.
+  - `action_rate_l2` (−1e-2): main smoothness penalty; with EMA-smoothed targets, ≈ −1e-3..−1e-1.
   - Net: tracking + success_bonus dominate; penalties are tie-breakers favoring smooth, slow finger motion.
 
 ### Code

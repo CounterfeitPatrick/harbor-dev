@@ -436,7 +436,7 @@ Sum-composed reward (9 terms) implementing a staged manipulation curriculum:
 3. **Open** (`open_drawer_bonus` w=7.5, drawer-position bonus doubled when graspable; `multi_stage_open_drawer` w=1.0, three discrete open-progress stages).
 4. **Penalties** (`action_rate_l2` w=-0.01; `joint_vel_l2` w=-0.0001).
 
-Composer = **sum** (IsaacLab `RewardManager` sums all `RewTerm`s, each scaled by `weight * dt`). Note per memory `feedback_isaaclab_reward_dt_scaling`: every weight is multiplied by `dt=1/60` internally.
+Composer = **sum** (IsaacLab `RewardManager` sums all `RewTerm`s).
 
 ### Decisions resolved (RewardsCfg)
 | term | func | weight | params |

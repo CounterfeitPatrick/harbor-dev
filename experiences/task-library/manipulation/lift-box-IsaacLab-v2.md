@@ -331,7 +331,7 @@ class FrankaLiftBoxEnvCfg_PLAY(FrankaLiftBoxEnvCfg):
         self.observations.policy.enable_corruption = False
 ```
 
-Env-cfg wiring + sim/physx knobs + dt-cancel loop (verbatim, in `LiftBoxEnvCfg`):
+Env-cfg wiring + sim/physx knobs (verbatim, in `LiftBoxEnvCfg`):
 
 ```python
 @configclass
@@ -355,18 +355,6 @@ class LiftBoxEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
         self.sim.physx.gpu_total_aggregate_pairs_capacity = 64 * 1024
         self.sim.physx.friction_correlation_distance = 0.00625
-
-        # Cancel RewardManager's dt scaling: each term pays its nominal weight/step.
-        # This fork's RewardManager.compute() still multiplies every term by
-        # step_dt = decimation*sim.dt = 0.05; the spec §6 weights are nominal
-        # per-step magnitudes (its source fork had the *dt removed). Dividing by
-        # step_dt here recovers the spec's effective magnitudes while keeping the
-        # RewardsCfg weights byte-for-byte verbatim.
-        step_dt = self.decimation * self.sim.dt
-        for _name in vars(self.rewards):
-            _term = getattr(self.rewards, _name)
-            if isinstance(_term, RewTerm):
-                _term.weight /= step_dt
 ```
 
 Sim timing: `decimation=6`, `sim.dt=1/120` → `step_dt = 0.05 s`; `episode_length_s=10.0` →
@@ -907,8 +895,8 @@ by BOTH robots:
 4. `box_xy_align` — tanh box-xy→target attractor, gated on lifted AND dual contact.
 5. `success_bonus` — one-shot +100 latch mirroring the `lift_box_success` predicate (dual grasp).
 
-The dt-cancel loop in `LiftBoxEnvCfg.__post_init__` divides every RewTerm weight by
-`step_dt = 0.05`, so declared weights are nominal per-step magnitudes (effective = declared/0.05).
+Declared weights are nominal per-step magnitudes, applied directly — the declared weight is
+what each term pays per step.
 
 **This reward was validated by training**: PPO @4096 envs, 40M steps → success_rate **0.89**
 (checkpoint `harbor/outputs/ppo_Isaac-Lift-Box-Dual-Franka-v0_20260606-231207`). It is the
@@ -924,7 +912,7 @@ a tip-on-end align-farming exploit (box stood on its short end to open the loose
 The verbatim weight-budget reasoning is preserved in the `RewardsCfg` docstring below.
 
 ### Decisions resolved
-- Per-stage NOMINAL weights (effective = ÷0.05): reach 0.0125 ea, grasp_contact 0.05 ea,
+- Per-stage NOMINAL weights: reach 0.0125 ea, grasp_contact 0.05 ea,
   lift_height 0.25, box_xy_align 0.125, success_bonus 100.0.
 - Contact gate: `_both_fingers_in_contact` thresholds each finger's `force_matrix_w` norm at
   `1e-3`. `dual_contact = gate_0 & gate_1`.
@@ -944,8 +932,7 @@ class RewardsCfg:
     episodic return lands around ~105 instead of ~8400 — same ratios,
     same convergence behaviour, more interpretable magnitudes.
 
-    Per-stage saturated per-step magnitude budget (NOMINAL weights, after the
-    dt-cancel loop in __post_init__ divides each by step_dt = decimation*sim.dt = 0.05):
+    Per-stage saturated per-step magnitude budget (NOMINAL weights, applied directly):
       reach (x2)   ee_0/1_to_grasp_0/1  -> 0.0125/step ea (0.025 paired) -> 5.0 / 200-step ep   [ungated]
       contact (x2) grasp_contact_0/1    -> 0.05/step ea  (0.10 paired)   -> 20.0 / ep (held)     [ungated]
       lift         lift_height          -> 0.25/step  (dual contact)     -> 50.0 / ep            [grasp-gated]
@@ -1216,7 +1203,7 @@ source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/
 ├── config/__init__.py
 ├── config/franka/__init__.py                 # gym.register (-v0 + -Play-v0)
 ├── config/franka/joint_pos_env_cfg.py        # FR3 cfg + scene/action wiring + PLAY
-├── lift_box_env_cfg.py                        # Scene/Actions/Obs/Event/Reward/Term cfgs + sim knobs + dt-cancel
+├── lift_box_env_cfg.py                        # Scene/Actions/Obs/Event/Reward/Term cfgs + sim knobs (nominal weights)
 └── mdp/
     ├── __init__.py                            # star-imports isaaclab.envs.mdp + local modules
     ├── actions_cfg.py                         # EMACumulativeDeltaPositionActionCfg
@@ -1251,7 +1238,7 @@ Clone this task identically into another benchmark:
 
 Reproduce mode pastes §6 reward verbatim + smokes only (no re-tuning); §7 is `<no DR>` (skipped).
 The new task must vendor the FR3 cfg + the `EMACumulativeDeltaPositionAction` classes locally (as
-here), provide the three USD assets under `<repo>/harbor/assets/`, and preserve the
-`__post_init__` dt-cancel loop (this fork's RewardManager still multiplies each term by
-`step_dt=0.05`).
+here), provide the three USD assets under `<repo>/harbor/assets/`, and rely on the
+benchmark-generator dt-strip (nominal weights applied directly — no `__post_init__`
+cancellation loop).
 ```

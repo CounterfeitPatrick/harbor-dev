@@ -373,7 +373,6 @@ A CurriculumCfg ramps the two penalty weights to -1e-1 after 10000 steps.
 - object_goal_tracking_fine_grained: ∈ [0, 5] (only when lifted, near goal)
 - action_rate: ≤ 0, small; ramps to -1e-1 weight after 10k steps
 - joint_vel: ≤ 0, small; ramps to -1e-1 weight after 10k steps
-- (RewardManager multiplies every term by `dt` ≈ 0.02 — see feedback_isaaclab_reward_dt_scaling)
 
 ### Code
 RewardsCfg + CurriculumCfg (`lift_env_cfg.py`):
@@ -473,7 +472,7 @@ def object_goal_distance(
 `action_rate_l2`, `joint_vel_l2` are stock `isaaclab.envs.mdp.rewards`; `modify_reward_weight` is stock `isaaclab.envs.mdp.curriculums`.
 
 ### Smoke
-Roll out; assert every per-term reward finite, `reaching_object` ∈ [0,1], `lifting_object` ∈ {0,15·w·dt}, total reward = sum of terms (RewardManager composer = sum).
+Roll out; assert every per-term reward finite, `reaching_object` ∈ [0,1], `lifting_object` ∈ {0, 15}, total reward = sum of terms (RewardManager composer = sum).
 
 ## §7 DR
 

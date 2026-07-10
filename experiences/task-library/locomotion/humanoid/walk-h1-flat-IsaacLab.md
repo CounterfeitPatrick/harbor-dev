@@ -436,7 +436,7 @@ All obs term funcs (`base_lin_vel`, `base_ang_vel`, `projected_gravity`, `genera
 
 ## §6 Reward
 
-**Description.** H1 replaces the shared `RewardsCfg` with `H1Rewards(RewardsCfg)`. Composer = **sum** (RewardManager sums weighted terms each step; every weight is silently multiplied by `dt` ≈ control-step). Tasks-vs-penalties below; **bold** = H1-specific (added or retuned vs the shared Anymal-style base).
+**Description.** H1 replaces the shared `RewardsCfg` with `H1Rewards(RewardsCfg)`. Composer = **sum** (RewardManager sums weighted terms each step). Tasks-vs-penalties below; **bold** = H1-specific (added or retuned vs the shared Anymal-style base).
 
 **Decisions resolved — final term set, weight, params:**
 
@@ -464,7 +464,7 @@ Joint-deviation penalties (all H1-added, biped posture regularizers):
 - **joint_deviation_arms** → `joint_deviation_l1`, weight -0.2, joints `.*_shoulder_.*`, `.*_elbow`.
 - **joint_deviation_torso** → `joint_deviation_l1`, weight -0.1, joint `torso`.
 
-Planning budget: no per-stage docstring present in `H1Rewards`. Retro-computed dominant magnitudes (per step, before dt-scaling): tracking terms saturate near +1 each (lin + ang ≈ +2); feet_air_time up to +threshold per foot-contact (flat: ≈+0.6 weighted ×1.0); termination_penalty −200 fires once on fall (dominant catastrophic signal). Penalties (orientation, joint-deviation, ankle-limit, acc/action-rate) are small continuous shaping terms tuned to keep an upright, low-deviation, smooth gait. (retro-computed)
+Planning budget: no per-stage docstring present in `H1Rewards`. Retro-computed dominant magnitudes (per step, nominal): tracking terms saturate near +1 each (lin + ang ≈ +2); feet_air_time up to +threshold per foot-contact (flat: ≈+0.6 weighted ×1.0); termination_penalty −200 fires once on fall (dominant catastrophic signal). Penalties (orientation, joint-deviation, ankle-limit, acc/action-rate) are small continuous shaping terms tuned to keep an upright, low-deviation, smooth gait. (retro-computed)
 
 **Code (shared base rewards — `velocity_env_cfg.py:RewardsCfg`).**
 ```python
@@ -685,7 +685,7 @@ def action_rate_l2(env: ManagerBasedRLEnv) -> torch.Tensor:
     return torch.sum(torch.square(env.action_manager.action - env.action_manager.prev_action), dim=1)
 ```
 
-**Smoke (§6 contract).** Per-step `sum(detailed_reward.values()) == env_reward` (composer = sum); reward finite + non-constant across a random rollout. Run when reproducing. WARN: `env.step_dt` dt-scaling applies to every weight (see MEMORY feedback_isaaclab_reward_dt_scaling) — the −200 termination penalty and large feet_air_time weight are tuned against that.
+**Smoke (§6 contract).** Per-step `sum(detailed_reward.values()) == env_reward` (composer = sum); reward finite + non-constant across a random rollout. Run when reproducing.
 
 ---
 

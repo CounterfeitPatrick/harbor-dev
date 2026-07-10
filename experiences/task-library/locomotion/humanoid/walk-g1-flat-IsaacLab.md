@@ -402,7 +402,7 @@ All obs funcs are upstream `isaaclab.envs.mdp` builtins (`base_lin_vel`, `base_a
 
 ## §6 Reward
 
-**Description.** Sum-composed (IsaacLab `RewardManager` sums all weighted RewTerms; each weight is silently multiplied by control dt ≈ 0.02). Two positive tracking terms (lin-vel xy in yaw frame, ang-vel z in world frame), a biped air-time bonus, plus a stack of regularization penalties (orientation, joint torques/acc, action rate, feet slide, ankle joint-pos limits) and FOUR finely-grouped joint-deviation penalties (hip / arms / fingers / torso), and a large termination penalty.
+**Description.** Sum-composed (IsaacLab `RewardManager` sums all weighted RewTerms). Two positive tracking terms (lin-vel xy in yaw frame, ang-vel z in world frame), a biped air-time bonus, plus a stack of regularization penalties (orientation, joint torques/acc, action rate, feet slide, ankle joint-pos limits) and FOUR finely-grouped joint-deviation penalties (hip / arms / fingers / torso), and a large termination penalty.
 
 **Composer:** SUM (IsaacLab `RewardManager`). Weights below are the *cfg weights*; effective per-step reward = `weight · dt · term`.
 
@@ -430,7 +430,7 @@ All obs funcs are upstream `isaaclab.envs.mdp` builtins (`base_lin_vel`, `base_a
 
 Inactive in flat: `undesired_contacts=None`, the base `dof_pos_limits` placeholder (G1 redefines its own ankle-limit term with weight -1.0).
 
-**Planning-budget docstring:** none present in `G1Rewards`. Retro-computed dominant magnitudes (per-step, ×dt=0.02): tracking terms saturate near `weight·dt` (lin ≈ 0.02, ang ≈ 0.02); feet_air_time bonus ≈ 0.75·0.02·0.4 ≈ 0.006/step; termination penalty ≈ -200·(one-shot, only on non-timeout reset). (Retro-computed — no upstream budget annotation.)
+**Planning-budget docstring:** none present in `G1Rewards`. Retro-computed dominant magnitudes (per-step, nominal): tracking terms saturate near their weight (lin ≈ 1.0, ang ≈ 1.0); feet_air_time bonus ≈ 0.75·0.4 ≈ 0.3/step; termination penalty ≈ -200 (one-shot, only on non-timeout reset). (Retro-computed — no upstream budget annotation.)
 
 **Code — RewardsCfg base (velocity_env_cfg.py:230-263):**
 ```python

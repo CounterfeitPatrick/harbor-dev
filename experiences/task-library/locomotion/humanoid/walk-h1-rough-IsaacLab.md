@@ -366,7 +366,7 @@ class ObservationsCfg:
 
 ## §6 Reward
 
-**Description.** Sum-composed reward (IsaacLab `RewardManager` adds all weighted terms, each silently × `step_dt`≈0.02). Two positive tracking terms (xy lin-vel in yaw frame, yaw ang-vel in world frame), a biped air-time bonus, and a battery of penalties: termination, feet slide, ankle joint-limit, hip/arm/torso default-pose deviation, plus inherited base penalties (z lin-vel, xy ang-vel, dof acc, action rate, flat orientation). H1 zeroes `dof_torques_l2` and `undesired_contacts`.
+**Description.** Sum-composed reward (IsaacLab `RewardManager` adds all weighted terms). Two positive tracking terms (xy lin-vel in yaw frame, yaw ang-vel in world frame), a biped air-time bonus, and a battery of penalties: termination, feet slide, ankle joint-limit, hip/arm/torso default-pose deviation, plus inherited base penalties (z lin-vel, xy ang-vel, dof acc, action rate, flat orientation). H1 zeroes `dof_torques_l2` and `undesired_contacts`.
 
 **Composer: SUM.**
 
@@ -393,11 +393,11 @@ class ObservationsCfg:
 
 > Note: H1's `H1Rewards` subclasses base `RewardsCfg`. It re-declares `dof_pos_limits`, `track_lin_vel_xy_exp`, `track_ang_vel_z_exp`, `feet_air_time` (rough: w=0.25,thr=0.4 — different funcs than base!), and adds `termination_penalty`, `feet_slide`, the three `joint_deviation_*`. Base `feet_air_time` used `mdp.feet_air_time` (L2, `.*FOOT`); H1 replaces it with `mdp.feet_air_time_positive_biped` on `.*ankle_link`. Base `track_*` use body-frame funcs; H1 replaces with yaw-frame / world-frame variants. The `lin_vel_z_l2`, `undesired_contacts` base terms are set to `None`.
 
-**Planning-budget (retro-computed per-step saturated magnitudes, ×dt≈0.02 applied by manager).**
-- track_lin_vel_xy_exp: max raw 1.0 → ~0.02/step at perfect tracking.
-- track_ang_vel_z_exp: max raw 1.0 → ~0.02/step.
-- feet_air_time: clamped to threshold 0.4, w=0.25 → ≤0.1 raw → ~0.002/step when commanded.
-- termination_penalty: raw 1.0 on a fall × −200 → −4.0 one-shot at the terminating step (×dt: −4.0 since is_terminated fires once; large dominant negative).
+**Planning-budget (retro-computed per-step saturated nominal magnitudes).**
+- track_lin_vel_xy_exp: max 1.0/step at perfect tracking.
+- track_ang_vel_z_exp: max 1.0/step.
+- feet_air_time: clamped to threshold 0.4, w=0.25 → ≤0.1/step when commanded.
+- termination_penalty: is_terminated (1.0 on a fall) × −200 → −200 one-shot at the terminating step (large dominant negative).
 - penalties (deviation/slide/orientation/action_rate/acc) are small shaping terms keeping the sum dominated by the two tracking exps under nominal walking.
 
 **Code — H1 reward class** (`rough_env_cfg.py:19-67`):

@@ -7,7 +7,8 @@ per step depending on what the underlying env exposes:
 
 1. **Manager-based** (``env.unwrapped.reward_manager`` exists). Reads
    ``manager._step_reward`` (shape ``(num_envs, num_terms)``) plus
-   ``manager.active_terms``. Per-term value = ``step_reward[:, i] * step_dt``;
+   ``manager.active_terms``. Per-term value = ``step_reward[:, i]`` (the manager
+   stores the real per-step reward);
    the composer-sum invariant ``Σ terms == env_reward`` holds by
    construction and is asserted each step.
    ``info["reward_composer"] = "sum"``.
@@ -51,8 +52,8 @@ def _make_detailed_reward_wrapper():
         Each step:
           1. Take env's native (obs, reward, term, trunc, info) — UNCHANGED.
           2. Read ``reward_manager._step_reward`` (shape [num_envs, num_terms])
-             and ``active_terms``; per-term per-step value
-             = step_reward[:, i] * step_dt.
+             and ``active_terms``; per-term per-step value = step_reward[:, i]
+             (the manager stores the real per-step reward).
           3. Verify ``torch.allclose(Σ terms, env_reward, atol=1e-4, rtol=1e-3)``.
           4. Stash {term_name: per-env tensor} on ``info["detailed_reward"]``.
 
@@ -77,7 +78,7 @@ def _make_detailed_reward_wrapper():
                 step_reward = self._manager._step_reward  # (num_envs, num_terms)
                 names = list(self._manager.active_terms)
                 terms = {
-                    names[i]: step_reward[:, i] * self._step_dt
+                    names[i]: step_reward[:, i]
                     for i in range(len(names))
                 }
                 composed = sum(terms.values())

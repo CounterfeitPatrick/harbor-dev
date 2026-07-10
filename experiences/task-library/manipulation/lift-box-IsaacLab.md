@@ -659,7 +659,7 @@ def box_quat_in_world(
 
 Composer = **sum**. 7 active terms in a strictly-increasing per-stage magnitude ladder (the iter-0 set was scaled down 80× to the values shown — same ratios, same convergence behaviour). No regularizers (action_rate, joint_vel). No failure-mode penalties. The `success_bonus` is a per-env one-shot latch that fires on the FIRST step the success predicate is satisfied each episode; the latch resets at `episode_length_buf <= 1`.
 
-**Fork-specific note (CRITICAL for reproduction):** this IsaacLab fork has REMOVED the per-weight `* dt` multiplier inside `RewardManager.compute` (`isaaclab/managers/reward_manager.py:149-153`). Weights below are the **raw per-step magnitudes** that show up in `episodic_return_mean`. If reproducing into a stock IsaacLab fork that still multiplies by `dt = sim.dt * decimation = 0.05`, multiply every weight here by `1/0.05 = 20` to recover the same effective magnitudes.
+Weights below are **nominal per-step magnitudes** — the declared weight is exactly what each term pays per step (and what shows up in `episodic_return_mean`).
 
 ### Decisions resolved
 
@@ -673,7 +673,7 @@ Composer = **sum**. 7 active terms in a strictly-increasing per-stage magnitude 
 | box_xy_align | `mdp.box_xy_align` | `std=0.15, target_xy=(0.0, 0.0), lift_threshold=0.05, init_z=0.11025` | **0.125** |
 | success_bonus | `mdp.success_bonus` | `target_xy=(0.0, 0.0), lift_height=0.25, xy_pos_tol=0.05, z_pos_tol=0.05, vel_tol=0.10, init_z=0.11025` | **100.0** |
 
-#### Per-stage saturated per-step magnitude budget (raw weights, no dt-multiplier)
+#### Per-stage saturated per-step magnitude budget (nominal weights)
 
 | Stage | Term(s) | Per-step saturated | 200-step ep ceiling |
 |---|---|---:|---:|

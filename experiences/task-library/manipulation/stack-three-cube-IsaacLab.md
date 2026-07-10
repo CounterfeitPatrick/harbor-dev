@@ -1077,7 +1077,7 @@ Composer = **sum** (verified at the call site in `isaaclab.managers.reward_manag
 
 The reward is a grasping-cube mux + sparse latched bonuses + a no-op release-shaping placeholder. The §5 obs mux and §6 reward share the same `_cube_0_on_cube_1_predicate` (with identical thresholds — xy<0.02 AND |Δz−CUBE_SIZE|<0.01) so the "currently grasped cube" flips on the same instant in obs and reward. In state B, the dense terms (`reach`, `lift`, `align`, `linear_lift_grasping_cube`) are multiplied by an integer scale + offset (30·base+1, 10·lifted+1, 50·base+1, 10·base·gate+1) to outweigh the state-A magnitudes and prevent the policy from regressing when the predicate flips.
 
-**Fork-specific note (CRITICAL for reproduction):** this IsaacLab fork has REMOVED the per-weight `* dt` multiplier inside `RewardManager.compute` (`isaaclab/managers/reward_manager.py:149-153`). Weights below are the **raw per-step magnitudes**. If reproducing into a stock IsaacLab fork that still multiplies by `dt = sim.dt * decimation = 1/120 * 6 = 0.05`, multiply every weight by `20` to recover the same effective magnitudes.
+Weights below are **nominal per-step magnitudes** — the declared weight is exactly what each term pays per step.
 
 ### Decisions resolved
 
@@ -1094,7 +1094,7 @@ The reward is a grasping-cube mux + sparse latched bonuses + a no-op release-sha
 
 > **WARN** — `RewardsCfg.align` is passed `minimal_height_b=0.0875` but the docstring annotation on the env_cfg line 306 says "`minimal_height_b = target_z = cube_1.z + 2·CUBE_SIZE = 0.1075`". The actual value (0.0875) is `cube_1.z(0.0215 init) + CUBE_SIZE(0.043) + xy_threshold-ish ≈ table_top + 1.5·CUBE_SIZE`. The 0.0875 value is what the code actually passes; the 0.1075 figure is the comment's intended design value. Either align — use what the code passes (`0.0875`) to reproduce exactly.
 
-#### Per-stage saturated per-step magnitude budget (raw weights, no dt-multiplier)
+#### Per-stage saturated per-step magnitude budget (nominal weights)
 
 Note: these are "(retro-computed)" — the env_cfg docstring on `RewardsCfg` lists older weights (`success_bonus w=300`, `stack_broke_penalty w=-500`, `reach w=0.02`, `lift w=0.1`, `align w=0.32`, etc.) that don't fully match the live values. Live weights below.
 

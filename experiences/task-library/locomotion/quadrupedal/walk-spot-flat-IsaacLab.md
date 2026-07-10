@@ -352,7 +352,7 @@ class SpotObservationsCfg:
 
 **Description.** Spot's reward is the **sum** of 5 task terms and 9 regularization penalties (14 `RewardTermCfg`s), all in `config/spot/mdp/rewards.py`. This is the distinguishing feature of Spot vs the shared velocity reward: instead of `track_lin_vel_xy_exp`/`track_ang_vel_z_exp` + simple L2 penalties, Spot adds **gait enforcement** (`GaitReward`, a `ManagerTermBase` that products sync/async foot-pair contact-timing kernels), **foot air-time shaping** (`air_time_reward`), **foot-clearance** (`foot_clearance_reward`), **foot-slip** and **air-time-variance** penalties, plus command-gated linear/angular velocity tracking with a velocity-magnitude ramp (`base_linear_velocity_reward` scales reward above `ramp_at_vel`). Several terms are **command-gated**: they only apply when `||cmd|| > 0` OR body speed exceeds `velocity_threshold` (0.5), so the policy isn't penalized for standing when commanded to stand. `joint_position_penalty` is the inverse — it is multiplied by `stand_still_scale=5.0` when standing, to hold the default pose.
 
-**Composer: SUM** (IsaacLab `RewardManager` sums all weighted terms; each weight is additionally multiplied by `dt` ≈ 0.02 internally — see CLAUDE.md memory `feedback_isaaclab_reward_dt_scaling`).
+**Composer: SUM** (IsaacLab `RewardManager` sums all weighted terms).
 
 **Decisions resolved — RewardsCfg terms (func, weight, key params).**
 | term | func | weight | key params |

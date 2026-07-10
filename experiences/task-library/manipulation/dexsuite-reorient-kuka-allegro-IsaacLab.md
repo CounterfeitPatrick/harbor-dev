@@ -667,7 +667,7 @@ Covered by §1 build smoke (`env.observation_space` Dict shapes). NOT CAPTURED o
 ## §6 Reward
 
 ### Description
-Composer = **sum** (IsaacLab `RewardManager` sums all weighted RewTerms per step, each weight implicitly ×dt; see MEMORY note on dt-scaling). Terms: small action / action-rate L2 penalties; a tanh reach reward (`fingers_to_object`); contact-gated position- and orientation-tracking tanh rewards (the two tracking terms are MULTIPLIED by a contact indicator inside their functions — only paid when ≥2 fingers incl. thumb touch the object); a large product-of-tanh `success` bonus (pos AND rot within std); a penalty when the abnormal-robot termination fires; plus the kuka_allegro-specific `good_finger_contact` bonus (0.5 when thumb + ≥1 other finger contact > 1 N).
+Composer = **sum** (IsaacLab `RewardManager` sums all weighted RewTerms per step). Terms: small action / action-rate L2 penalties; a tanh reach reward (`fingers_to_object`); contact-gated position- and orientation-tracking tanh rewards (the two tracking terms are MULTIPLIED by a contact indicator inside their functions — only paid when ≥2 fingers incl. thumb touch the object); a large product-of-tanh `success` bonus (pos AND rot within std); a penalty when the abnormal-robot termination fires; plus the kuka_allegro-specific `good_finger_contact` bonus (0.5 when thumb + ≥1 other finger contact > 1 N).
 
 ### Decisions resolved — RewardsCfg (base) + kuka_allegro override
 | term | func | weight | key params |
@@ -681,7 +681,7 @@ Composer = **sum** (IsaacLab `RewardManager` sums all weighted RewTerms per step
 | early_termination | is_terminated_term | -1 | term_keys="abnormal_robot" |
 | good_finger_contact | contacts | 0.5 | threshold=1.0 (kuka_allegro mixin) |
 
-Per-step saturated magnitudes (retro-computed; weights are ×dt≈1/60 inside RewardManager unless the impl divides out — verify against your trainer): reach ≤ 1·1.0; pos_track ≤ 1·2.0 (gated); orient_track ≤ 1·4.0 (gated); success ≤ 1·10; good_finger_contact ≤ 0.5; penalties small/negative. Success bonus is the dominant signal once contact + alignment achieved.
+Per-step saturated nominal magnitudes (retro-computed): reach ≤ 1.0; pos_track ≤ 2.0 (gated); orient_track ≤ 4.0 (gated); success ≤ 10; good_finger_contact ≤ 0.5; penalties small/negative. Success bonus is the dominant signal once contact + alignment achieved.
 
 ### Code — RewardsCfg + kuka_allegro reward override
 `dexsuite_env_cfg.py`

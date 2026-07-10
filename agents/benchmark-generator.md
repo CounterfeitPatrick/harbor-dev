@@ -1,7 +1,7 @@
 ---
 name: benchmark-generator
 description: |
-  Adds benchmark sanity scaffolding to a Python env that dependency-generator already built and verified (uv backend — host venv at `<repo>/.venv/`). Reads repo markdown for benchmark-level context, renders TWO scripts (random-action rollout + render-to-MP4), runs a 2-tier smoke (L1 random / L2 render), captures the suite spec into <repo>/harbor/benchmark-generator/benchmark-spec.json, and emits history.md + benchmark.md receipts. Does NOT generate train/eval scripts — that scaffolding is owned by rl-integration-generator. Does NOT modify the env — dependency-generator owns the environment, including the `imageio[ffmpeg]` extras line. PREREQUISITE: dependency-generator already set up the environment (`<repo>/.venv/` ready and the import smoke test green). Invoke ONLY after dependency-generator finished cleanly.
+  Adds benchmark sanity scaffolding to a Python env that dependency-generator already built and verified (uv backend — host venv at `<repo>/.venv/`). Reads repo markdown for benchmark-level context, renders TWO scripts (random-action rollout + render-to-MP4), runs a 2-tier smoke (L1 random / L2 render), captures the suite spec into <repo>/harbor/benchmark-generator/benchmark-spec.json, and emits history.md + benchmark.md receipts. Does NOT generate train/eval scripts — that scaffolding is owned by rl-integration-generator. Does NOT modify the env config or dependencies — dependency-generator owns the environment, including the `imageio[ffmpeg]` extras line. The ONE deliberate env-source edit it makes is the IsaacLab dt-strip (Step 3.4): a single-line, idempotent reward-semantics normalization of the vendored `RewardManager.compute()`. PREREQUISITE: dependency-generator already set up the environment (`<repo>/.venv/` ready and the import smoke test green). Invoke ONLY after dependency-generator finished cleanly.
 tools: [Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, mcp__plugin_harbor_harbor__get_benchmark_spec, mcp__plugin_harbor_harbor__lookup_benchmark]
 model: opus
 ---
@@ -158,6 +158,45 @@ Both scripts MUST keep the shipped header convention: a module docstring with a 
 
 Full contract, env-build expression rules, anti-patterns: `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/smoke-test-contract.md`.
 
+## Step 3.4 — [IsaacLab only] Strip the RewardManager dt scaling (+ hard smoke)
+
+Stock IsaacLab's manager-based `RewardManager.compute()` scales every reward term by the
+control `dt` — making declared weights ~20x too small and the native per-term LOG values
+~20x too large at 20 Hz. Harbor's convention is **nominal weights, and logs that show the
+real per-step reward**, so strip the dt scaling ONCE here, at the source. **This is the
+only stage that deals with dt — every downstream stage assumes it is gone and never
+mentions it.**
+
+Run the deterministic patcher — it strips the scaling AND is a **hard smoke gate**
+(idempotent; a clean no-op on non-IsaacLab repos or an already-stripped repo):
+
+```bash
+<repo>/.venv/bin/python "${CLAUDE_PLUGIN_ROOT}/scripts/benchmark-generator/strip_reward_dt.py" \
+    --repo   <repo_path> \
+    --python <repo_path>/.venv/bin/python
+```
+
+It removes both dt factors from `compute()` (the `* dt` on the value line → nominal weights;
+the `/ dt` on the `_step_reward` log buffer → real per-step reward). The gate is **fail-closed
+and structure-agnostic**, not a brittle string match: after a best-effort strip it re-scans the
+whole `compute()` body and asserts the **postcondition** that NO `[*/]` scaling by any dt-like
+token (`dt` / `step_dt` / `self.*dt`) survives anywhere. So a future IsaacLab that renames the
+`dt` param, reorders the multiply, or restructures the loop cannot slip through: if the stripper
+doesn't recognize the new layout, the dt token remains → the script leaves the file untouched and
+EXITS 1 (`DT-SCALE SMOKE FAIL`, with the offending line), rather than falsely reporting success.
+It also fails closed if `compute()` / `reward_manager.py` can't be located while IsaacLab is
+importable (moved file = structure changed). Only a genuinely non-IsaacLab repo is a no-op pass.
+
+**Exit `1` is a FATAL smoke failure** — treat it like L1/L2: do not proceed to Step 3.5 until it
+prints `DT-SCALE SMOKE PASS`. On a FAIL, open `compute()`, strip the dt scaling by hand (and add a
+`# harbor: dt-scaling stripped` marker on the edited lines), then re-run. The **policy reward is
+unchanged** by the strip (`reward_buf = Σ(weight·term)`); only the per-term LOG scale is corrected.
+
+> Caveat to flag: this is a **repo-global** change. Any *upstream* IsaacLab task whose
+> weights were tuned assuming the `* dt` multiply will see its reward inflate ~20x. Harbor
+> trains harbor-authored tasks (all nominal-weight), so this is intended; note it in the
+> summary if the repo also ships upstream tasks meant to be trained as-is.
+
 ## Step 3.5 — Capture suite spec
 
 Write `<repo>/harbor/benchmark-generator/benchmark-spec.json` with the fields `rl-integration-generator` and the RL training/tuning commands (`/harbor:rl-run`, `/harbor:rl-tune`) need. `category` is always `"rl"` (we no longer branch on IL vs RL).
@@ -285,7 +324,7 @@ If L1 or L2 fails, do **not** silently edit the env. Instead:
 
 4. **Only if user picks A**: apply fix with `Edit` / `Bash`. Retry the failed tier ONCE. If it still fails, stop and report. Append `{path, change_summary}` to `diagnostics_applied`.
 
-Never loop. Never modify the env silently. The contract: dependency-generator delivered a venv that imports cleanly; failures past that point are upstream bugs or our own scaffolding bugs, not env-config debt.
+Never loop. Never modify the env silently. The contract: dependency-generator delivered a venv that imports cleanly; failures past that point are upstream bugs or our own scaffolding bugs, not env-config debt. (The one sanctioned env-source edit is the Step 3.4 IsaacLab dt-strip — declared, idempotent, reward-semantics only.)
 
 ## Key Rules
 
@@ -301,6 +340,7 @@ Never loop. Never modify the env silently. The contract: dependency-generator de
 | L2 `no RGB frames captured` | `{{VIDEO_FRAME_EXTRACT}}` returns `None` for this benchmark | re-pick the expression (camera obs key, env.render(), env.physics.render()) and re-render `render_random.py` |
 | L2 `ImportError: imageio` | dependency-generator's harbor-extras block was skipped | re-run dependency-generator (it injects `imageio[ffmpeg]` into setup_uv.sh) |
 | L1 missing system library | host is missing libegl1 / libosmesa6 / libvulkan1 | surface the apt package name to the user; do NOT auto-install — host system changes need consent |
+| `DT-SCALE SMOKE FAIL` (Step 3.4) | `compute()` still scales by a dt token, or its structure changed so the auto-stripper couldn't recognize it (new IsaacLab version, moved file, hand-edit) — the gate fails closed rather than false-pass | fatal — open `compute()`, strip the dt scaling by hand + add a `# harbor: dt-scaling stripped` marker, re-run; downstream stages assume no dt scaling |
 
 ## Case Studies
 
