@@ -54,7 +54,7 @@ The spec is **ground truth** — subagents don't re-derive design choices, they 
    | # | Stage | Done-check | If missing |
    |---|---|---|---|
    | 1 | `dependency-generator` | `test -x ${repo_path}/.venv/bin/python` | `Agent(dependency-generator, prompt={repo_path})` — renders `harbor/dependency-generator/setup_uv.sh`, creates `.venv/`, runs the import smoke |
-   | 2 | `benchmark-generator` | `test -f ${repo_path}/harbor/benchmark-generator/benchmark-spec.json` AND its `tasks[]` is non-empty | `Agent(benchmark-generator, prompt={repo_path})` — random rollout + render-to-MP4 smokes, writes `benchmark-spec.json` + `task-implementation.md` (Step 3.7) |
+   | 2 | `benchmark-generator` | `test -f ${repo_path}/harbor/benchmark-generator/benchmark-spec.json` AND its `tasks[]` is non-empty | `Agent(benchmark-generator, prompt={repo_path})` — random rollout + render-to-MP4 smokes, writes `benchmark-spec.json` + `task-implementation.md` (Step 3.7). **Dispatch with `repo_path` ONLY — benchmark-generator is a repo-level, TASK-AGNOSTIC step: never pass the pending task's name/description/intent. Leaking it makes the family guide pre-commit to one task's design (e.g. framing a pick-place task as "mirror the lift task + add a container"), which biases every downstream agent. The per-task design base is chosen later, in Step 1.5.** |
    | 3 | `rl-integration-generator` | `test -f ${repo_path}/harbor/rl-integration-generator/rl-suite-spec.json` | `Agent(rl-integration-generator, prompt={repo_path, algorithm_source})` — renders the train/eval/render scaffold + configs |
 
    **`algorithm_source` for stage 3**: if the user's prompt names a source (`stable_baseline3`, `local_implementation` with a package path / github URL) or otherwise states a specific algorithm requirement, honor it. Otherwise default to `custom_torch` (the self-contained custom algorithm tree) — do NOT ask.
@@ -128,18 +128,11 @@ Each phase also writes a process log inside the same directory:
 
 These logs are **append-only within one agent's run**, written as work progresses. Each agent discovers state from the repo (env_cfg, mdp/ tree) on entry — there is no inter-agent handoff file.
 
-### Step 1.5 — Search the task-library (create / edit mode)
+### Step 1.5 — Select the design base (create / edit mode)
 
-Before dispatching the chain, run the protocol in `${CLAUDE_PLUGIN_ROOT}/references/task-library-search.md` **once** for the whole task:
+Run the protocol in `${CLAUDE_PLUGIN_ROOT}/references/task-library-search.md` **once** to pick the single most-relevant task-library spec as the `design_base`; set `library_refs` and record it in `spec.json` + the final summary. Pass them into the task-generator / reward dispatches so they don't re-search. `task-implementation.md` is used only for how-to-express-it-in-this-repo, never as the design base.
 
-1. Classify the task's embodiment from `<description>` + `<name>` → pick the `experiences/task-library/<folder>/`.
-2. `ls` + `grep -ril <verb/object/robot keywords>` that folder, then **read EVERY result** — never pipe this discovery search through `head`/`tail`/limit and never stop at the first plausible hit (the best match is often alphabetically adjacent to a near-miss). Pick the 1–3 most relevant `*-implementation.md` specs. Set `library_refs = [<abs paths>]`.
-3. If a match is **byte-identical** to what's wanted, recommend `/harbor:task-create from=<that spec>` (reproduce mode) and ask the user whether to switch before authoring from scratch.
-4. Record the matches (or "no match") in `spec.json` and the final summary.
-
-**Adapt-first is binding** (protocol Step 4): when `library_refs` is non-empty, the downstream agents treat the best match as the BASE implementation and author by minimal modification — pure creation mode activates ONLY when the library has no relevant task. Each agent documents an **Adaptation delta** block (base spec, kept-as-is, enumerated changes + why) in its history file; surface the base + headline changes in the final summary too.
-
-Skip in **reproduce** mode — the `from=<spec>` already IS the source design. Never block on an empty library; `library_refs = []` is fine (pure creation mode). Pass `library_refs` into the task-generator and reward-generator dispatches so they don't each re-grep.
+Skip in **reproduce** mode (`from=<spec>` already IS the design). Empty library → pure creation mode (`library_refs = []`).
 
 ### Step 2 — Dispatch `task-generator` (sections from §1..§5)
 

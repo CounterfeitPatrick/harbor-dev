@@ -187,7 +187,8 @@ templates/
   plot/                  spec.example.yaml (example /harbor:plot spec)
 
 references/
-  task-library-search.md  cross-cutting: search the task-library + experience ledger for a similar prior task BEFORE designing (read by task-generator, /harbor:task-create, /harbor:reward-tune main agent)
+  task-library-search.md  cross-cutting: search the task-library and return the single most-relevant prior task BEFORE designing (read by /harbor:task-create Step 1.5, /harbor:reward-tune main agent)
+  adapt-first.md          cross-cutting: how the authoring agents build from the selected base — read the ledger, port everything / change only overrides, document the delta (read by task-generator, reward-tune main agent, dr-generator)
   common/agent-conventions.md  cross-cutting: shared conventions (smoke pass-criterion, diagnose-and-retry, process-log discipline, English-only / no-nested-dispatch) for the authoring subagents — each agent's body overrides the generic shape with its own specifics
   dependency-generator/         decision-protocol, install-plan-schema
   benchmark-generator/   smoke-test-contract,

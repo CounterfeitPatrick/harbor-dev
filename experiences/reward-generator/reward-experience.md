@@ -2,7 +2,7 @@
 
 Cross-run heuristics from human-in-the-loop reward tuning. These are **heuristics, not rules** —
 weigh them against the task at hand. They are **subordinate to a matched task-library base spec**
-(see `references/task-library-search.md` "Priority"): library tasks are proven successful, and a
+(see `references/adapt-first.md` precedence): library tasks are proven successful, and a
 heuristic is never a reason to modify a proven base design. **Each entry is numbered for stable
 cross-reference; never renumber existing entries — only append.**
 

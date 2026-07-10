@@ -60,7 +60,8 @@ Author or surgically re-author the requested subset of §1..§5. Smokes for thos
 - `${CLAUDE_PLUGIN_ROOT}/references/task-generator/isaaclab-code-reference.md` — IsaacLab API surface for action terms, scene state, observation manager, termination/command managers, forced reset/goal injection. Read this before authoring or rendering smokes.
 - `${CLAUDE_PLUGIN_ROOT}/references/task-generator/smoke-contracts.md` — what each smoke verifies + what each substitution slot expects.
 - `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/task-implementation-contract.md` — per-family conventions baked into the implementation guide.
-- `${CLAUDE_PLUGIN_ROOT}/references/task-library-search.md` — **read FIRST** (Phase 0): how to find a similar prior task in the task-library + the task-generator experience ledger and reuse its §1–§5 design.
+- `${CLAUDE_PLUGIN_ROOT}/references/task-library-search.md` — **read FIRST** (Phase 0): find the single most-relevant prior task in the task-library (returns one base). Skip if `library_refs` was passed in.
+- `${CLAUDE_PLUGIN_ROOT}/references/adapt-first.md` — how to build §1–§5 from that base: read the ledger, port everything / change only overrides, document the delta.
 
 ## Smoke templates
 
@@ -118,13 +119,9 @@ Run the mode-specific check (see Inputs table). Read `task-implementation.md` an
 
 ### Phase 0 — Search the task-library FIRST
 
-Before authoring, run the protocol in `references/task-library-search.md`: classify the new task's embodiment, find the 1–3 most relevant `experiences/task-library/<folder>/*.md` specs, skim their §1–§5, and read `experiences/task-generator/task-experience.md`. If the dispatcher passed `library_refs` in Inputs (resolved paths from `/harbor:task-create` Step 1.5), read those specs directly and skip the classify+grep — the search was already done for you.
-
-**Adapt-first (BINDING — protocol Step 4).** When a relevant match exists, its §1–§5 is the BASE implementation: author by computing the **minimal modification** that turns the proven base into the new task (object count/size, poses, robot placement, success geometry, names, asset paths). Library tasks are PROVEN successful (protocol "Priority" section): the base's settled decisions outrank every `task-experience.md` heuristic — do NOT re-derive decisions the base already settles (action mode, reset ranges, obs layout, **robot init pose/qpos**). The in-repo canonical example still wins on API/idiom. If a match is byte-identical to what's wanted, recommend `/harbor:task-create from=<spec>` instead of re-authoring. **Pure creation mode activates ONLY when no relevant task exists in the library** — an imperfect match means a larger delta, not pure-create.
+Get the base: if `library_refs` was passed in (from `/harbor:task-create` Step 1.5), use it; otherwise run `references/task-library-search.md` to select the single most-relevant task-library spec. Then **follow `references/adapt-first.md`** — read the ledger, port everything / change only what the prompt overrides, and record the **Adaptation delta** in `task-history.md`. Its §1–§5 is your BASE; author by minimal modification.
 
 **Embodiment-swap trap (known failure mode):** when the base's robot asset is missing and you substitute the canonical in-repo robot, you must still PORT the base's `init_state.joint_pos` / init pose onto the substitute (joint values map 1:1 across same-family arms, e.g. FR3 → Panda) — `SomeRobotCfg.replace(...)` silently inherits the substitute's default home pose otherwise. Init qpos is task DESIGN (it places the EE over the workspace at t=0), not robot idiom. Any value that genuinely cannot port gets an explicit `changed:` bullet in the Adaptation delta.
-
-Document the outcome in `task-history.md` as an **Adaptation delta** block (protocol Step 5): the base spec path (or "none — pure creation mode"), what was kept as-is, and one bullet per change made to adapt it — each with why the new task requires it. Never block on an empty library.
 
 ### Phase A — authoring rules
 

@@ -1,123 +1,40 @@
-# Task-library search protocol (run FIRST, before any design)
+# Task-library search (returns ONE selected task)
 
-Loaded by `task-generator` and the `/harbor:task-create` / `/harbor:reward-tune` orchestrators (the
-reward-tune **main agent** owns reward design, so it — not the `reward-generator` subagent — reads this for §6). Before authoring or tuning anything, search the cross-run **task-library** for a similar
-task already designed end-to-end, plus the relevant **experience ledger** — then reuse what fits.
+Run FIRST by whoever needs a design base — `/harbor:task-create` Step 1.5, or the reward-tune main
+agent. It searches the cross-run **task-library** and returns the **single most-relevant** proven task
+to adapt from. Every library spec is a verified, successfully-trained task (a full §1..§7 spec named
+`<short-task>-<repo>.md`, filled by `/harbor:update-experience target=task-library`).
 
-The library is filled by `/harbor:update-experience target=task-library` from `/harbor:probe-task`
-specs; each file is a full §1..§7 implementation spec named `<short-task>-<repo>.md`.
+Selection only. How to build from the returned base is `adapt-first.md`.
 
-## Priority: library specs are PROVEN — they outrank all experience ledgers
+## Step 1 — Classify the new task
 
-Every task in the library is a **verified, successfully-trained task** — its design choices have been
-proved correct end-to-end. The experience ledgers (`task-experience.md` / `reward-experience.md` /
-`dr-experience.md` / `tuning-experience.md`) are **heuristics distilled from past runs** — useful
-priors, but never proof. When the two disagree, the precedence is:
-
-1. **User description / explicit constraints** — always binding.
-2. **The matched library base spec** — its settled design choices (term ladders, weights, gating,
-   init poses, action modes, …) are copied as-is.
-3. **Destination-repo mechanics** — the in-repo canonical example / `task-implementation.md` for
-   *how* to express things, plus mechanically-forced repo differences (e.g. a renamed cfg field or
-   a different import path between repo versions). These adapt the base's *expression*, never its
-   *design*.
-4. **Experience-ledger heuristics** — apply ONLY to (a) choices the base spec leaves open,
-   (b) pure-creation mode (no library match), or (c) a base choice that training evidence from the
-   CURRENT run has demonstrably falsified on the new task (logged in the Adaptation delta with the
-   evidence). A ledger heuristic is NEVER a reason to pre-emptively "improve" a proven base design.
-
-## Step 1 — Classify the new task's embodiment
-
-From the task `description` + `task_id` (and the in-repo canonical example if already known), pick the
-folder under `${CLAUDE_PLUGIN_ROOT}/experiences/task-library/`:
+From `description` + `task_id`, pick the folder under `${CLAUDE_PLUGIN_ROOT}/experiences/task-library/`:
 
 | Folder | When |
 |---|---|
-| `manipulation/` | any arm/hand manipulating objects — single-arm or multi-arm/bimanual (pick, place, insert, lift, stack, in-hand) |
+| `manipulation/` | any arm/hand manipulating objects — single- or multi-arm/bimanual (pick, place, insert, lift, stack, in-hand) |
 | `locomotion/humanoid/`   | bipedal humanoid locomotion |
 | `locomotion/quadrupedal/` | quadruped locomotion |
 
-If the task spans/straddles categories, search the closest folder first, then the sibling.
+If the task straddles categories, search the closest folder first, then the sibling.
 
-## Step 2 — Find relevant specs (filenames are searchable on purpose)
+## Step 2 — Find candidates, then select one
 
 ```bash
 LIB="${CLAUDE_PLUGIN_ROOT}/experiences/task-library/<folder>"
-ls "$LIB"                                   # short accurate names: stack-three-cube-IsaacLab.md, ...
-grep -ril "<verb|object|robot keywords>" "$LIB"   # e.g. "stack", "drawer", "cube", "franka"
+ls "$LIB"
+grep -ril "<verb|object|robot keywords>" "$LIB"
 ```
 
-**Review EVERY result — never truncate this discovery search.** Do NOT pipe the `ls` / `grep`
-through `head`, `tail`, or any `| head -N` / limit, and do not stop reading at the first plausible
-hit. The folder is small (tens of specs) and the filenames are short by design, so read the full
-list every time. The best match is often alphabetically adjacent to a near-miss (e.g.
-`dexterous-grasp-*` sits right after `dexsuite-reorient-*`); a truncated search silently drops it and
-reads as "I looked" when you didn't. If you must sort for readability, `| sort` — never `| head`.
+**Review EVERY result — never truncate this discovery search.** No `head`/`tail`/limit; the folder is
+small and the best match is often alphabetically adjacent to a near-miss. Sort for readability if you
+must (`| sort`), never `| head`.
 
-Rank by overlap with the new task's verb (stack / insert / lift / grasp / walk …), object class, and
-robot. Pick the **1–3 best matches**. Skim each match's `Task summary` + the sections you own
-(`task-generator` → §1–§5; the reward-tune main agent → §6) — don't read whole files you don't need.
+Shortlist the **top 3** by verb (pick / place / lift / insert / stack …) + goal structure + object +
+robot, **read each of the 3 in full** (what it actually does — scene, goal, action, reward), and
+**return the single most relevant** as the `design_base`. Match the task, not just the robot: a
+place-into-container task is closest to another place-into-container task, not a lift task that only
+shares the arm.
 
-## Step 3 — Read the matching experience ledger
-
-Also read the caller's own append-only ledger (heuristics distilled across runs):
-
-| Caller | Ledger |
-|---|---|
-| `task-generator` | `experiences/task-generator/task-experience.md` |
-| `/harbor:reward-tune` (main agent) | `experiences/reward-generator/reward-experience.md` |
-| `dr-generator` | `experiences/dr-generator/dr-experience.md` |
-
-## Step 4 — Adapt-first (BINDING): minimal modification of the matched spec
-
-When a relevant match exists, **adapt-first is the rule, not a suggestion**: the best-matched spec is
-the BASE implementation, and authoring means computing the **minimal modification** that turns the
-proven base into the new task. Do NOT re-derive design choices from scratch that the base already
-settles — a worked task encodes dozens of validated decisions (action mode, reset ranges, obs layout,
-reward term ladder, weights, composer, gating, DR axes); every gratuitous deviation from it is an
-unforced risk.
-
-- **Start from the base**: take the matched spec's sections you own as the starting implementation.
-  Change only what the new task's description / scene actually requires (object count/size, poses,
-  robot placement, success geometry, stage predicates, asset paths, names).
-- **Ledger heuristics do not override the base** (see the Priority section above): the base spec is
-  proven; the ledgers are not. Do not rebalance proven weights, remove proven terms, or restructure
-  proven gating because a ledger entry suggests a different pattern — let training falsify the base
-  first, then change it citing that evidence.
-- **Embodiment swaps do NOT license inheriting the destination cfg's defaults.** When the base's
-  robot asset is unavailable and you substitute the in-repo canonical robot, the base's **init
-  pose / init qpos**, gains-relevant choices, and other pose-level design decisions must still be
-  PORTED (joint values map 1:1 across same-family arms, e.g. FR3 → Panda). The base chose its init
-  qpos for a reason (e.g. "EE arcs over the table"); silently taking the substitute cfg's default
-  pose is a known failure mode that cripples exploration. If a value genuinely cannot port, that is
-  a `changed:` bullet in the Adaptation delta — never an undeclared fallback.
-- **The in-repo canonical example + `task-implementation.md` remain ground truth** for the destination
-  benchmark's API/idioms. When the library spec and the destination family disagree on *how* to express
-  something, follow the destination family; borrow the *design* from the library.
-- If a library spec is byte-identical to what you need, prefer `/harbor:task-create from=<that spec>`
-  (reproduce mode) over re-authoring — surface this to the user.
-
-**Pure creation mode is the fallback of last resort** — it activates ONLY when the library has no
-relevant task at all (empty folder, or no spec sharing the verb/object-class/embodiment). "The match
-isn't perfect" is not a reason to go pure-create; it's a reason to adapt with a larger delta.
-
-## Step 5 — Document the adaptation delta in the history file
-
-Every caller MUST record in its history file (`task-history.md` / `reward-history.md` / the
-`## Iter <N>` section of a tune) an **Adaptation delta** block:
-
-```markdown
-### Adaptation delta
-- base: <abs path of the matched library spec>  (or "none — pure creation mode: no relevant task in <folder>")
-- kept as-is: <what was reused unchanged — e.g. action mode, composer, gating structure>
-- changed: <enumerated list — one bullet per deviation from the base, each with WHY the new task requires it>
-```
-
-This is what makes the next run's search useful: the delta shows which knobs actually had to move
-between two sibling tasks.
-
-## When the library is empty / no match
-
-Only then does pure creation mode activate. Note it in the process log ("task-library: no relevant
-prior task in `<folder>` — pure creation mode") and proceed with the canonical-example-driven flow.
-Never block on an empty library.
+If no spec shares the verb / object / embodiment, return **none** → pure creation mode.
