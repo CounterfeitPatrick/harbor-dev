@@ -2,7 +2,7 @@
 
 > **CAVEAT — DESIGN CAPTURE, NOT BUILD-VERIFIED.** symdex is **NOT** a harbor benchmark repo. This spec was reverse-engineered by reading source only; nothing here was executed or build-verified. All dimensions (observation / action) are **ANALYTIC** — derived by hand from the term functions in the source, not read back from a running env. Treat magnitudes/dims as reproduction targets to re-verify, not ground truth.
 
-- benchmark_family: symdex-manager-based
+- benchmark_family: isaaclab-manager-based
 - source_repo: symdex
 - source_path: /home/steven/code/symdex/symdex/env/tasks/StirBowl
 - embodiment: bimanual UF850 + dual Allegro hands

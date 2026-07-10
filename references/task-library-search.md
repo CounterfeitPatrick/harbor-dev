@@ -33,8 +33,18 @@ must (`| sort`), never `| head`.
 
 Shortlist the **top 3** by verb (pick / place / lift / insert / stack …) + goal structure + object +
 robot, **read each of the 3 in full** (what it actually does — scene, goal, action, reward), and
-**return the single most relevant** as the `design_base`. Match the task, not just the robot: a
-place-into-container task is closest to another place-into-container task, not a lift task that only
-shares the arm.
+**return the single most relevant** as the `design_base`.
+
+**Ranking priority — earlier axes dominate later ones:**
+
+1. **Task + goal structure** (what the episode actually rewards / terminates on) — a place-into-container
+   task is closest to another place-into-container task, NOT a lift task that only shares the arm.
+2. **Robot / embodiment** (arm + hand DoF, dexterous hand vs parallel-jaw gripper).
+3. **Simulator / benchmark family** (IsaacLab vs ManiSkill vs …).
+
+Never let simulator match — or whether a spec is build-verified in a harbor harness — outrank a better
+task + goal match. A proven place task in a different-but-portable sim beats a lift task in the same sim:
+return the better task match as the `design_base` and graft its goal / reward half onto a same-sim
+chassis. Break ties with a lower axis only once the higher axes are equal.
 
 If no spec shares the verb / object / embodiment, return **none** → pure creation mode.

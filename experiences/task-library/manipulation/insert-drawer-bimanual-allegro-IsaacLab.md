@@ -1,6 +1,6 @@
 # InsertDrawer — Implementation Spec
 
-- benchmark_family: symdex-manager-based
+- benchmark_family: isaaclab-manager-based
 - source_repo: symdex
 - source_path: /home/steven/code/symdex/symdex/env/tasks/InsertDrawer
 - embodiment: bimanual UF850 + dual Allegro hands
