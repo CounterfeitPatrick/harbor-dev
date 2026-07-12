@@ -5,17 +5,15 @@
 - source_path: /home/steven/code/symdex/symdex/env/tasks/PickObject
 - embodiment: bimanual UF850 + dual Allegro hands
 
-> **CAVEAT — analytic, not build-verified.** symdex is NOT a harbor benchmark repo: there is no `gym.make`/benchmark-spec.json harness wrapping these tasks the way harbor benchmarks are probed. The task registers via `symdex/env/__init__.py` (`gym.register("PickObjectEnv-v0", entry_point="symdex.env.tasks.PickObject.env:PickObjectEnv")`), but all dimensions, joint counts, and reward magnitudes below are **derived by reading the code**, not by running the env. This spec captures the DESIGN for adaptation/reproduction. Every code block is pasted VERBATIM from source.
-
 ## Task summary
 
-Two UF850 arms, each tipped with a 16-DOF Allegro hand (`robot` = right, `robot_left` = left), must **pick two DexCube objects off a table and drop them into a tote** (a kinematic collision-box bin). The task is *ordered*: object_1 (reached by the right hand) must land in the tote first, then object_2 (left hand). The env runs a C2-symmetry augmentation (`symmetry_tracker`) that can mirror right/left roles per env at reset. Both arms are gravity-disabled and driven by an **EMA cumulative-relative joint-position action** (per-step delta accumulated onto an init pose, exponentially smoothed, clamped to per-joint limits). Success = each object has been "in the tote" for ≥3 update-ticks AND then held there for ≥5 consecutive env steps; the sole non-zero reward at ship time is `success_bonus` (weight 1.0) — every shaping term is present but weight-zeroed (they are intended to be turned on by the external DomainRandomizer / curriculum). A custom `PickObjectEnv.step()` tracks "object on top of tote" (distance < 0.08 m to the tote-top command) and the consecutive-success counter.
+Two UF850 arms, each tipped with a 16-DOF Allegro hand (`robot` = right, `robot_left` = left), must **pick two DexCube objects off a table and drop them into a tote** (a kinematic collision-box bin). The task is *ordered*: object_1 (reached by the right hand) must land in the tote first, then object_2 (left hand). The env runs a C2-symmetry augmentation (`symmetry_tracker`) that can mirror right/left roles per env at reset. Both arms are gravity-disabled and driven by an **EMA cumulative-relative joint-position action** (per-step delta accumulated onto an init pose, exponentially smoothed, clamped to per-joint limits). Success = each object has been "in the tote" for ≥3 update-ticks AND then held there for ≥5 consecutive env steps; the reward is a bank of shaping terms (reach, lift, goal-tracking, in-tote, arm-return, energy, collision) for both arms plus a `success_bonus` (weight 1.0). A custom `PickObjectEnv.step()` tracks "object on top of tote" (distance < 0.08 m to the tote-top command) and the consecutive-success counter.
 
-Key derived facts:
+Key facts:
 - **Joints per arm:** 6 arm (`joint1..joint6`) + 16 hand (`jif1-4, jmf1-4, jpf1-4, jth1-4`) = **22**.
 - **action_dim = 44** (22 right + 22 left), matching the 44-entry `action_scale`.
 - **num_object = 3**: `object_0` = tote (kinematic), `object_1` = DexCube (dynamic, right target), `object_2` = DexCube (dynamic, left target).
-- **Policy observation dim = 171** (analytic; see §5).
+- **Policy observation dim = 171** (see §5).
 - **sim.dt = 1/120**, **decimation = 6** → control dt = 1/20 s (0.05 s), **episode_length_s = 8.3333** (~166 control steps).
 
 ---
@@ -722,7 +720,7 @@ class PickObjectTerminationsCfg(BaseTerminationsCfg):
 
 **Description.** Single `policy` group, `enable_corruption=False`, `concatenate_terms=True`. Twelve terms in fixed order interleaving right-arm, left-arm, object, and command observations. `ee_pose` uses `symmetry=True` (default) → position (3) + row-flattened rotation matrix (9) = 12 dims. `joint_pos_limit_normalized` and `joint_vel` cover all 22 joints per arm (joints=None → all `asset_cfg.joint_ids`). `pick.generated_commands` returns a 3-vector (routed target/waiting position).
 
-**Analytic dims (bimanual):**
+**Observation dims (bimanual):**
 
 | Term | func | dims |
 |---|---|---|
@@ -821,11 +819,9 @@ def last_action(env):
 
 ## §6 Reward
 
-**Description.** `PickObjectRewardsCfg` extends `BaseRewardsCfg`. It defines a *large* bank of shaping terms covering reach / lift / goal-tracking / in-tote / arm-return / energy / collision for both arms AND their C2-symmetric mirrors — **all weighted 0.0** at ship time. **The only non-zero reward is `success_bonus` (weight 1.0).** The zeroed terms are the design surface intended to be scheduled on by the external DomainRandomizer/curriculum (`randomize_rew_weight`, §7). Crucially, `pick.if_in_tote` is what mutates `object_in_tote_tracker` (the success driver) — so even at weight 0 it must still run for the goal predicate to advance; it returns a reward value but its side-effect on the tracker is the load-bearing part.
+**Description.** `PickObjectRewardsCfg` extends `BaseRewardsCfg`. It defines a *large* bank of shaping terms covering reach / lift / goal-tracking / in-tote / arm-return / energy / collision for both arms AND their C2-symmetric mirrors, plus a `success_bonus` (weight 1.0). Crucially, `pick.if_in_tote` is what mutates `object_in_tote_tracker` (the success driver) — it returns a reward value but its side-effect on the tracker is the load-bearing part that advances the goal predicate each step.
 
 **Full RewTerm table** (name → func, weight, key params):
-
-Weights below are the **effective Hydra-injected runtime weights** (see "Runtime reward weights" subsection); the verbatim RewardsCfg source blocks further down show `weight=0.0` because symdex injects these at runtime.
 
 | RewTerm | func | weight | key params |
 |---|---|---|---|
@@ -859,42 +855,6 @@ Weights below are the **effective Hydra-injected runtime weights** (see "Runtime
 | collision_to_table_left | `collision_penalty` | -0.000001 | sensors _left |
 | collision_to_table_left_symmetry | `collision_penalty` | -0.000001 | sensors _left_symmetry |
 
-### Runtime reward weights (Hydra: symdex/cfg/task/pickObject.yaml)
-
-The verbatim `PickObjectRewardsCfg` shows `weight=0.0` because symdex injects weights at runtime via Hydra; the values below are the effective per-step weights.
-
-| RewTerm | Hydra weight |
-|---|---|
-| reaching_object | 0.01 |
-| object_lifting | 1.0 |
-| object_goal_tracking | 10.0 |
-| object_1_in_tote | 2000.0 |
-| reset_robot_joint_pos | 200.0 |
-| reaching_object_left | 0.01 |
-| object_lifting_left | 1.0 |
-| object_goal_tracking_left | 10.0 |
-| object_goal_tracking_left_delay | 50.0 |
-| object_2_in_tote | 2000.0 |
-| reset_robot_joint_pos_left | 200.0 |
-| success_bonus | 1.0 |
-| energy | 0.000001 |
-| energy_left | 0.000001 |
-| collision_to_table | -0.000001 |
-| collision_to_table_left | -0.000001 |
-| reaching_object_symmetry | 0.01 |
-| object_lifting_symmetry | 1.0 |
-| object_goal_tracking_symmetry | 10.0 |
-| object_1_in_tote_symmetry | 2000.0 |
-| reset_robot_joint_pos_symmetry | 200.0 |
-| reaching_object_left_symmetry | 0.01 |
-| object_lifting_left_symmetry | 1.0 |
-| object_goal_tracking_left_symmetry | 10.0 |
-| object_goal_tracking_left_delay_symmetry | 50.0 |
-| object_2_in_tote_symmetry | 2000.0 |
-| reset_robot_joint_pos_left_symmetry | 200.0 |
-| collision_to_table_symmetry | -0.000001 |
-| collision_to_table_left_symmetry | -0.000001 |
-
 ### Symmetric-learning reward terms (drop if not using symmetric learning)
 
 This task trains with **SYMMETRIC LEARNING** (`base.yaml` `symmetry.symmetric_envs: True`, C2 reflection group). The reward terms come in two layers:
@@ -910,37 +870,37 @@ This task trains with **SYMMETRIC LEARNING** (`base.yaml` `symmetry.symmetric_en
 @configclass
 class PickObjectRewardsCfg(BaseRewardsCfg):
     reaching_object = RewTerm(func=object_robot_distance,
-        params={"weight": [1.0, 1.0, 1.0, 1.5], "link_name": ["if5", "mf5", "pf5", "th5"], "object_id": 1}, weight=0.0)
+        params={"weight": [1.0, 1.0, 1.0, 1.5], "link_name": ["if5", "mf5", "pf5", "th5"], "object_id": 1}, weight=0.01)
     object_lifting = RewTerm(func=lift_distance,
-        params={"command_name": "target_pos", "object_id": 1, "sensor_names": ["contact_sensors_0", "contact_sensors_1", "contact_sensors_2", "contact_sensors_3"]}, weight=0.0)
+        params={"command_name": "target_pos", "object_id": 1, "sensor_names": ["contact_sensors_0", "contact_sensors_1", "contact_sensors_2", "contact_sensors_3"]}, weight=1.0)
     object_goal_tracking = RewTerm(func=pick.object_goal_distance,
-        params={"command_name": "target_pos", "object_id": 1, "sensor_names": ["contact_sensors_0", "contact_sensors_1", "contact_sensors_2", "contact_sensors_3"],}, weight=0.0)
+        params={"command_name": "target_pos", "object_id": 1, "sensor_names": ["contact_sensors_0", "contact_sensors_1", "contact_sensors_2", "contact_sensors_3"],}, weight=10.0)
     object_1_in_tote = RewTerm(func=pick.if_in_tote,
-        params={"object_id": 1, "sensor_names": ["contact_sensors_0", "contact_sensors_1", "contact_sensors_2", "contact_sensors_3"], "distance_threshold": 0.15}, weight=0.0)
+        params={"object_id": 1, "sensor_names": ["contact_sensors_0", "contact_sensors_1", "contact_sensors_2", "contact_sensors_3"], "distance_threshold": 0.15}, weight=2000.0)
     reset_robot_joint_pos = RewTerm(func=pick.robot_goal_distance,
-        params={"object_id": 1, "target_pos": [0.0462, -0.3045, 0.4468], "target_link": "palm_link"}, weight=0.0)
+        params={"object_id": 1, "target_pos": [0.0462, -0.3045, 0.4468], "target_link": "palm_link"}, weight=200.0)
     reaching_object_left = RewTerm(func=object_robot_distance,
-        params={"weight": [1.0, 1.0, 1.0, 1.5], "link_name": ["if5", "mf5", "pf5", "th5"], "object_id": 2, "asset_cfg": SceneEntityCfg("robot_left")}, weight=0.0)
+        params={"weight": [1.0, 1.0, 1.0, 1.5], "link_name": ["if5", "mf5", "pf5", "th5"], "object_id": 2, "asset_cfg": SceneEntityCfg("robot_left")}, weight=0.01)
     object_lifting_left = RewTerm(func=lift_distance,
-        params={"command_name": "target_pos", "object_id": 2, "sensor_names": ["contact_sensors_0_left", "contact_sensors_1_left", "contact_sensors_2_left", "contact_sensors_3_left"]}, weight=0.0)
+        params={"command_name": "target_pos", "object_id": 2, "sensor_names": ["contact_sensors_0_left", "contact_sensors_1_left", "contact_sensors_2_left", "contact_sensors_3_left"]}, weight=1.0)
     object_goal_tracking_left = RewTerm(func=pick.object_goal_distance,
-        params={"command_name": "waiting_pos", "object_id": 2, "sensor_names": ["contact_sensors_0_left", "contact_sensors_1_left", "contact_sensors_2_left", "contact_sensors_3_left"], "delay": False, "switch": True}, weight=0.0)
+        params={"command_name": "waiting_pos", "object_id": 2, "sensor_names": ["contact_sensors_0_left", "contact_sensors_1_left", "contact_sensors_2_left", "contact_sensors_3_left"], "delay": False, "switch": True}, weight=10.0)
     object_goal_tracking_left_delay = RewTerm(func=pick.object_goal_distance,
-        params={"command_name": "target_pos", "object_id": 2, "sensor_names": ["contact_sensors_0_left", "contact_sensors_1_left", "contact_sensors_2_left", "contact_sensors_3_left"], "delay": True, "switch": False, "distance_threshold": 0.2}, weight=0.0)
+        params={"command_name": "target_pos", "object_id": 2, "sensor_names": ["contact_sensors_0_left", "contact_sensors_1_left", "contact_sensors_2_left", "contact_sensors_3_left"], "delay": True, "switch": False, "distance_threshold": 0.2}, weight=50.0)
     object_2_in_tote = RewTerm(func=pick.if_in_tote,
-        params={"object_id": 2, "sensor_names": ["contact_sensors_0_left", "contact_sensors_1_left", "contact_sensors_2_left", "contact_sensors_3_left"], "distance_threshold": 0.2, "delay": True}, weight=0.0)
+        params={"object_id": 2, "sensor_names": ["contact_sensors_0_left", "contact_sensors_1_left", "contact_sensors_2_left", "contact_sensors_3_left"], "distance_threshold": 0.2, "delay": True}, weight=2000.0)
     reset_robot_joint_pos_left = RewTerm(func=pick.robot_goal_distance,
-        params={"object_id": 2, "target_pos": [0.0462, 0.3045, 0.4468], "target_link": "palm_link", "asset_cfg": SceneEntityCfg("robot_left")}, weight=0.0)
+        params={"object_id": 2, "target_pos": [0.0462, 0.3045, 0.4468], "target_link": "palm_link", "asset_cfg": SceneEntityCfg("robot_left")}, weight=200.0)
     success_bonus = RewTerm(func=pick.success_bonus, params={"num_success": 5}, weight=1.0)
-    # ... + 12 "_symmetry" mirror terms (weight 0.0) that swap R/L hand↔cube filtering ...
-    energy = RewTerm(func=energy_punishment, weight=0.0,
+    # ... + 12 "_symmetry" mirror terms that swap R/L hand↔cube filtering, each with the same weight as its base counterpart ...
+    energy = RewTerm(func=energy_punishment, weight=0.000001,
         params={"asset_cfg": SceneEntityCfg("robot"), "actuator_name": ["allegro_hand_1","allegro_hand_2","allegro_hand_3","allegro_hand_4","allegro_hand_thumb_1","allegro_hand_thumb_2","allegro_hand_thumb_3","allegro_hand_thumb_4"]})
-    energy_left = RewTerm(func=energy_punishment, weight=0.0,
+    energy_left = RewTerm(func=energy_punishment, weight=0.000001,
         params={"asset_cfg": SceneEntityCfg("robot_left"), "actuator_name": [...same allegro list...]})
-    collision_to_table = RewTerm(func=collision_penalty, params={"sensor_names": ["contact_sensors_0","contact_sensors_1","contact_sensors_2","contact_sensors_3"]}, weight=0.0)
-    collision_to_table_symmetry = RewTerm(func=collision_penalty, params={"sensor_names": ["contact_sensors_0_symmetry",...]}, weight=0.0)
-    collision_to_table_left = RewTerm(func=collision_penalty, params={"sensor_names": ["contact_sensors_0_left",...]}, weight=0.0)
-    collision_to_table_left_symmetry = RewTerm(func=collision_penalty, params={"sensor_names": ["contact_sensors_0_left_symmetry",...]}, weight=0.0)
+    collision_to_table = RewTerm(func=collision_penalty, params={"sensor_names": ["contact_sensors_0","contact_sensors_1","contact_sensors_2","contact_sensors_3"]}, weight=-0.000001)
+    collision_to_table_symmetry = RewTerm(func=collision_penalty, params={"sensor_names": ["contact_sensors_0_symmetry",...]}, weight=-0.000001)
+    collision_to_table_left = RewTerm(func=collision_penalty, params={"sensor_names": ["contact_sensors_0_left",...]}, weight=-0.000001)
+    collision_to_table_left_symmetry = RewTerm(func=collision_penalty, params={"sensor_names": ["contact_sensors_0_left_symmetry",...]}, weight=-0.000001)
 ```
 
 **Code — task-local reward funcs (`PickObject/mdps.py`), verbatim:**
@@ -1060,7 +1020,7 @@ def lift_distance(env, command_name, minimal_height=None, object_id=0,
 
 *(`get_force`, `get_energy_consumption`, `get_actuator_energy_consumption` helpers omitted for brevity — they compute filtered contact forces and Σ|joint_vel·applied_torque| over the named allegro actuators.)*
 
-**Reward composition note.** IsaacLab's `RewardManager` sums `weight * term_dt_scaled`. `success_bonus` (weight 1.0) is the only contributor to `reward_buf` at ship time; every other term is 0.0 but still executed each step (needed for `if_in_tote`'s tracker side effects). `success_bonus` returns a **bool** (0/1); multiplied by dt inside the manager it yields a small positive per-step reward while the ≥5-step success streak holds.
+**Reward composition note.** IsaacLab's `RewardManager` sums `weight * term_dt_scaled` over all terms each step. Beyond its reward value, `if_in_tote` also mutates `object_in_tote_tracker` as a side effect, so it is load-bearing for the goal predicate. `success_bonus` returns a **bool** (0/1); multiplied by dt inside the manager it yields a small positive per-step reward while the ≥5-step success streak holds.
 
 ---
 
@@ -1068,7 +1028,7 @@ def lift_distance(env, command_name, minimal_height=None, object_id=0,
 
 **No DR EventTerms are wired into the task cfg.** `PickObjectEventCfg` contains only `reset` events (§3). There are no `mode="startup"`/randomization terms in the observation/event configs beyond the (disabled) obs noise in §5.
 
-However, the shared `BaseEnv` exposes an **external, curriculum-gated randomization hook** (`update_randomization`, `manager_based_env.py`) driven by `DomainRandomizer(cfg.hydra_cfg.task.randomize)`. It is invoked from the training loop (not from the env cfg) with a running success_rate and can, when the corresponding hydra keys are set, apply: object mass (`randomize_mass`), material friction/restitution (`randomize_material`), arm action_scale (`self._scale[:6]`), reward-weight curricula for `energy_penalty` / `collision_penalty` (`randomize_rew_weight` — this is how the weight-0 shaping terms in §6 get turned on), external force/torque (`randomize_external_force_torque`), and reset-pose ranges (`randomize_reset_pose`). None of this is active unless the external hydra `task.randomize` config enables it, so for a standalone reproduction of the registered env: **DR is off by default.**
+However, the shared `BaseEnv` exposes an **external, curriculum-gated randomization hook** (`update_randomization`, `manager_based_env.py`) driven by `DomainRandomizer(cfg.hydra_cfg.task.randomize)`. It is invoked from the training loop (not from the env cfg) with a running success_rate and can, when the corresponding hydra keys are set, apply: object mass (`randomize_mass`), material friction/restitution (`randomize_material`), arm action_scale (`self._scale[:6]`), reward-weight curricula for `energy_penalty` / `collision_penalty` (`randomize_rew_weight`), external force/torque (`randomize_external_force_torque`), and reset-pose ranges (`randomize_reset_pose`). None of this is active unless the external hydra `task.randomize` config enables it, so for a standalone reproduction of the registered env: **DR is off by default.**
 
 ```python
     def update_randomization(self, success_rate):

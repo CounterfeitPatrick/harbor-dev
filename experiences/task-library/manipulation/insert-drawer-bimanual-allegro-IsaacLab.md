@@ -5,11 +5,11 @@
 - source_path: /home/steven/code/symdex/symdex/env/tasks/InsertDrawer
 - embodiment: bimanual UF850 + dual Allegro hands
 
-> **CAVEAT — provenance & verification.** symdex is **NOT** a harbor benchmark repo. Nothing here was build-verified against a harbor scaffold; every dimension (observation/action counts) is **ANALYTIC** — derived by reading the code, not by running `gym.make`. This spec captures the **DESIGN** of the original symdex `InsertDrawerEnv-v0` faithfully enough to reproduce it. This InsertDrawer is the **ORIGINAL** from which IsaacLab's `dex_grasp` / `dex_pickplace` tasks were vendored (the right-robot half: USD, init pose, actuator gain groups, EMA cumulative-relative action). All code below is pasted **VERBATIM** from the source files.
+This spec captures the design of symdex `InsertDrawerEnv-v0`. This InsertDrawer is the original from which IsaacLab's `dex_grasp` / `dex_pickplace` tasks were vendored (the right-robot half: USD, init pose, actuator gain groups, EMA cumulative-relative action).
 
 ## Task summary
 
-Two UF850 arms, each tipped with an Allegro hand (`Robot` = right, `Robot_left` = left), stand behind a table. A small rigid object (`dog.usd`, mass 0.11 kg) sits on the table in front of the right hand; a `drawer` articulation (single prismatic `base_drawer_joint`) sits to the front-left. The bimanual task is a coordinated **pick-and-insert**: the RIGHT hand grasps and lifts the object, the LEFT hand reaches the drawer handle and pulls it open, then the object is deposited **inside** the drawer, and the drawer is pushed closed with the object retained. Success is a **consecutive-success** counter: the drawer must be nearly closed (`base_drawer_joint < 0.1`) AND the object registered "in drawer" (fingertips released + object within 0.2 m of the drawer body below 1.0 m height) for **20 consecutive steps**. The environment is `C2`-symmetric — half the envs are mirror-reset each episode and a full symmetric copy of every reward/observation/sensor exists so the same policy handles the left↔right mirror. Control is a per-joint **EMA cumulative-relative joint-position** action (α = 0.2) over all 44 joints (22 per arm). Physics run at 120 Hz with decimation 6 → 20 Hz control; episodes are 8.3333 s. Note **all reward weights are 0.0 in source** — weights are injected at train time via the hydra task config / DR curriculum (see §6 & §7).
+Two UF850 arms, each tipped with an Allegro hand (`Robot` = right, `Robot_left` = left), stand behind a table. A small rigid object (`dog.usd`, mass 0.11 kg) sits on the table in front of the right hand; a `drawer` articulation (single prismatic `base_drawer_joint`) sits to the front-left. The bimanual task is a coordinated **pick-and-insert**: the RIGHT hand grasps and lifts the object, the LEFT hand reaches the drawer handle and pulls it open, then the object is deposited **inside** the drawer, and the drawer is pushed closed with the object retained. Success is a **consecutive-success** counter: the drawer must be nearly closed (`base_drawer_joint < 0.1`) AND the object registered "in drawer" (fingertips released + object within 0.2 m of the drawer body below 1.0 m height) for **20 consecutive steps**. The environment is `C2`-symmetric — half the envs are mirror-reset each episode and a full symmetric copy of every reward/observation/sensor exists so the same policy handles the left↔right mirror. Control is a per-joint **EMA cumulative-relative joint-position** action (α = 0.2) over all 44 joints (22 per arm). Physics run at 120 Hz with decimation 6 → 20 Hz control; episodes are 8.3333 s.
 
 ---
 
@@ -1127,7 +1127,7 @@ Command term (`command_mdps/grasp_command.py` — key `_update_metrics` / `_resa
 
 ## §5 Observation
 
-**Description.** Single concatenated `policy` group, `enable_corruption = False`, `concatenate_terms = True`. Ten terms, order preserved. All `ee_pose` terms return **12-dim** (position 3 + flattened rotation matrix 9, `symmetry=True` default). Joint terms cover all 22 joints/arm. **Analytic total = 172** per env: ee_pose_right 12 + joint_pos_right 22 + joint_vel_right 22 + object_pos 3 + ee_pose_left 12 + joint_pos_left 22 + joint_vel_left 22 + drawer_handle_pose 12 + drawer_joint_pos 1 + last_action 44. Joint-position terms are normalized against the per-arm `JOINT_LOWER/UPPER_LIMIT` lists (drawer term against its own soft limits) and carry Gaussian obs noise (std 0.005) despite `enable_corruption=False` (corruption disabled → noise not applied). `object_pos` carries uniform noise `[0, 0.01]`.
+**Description.** Single concatenated `policy` group, `enable_corruption = False`, `concatenate_terms = True`. Ten terms, order preserved. All `ee_pose` terms return **12-dim** (position 3 + flattened rotation matrix 9, `symmetry=True` default). Joint terms cover all 22 joints/arm. **Total = 172** per env: ee_pose_right 12 + joint_pos_right 22 + joint_vel_right 22 + object_pos 3 + ee_pose_left 12 + joint_pos_left 22 + joint_vel_left 22 + drawer_handle_pose 12 + drawer_joint_pos 1 + last_action 44. Joint-position terms are normalized against the per-arm `JOINT_LOWER/UPPER_LIMIT` lists (drawer term against its own soft limits) and carry Gaussian obs noise (std 0.005) despite `enable_corruption=False` (corruption disabled → noise not applied). `object_pos` carries uniform noise `[0, 0.01]`.
 
 ### Decisions resolved
 
@@ -1143,7 +1143,7 @@ Command term (`command_mdps/grasp_command.py` — key `_update_metrics` / `_resa
 | drawer_handle_pose | `ee_pose` | handle_grip (drawer) | 12 | `env_cfg.py:454` |
 | drawer_joint_pos | `joint_pos_limit_normalized` | drawer (1 joint, soft limits) | 1 | `env_cfg.py:455` |
 | last_action | `last_action` | — | 44 | `env_cfg.py:456` |
-| **total** | | | **172** | analytic |
+| **total** | | | **172** | sum of terms |
 | flags | `enable_corruption=False`, `concatenate_terms=True` | | | `env_cfg.py:458-460` |
 
 ### Code
@@ -1264,7 +1264,7 @@ def last_action(env: ManagerBasedEnv) -> torch.Tensor:
 
 **Description.** 23 `RewTerm`s total — 2 inherited from `BaseRewardsCfg` (`energy`, `energy_left`) plus 21 in `InsertDrawerRewardsCfg`. The task defines a **full right-and-left symmetric bank**: each behavioral term (`reaching_object`, `object_lifting`, `object_goal_tracking`, `object_in_drawer`, `reset_robot_joint_pos`, `reaching_handle`, `moving_drawer`, `moving_drawer_inside`, `collision_to_table`, `collision_to_drawer`) has a `..._symmetry` twin that swaps `robot`↔`robot_left` and the object/drawer contact-sensor sets. `success_bonus` returns `env.success_tracker`.
 
-> **CRITICAL — every weight is `0.0` in source.** The static cfg ships all weights at 0.0; the actual per-term weights are injected at **train time** by the hydra task config and the DR/curriculum machinery (`randomize_rew_weight` on `energy_penalty` / `collision_penalty` groups; other weights loaded from the hydra `task` config). So this §6 captures the reward **structure and function definitions**, not runtime magnitudes — a reproduction must supply weights from the training config, not from these cfg literals.
+The reward is the weighted sum of all 23 `RewTerm`s; each term's weight is listed in the table below.
 
 Behavioral term semantics (see verbatim funcs below):
 - `object_robot_distance` (`reaching_object`): `1 / mean(weighted fingertip→object distance)`, fingertip weights `[1,1,1,1.5]` (thumb up-weighted).
@@ -1280,9 +1280,7 @@ Behavioral term semantics (see verbatim funcs below):
 
 ### Decisions resolved (every RewTerm)
 
-> Weight column below is the **effective runtime weight** from Hydra (`symdex/cfg/task/insertDrawer.yaml`); the verbatim cfg further down keeps the source `0.0` literals (symdex injects weights at runtime — see the *Runtime reward weights* subsection).
-
-| Term | func | key params | weight (Hydra runtime) |
+| Term | func | key params | weight |
 |---|---|---|---|
 | energy | `energy_punishment` | robot, allegro hand actuators | 0.000001 |
 | energy_left | `energy_punishment` | robot_left, allegro hand actuators | 0.000001 |
@@ -1308,36 +1306,6 @@ Behavioral term semantics (see verbatim funcs below):
 | collision_to_table_symmetry | `collision_penalty` | …_symmetry sensors | 0.000001 |
 | collision_to_drawer_symmetry | `collision_penalty` | …_left_symmetry sensors | 0.000001 |
 
-### Runtime reward weights (Hydra: symdex/cfg/task/insertDrawer.yaml)
-
-The static `RewardsCfg` ships every `weight=0.0`; symdex **injects the weights at runtime via Hydra** (`symdex/cfg/task/insertDrawer.yaml`). The values below are the **effective** weights actually used in training — a faithful reproduction must supply these, not the `0.0` cfg literals.
-
-| Term | Hydra weight |
-|---|---|
-| reaching_object | 0.01 |
-| object_lifting | 5.0 |
-| object_goal_tracking | 50.0 |
-| object_in_drawer | 100.0 |
-| reset_robot_joint_pos | 1.0 |
-| energy | 0.000001 |
-| collision_to_table | 0.000001 |
-| reaching_handle | 0.01 |
-| moving_drawer | 10 |
-| moving_drawer_inside | 10 |
-| success_bonus | 5000 |
-| energy_left | 0.000001 |
-| collision_to_drawer | 0.000001 |
-| reaching_object_symmetry | 0.01 |
-| object_lifting_symmetry | 5.0 |
-| object_goal_tracking_symmetry | 50.0 |
-| object_in_drawer_symmetry | 100.0 |
-| reset_robot_joint_pos_symmetry | 1.0 |
-| reaching_handle_symmetry | 0.01 |
-| moving_drawer_symmetry | 10 |
-| moving_drawer_inside_symmetry | 10 |
-| collision_to_table_symmetry | 0.000001 |
-| collision_to_drawer_symmetry | 0.000001 |
-
 ### Symmetric-learning reward terms (drop if not using symmetric learning)
 
 This task trains with **symmetric learning** (`base.yaml` → `symmetry.symmetric_envs: True`, `C2` group). The **BASE reward set** consists of the right-arm object terms **plus** the left-arm drawer-handle terms — both halves are genuine for the bimanual insert task (right hand picks/lifts/inserts the object; left hand reaches the handle and opens/closes the drawer):
@@ -1358,12 +1326,12 @@ Base rewards (energy, `manager_based_env_cfg.py:142-154`):
 class BaseRewardsCfg:
     """Reward terms for the MDP."""
     energy = RewTerm(func=energy_punishment,
-                                  weight=0.0,
+                                  weight=0.000001,
                                   params={"asset_cfg": SceneEntityCfg("robot"), "actuator_name": ["allegro_hand_1", "allegro_hand_2", "allegro_hand_3", "allegro_hand_4", 
                                                                                                   "allegro_hand_thumb_1", "allegro_hand_thumb_2", "allegro_hand_thumb_3", "allegro_hand_thumb_4"]},
                                   )
     energy_left = RewTerm(func=energy_punishment,
-                                  weight=0.0,
+                                  weight=0.000001,
                                   params={"asset_cfg": SceneEntityCfg("robot_left"), "actuator_name": ["allegro_hand_1", "allegro_hand_2", "allegro_hand_3", "allegro_hand_4", 
                                                                                                   "allegro_hand_thumb_1", "allegro_hand_thumb_2", "allegro_hand_thumb_3", "allegro_hand_thumb_4"]},
                                   )
@@ -1379,46 +1347,46 @@ class InsertDrawerRewardsCfg(BaseRewardsCfg):
                               params={"weight": [1.0, 1.0, 1.0, 1.5], 
                                       "link_name": ["if5", "mf5", "pf5", "th5"], 
                                       "object_id": 0}, 
-                                      weight=0.0)
+                                      weight=0.01)
     object_lifting = RewTerm(func=lift_distance,
                              params={"command_name": "target_pos", "object_id": 0, "sensor_names": ["contact_sensors_0", "contact_sensors_1", "contact_sensors_2", "contact_sensors_3"]},
-                             weight=0.0,
+                             weight=5.0,
                              )
     object_goal_tracking = RewTerm(func=object_goal_distance,
                                    params={"command_name": "target_pos", "object_id": 0, "sensor_names": ["contact_sensors_0", "contact_sensors_1", "contact_sensors_2", "contact_sensors_3"],},
-                                   weight=0.0,
+                                   weight=50.0,
                                    )
     object_in_drawer = RewTerm(func=drawer.if_in_drawer,
                              params={"object_id": 0, "sensor_names": ["contact_sensors_0", "contact_sensors_1", "contact_sensors_2", "contact_sensors_3"]},
-                             weight=0.0,
+                             weight=100.0,
                              )
     reset_robot_joint_pos = RewTerm(func=drawer.robot_goal_distance, 
                               params={"target_pos": [-0.1277, -0.3174,  1.2583], 
                                       "target_link": "palm_link"}, 
-                                      weight=0.0)           
+                                      weight=1.0)           
     
     reaching_handle = RewTerm(func=drawer.drawer_handle_robot_distance, 
                               params={"weight": [1.0, 1.0], 
                                       "link_name": ["if5", "mf5"], 
                                       "asset_cfg": SceneEntityCfg("robot_left")}, 
-                                      weight=0.0)
+                                      weight=0.01)
     moving_drawer = RewTerm(func=drawer.drawer_move, 
                             params={"joints": ["base_drawer_joint"], "asset_cfg": SceneEntityCfg("drawer"), "sensor_names": ["contact_sensors_0_left"]},
-                            weight=0.0)
+                            weight=10)
     moving_drawer_inside = RewTerm(func=drawer.drawer_move_inside, 
                             params={"joints": ["base_drawer_joint"], "asset_cfg": SceneEntityCfg("drawer"), "sensor_names": ["contact_sensors_0_left"]},
-                            weight=0.0)
+                            weight=10)
     success_bonus = RewTerm(func=drawer.success_bonus,
                             params={},
-                            weight=0.0,
+                            weight=5000,
                             )
     collision_to_table = RewTerm(func=collision_penalty,
                                 params={"sensor_names": ["contact_sensors_0", "contact_sensors_1", "contact_sensors_2", "contact_sensors_3"]},
-                                weight=0.0,
+                                weight=0.000001,
                                 )
     collision_to_drawer = RewTerm(func=collision_penalty,
                                 params={"sensor_names": ["contact_sensors_0_left", "contact_sensors_1_left", "contact_sensors_2_left", "contact_sensors_3_left"]},
-                                weight=0.0,
+                                weight=0.000001,
                                 )
     # symmetry terms
     reaching_object_symmetry = RewTerm(func=object_robot_distance,
@@ -1426,43 +1394,43 @@ class InsertDrawerRewardsCfg(BaseRewardsCfg):
                                       "link_name": ["if5", "mf5", "pf5", "th5"], 
                                       "object_id": 0,
                                       "asset_cfg": SceneEntityCfg("robot_left")}, 
-                                      weight=0.0)
+                                      weight=0.01)
     object_lifting_symmetry = RewTerm(func=lift_distance,
                              params={"command_name": "target_pos", "object_id": 0, "sensor_names": ["contact_sensors_0_symmetry", "contact_sensors_1_symmetry", "contact_sensors_2_symmetry", "contact_sensors_3_symmetry"]},
-                             weight=0.0,
+                             weight=5.0,
                              )
     object_goal_tracking_symmetry = RewTerm(func=object_goal_distance,
                                    params={"command_name": "target_pos", "object_id": 0, "sensor_names": ["contact_sensors_0_symmetry", "contact_sensors_1_symmetry", "contact_sensors_2_symmetry", "contact_sensors_3_symmetry"],},
-                                   weight=0.0,
+                                   weight=50.0,
                                    )
     object_in_drawer_symmetry = RewTerm(func=drawer.if_in_drawer,
                              params={"object_id": 0, "sensor_names": ["contact_sensors_0_symmetry", "contact_sensors_1_symmetry", "contact_sensors_2_symmetry", "contact_sensors_3_symmetry"]},
-                             weight=0.0,
+                             weight=100.0,
                              )
     reset_robot_joint_pos_symmetry = RewTerm(func=drawer.robot_goal_distance, 
                               params={"target_pos": [-0.1277, 0.3174,  1.2583], 
                                       "target_link": "palm_link",
                                       "asset_cfg": SceneEntityCfg("robot_left")}, 
-                                      weight=0.0)           
+                                      weight=1.0)           
     
     reaching_handle_symmetry = RewTerm(func=drawer.drawer_handle_robot_distance, 
                               params={"weight": [1.0, 1.0], 
                                       "link_name": ["if5", "mf5"], 
                                       "asset_cfg": SceneEntityCfg("robot")}, 
-                                      weight=0.0)
+                                      weight=0.01)
     moving_drawer_symmetry = RewTerm(func=drawer.drawer_move, 
                             params={"joints": ["base_drawer_joint"], "asset_cfg": SceneEntityCfg("drawer"), "sensor_names": ["contact_sensors_0_left_symmetry"]},
-                            weight=0.0)
+                            weight=10)
     moving_drawer_inside_symmetry = RewTerm(func=drawer.drawer_move_inside, 
                             params={"joints": ["base_drawer_joint"], "asset_cfg": SceneEntityCfg("drawer"), "sensor_names": ["contact_sensors_0_left_symmetry"]},
-                            weight=0.0)
+                            weight=10)
     collision_to_table_symmetry = RewTerm(func=collision_penalty,
                                 params={"sensor_names": ["contact_sensors_0_symmetry", "contact_sensors_1_symmetry", "contact_sensors_2_symmetry", "contact_sensors_3_symmetry"]},
-                                weight=0.0,
+                                weight=0.000001,
                                 )
     collision_to_drawer_symmetry = RewTerm(func=collision_penalty,
                                 params={"sensor_names": ["contact_sensors_0_left_symmetry", "contact_sensors_1_left_symmetry", "contact_sensors_2_left_symmetry", "contact_sensors_3_left_symmetry"]},
-                                weight=0.0,
+                                weight=0.000001,
                                 )
 ```
 

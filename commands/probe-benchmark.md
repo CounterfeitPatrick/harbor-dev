@@ -7,7 +7,7 @@ argument-hint: [repo=<path>] [canonical_task=<id>]
 
 Inspect an already-set-up benchmark repo (dependency-generator + benchmark-generator Step 3.5/3.6 have run), detect its family, pick a canonical example task, and render `<repo>/harbor/create-task/task-implementation.md` from the template — the single shared file `/harbor:task-create` reads.
 
-`/harbor:task-create` boots three agents (`task-generator` → `reward-generator` → `dr-generator`) that **do not re-scan the upstream repo** — they trust this doc, so getting it right is part of the probe contract.
+`/harbor:task-create` boots three authoring agents (`task-generator` → `reward-tuning-agent` → `dr-generator`) that **do not re-scan the upstream repo** — they trust this doc, so getting it right is part of the probe contract.
 
 ## Optional arguments
 

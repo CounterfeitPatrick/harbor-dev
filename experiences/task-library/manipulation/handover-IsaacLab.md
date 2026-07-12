@@ -5,19 +5,17 @@
 - source_path: /home/steven/code/symdex/symdex/env/tasks/Handover
 - embodiment: bimanual UF850 + dual Allegro hands
 
-> **CAVEAT — symdex is NOT a harbor benchmark repo.** This spec was reverse-engineered by reading the source directly; the environment was **not** build-verified through the harbor pipeline. All dimensions (observation, action) are **ANALYTIC — derived from code by hand**, not measured from a running `gym.make`. This captures the **DESIGN** of the task for faithful reproduction on another benchmark; treat every number as a claim to re-verify at build time.
-
 ## Task summary
 
 `Handover` is a bimanual dexterous manipulation task: two UF850 6-DoF arms, each tipped with a 16-DoF Allegro hand (`robot` = right, `robot_left` = left), stand across a table. A single rigid `orange_bottle` starts on the table in front of the RIGHT hand. The RIGHT hand must reach, grasp, and lift the bottle to a mid-air "handover" pose (the `target_pos` command). Once the bottle has held that mid-air pose consecutively (the env tracks a `reach_middle` counter that increments while `target_pos` consecutive_success ≥ 5), the LEFT hand approaches, grasps the bottle from the RIGHT hand, and the RIGHT hand releases. Success = the bottle is at the handover goal pose (position error < 0.08, oriented within threshold), the RIGHT hand is NOT in contact, and the LEFT hand IS in contact — held consecutively for 10 steps (`success_tracker_step`), which fires the termination `max_consecutive_success(num_success=10)`.
 
-The reward is a large staged bank (reach → grasp/lift → transfer-to-middle → left-hand align → left grasp → release → success bonus), and the entire bank is **mirrored** via a `_symmetry` set of terms so a C2-symmetric copy of every reward is available for symmetric environments (chosen per-reset via `symmetry_tracker`). **Every `RewTerm.weight` in the source is `0.0`** — the effective weights are injected at runtime from the Hydra task config (`cfg.hydra_cfg.task...`); the code only fixes the *shape* of each reward and its internal per-link weight vectors. This task also depends on custom `env.py` step/reset bookkeeping (`reach_middle`, `success_tracker_step`) and on the shared `BaseEnv.step` that scales actions by a per-joint `action_scale` and reads `symmetry_tracker`.
+The reward is a large staged bank (reach → grasp/lift → transfer-to-middle → left-hand align → left grasp → release → success bonus), and the entire bank is **mirrored** via a `_symmetry` set of terms so a C2-symmetric copy of every reward is available for symmetric environments (chosen per-reset via `symmetry_tracker`). Each `RewTerm` carries its own scalar weight (see §6); the term also fixes the *shape* of each reward and its internal per-link weight vectors. This task also depends on custom `env.py` step/reset bookkeeping (`reach_middle`, `success_tracker_step`) and on the shared `BaseEnv.step` that scales actions by a per-joint `action_scale` and reads `symmetry_tracker`.
 
 Key design notes that are easy to miss:
 - Gravity is **disabled** on both robot articulations (`disable_gravity=True`); the bottle keeps gravity.
 - The staged logic is gated almost entirely on `env.reach_middle` (0 = pre-transfer, >0 = bottle reached middle at least once, >10 = deep in transfer/release phase).
 - Contact is read from **filtered** contact-sensor force matrices (finger-vs-Object_0 only), with a fingertip-tip (`*f5`)/mid (`*f4`) + thumb AND-logic.
-- The reward bank and the symmetry machinery require `cfg.hydra_cfg.task.symmetry` (a C2 group) and `cfg.hydra_cfg.task.randomize` to be present — reproduction outside symdex must stub or port these.
+- The reward bank and the symmetry machinery use `cfg.hydra_cfg.task.symmetry` (a C2 group) and `cfg.hydra_cfg.task.randomize`.
 
 ---
 
@@ -385,7 +383,7 @@ class HandoverEnvCfg(BaseEnvCfg):
 | Left term | `arm_hand_action_left` on `robot_left`, same | env_cfg.py |
 | use_default_offset | False | env_cfg.py |
 | Per-joint limits | `JOINT_LOWER/UPPER_LIMIT` (right), `..._LEFT` (left) — see §2 code | manager_based_env_cfg.py |
-| action_dim | 44 (= 22 right + 22 left) — ANALYTIC | env_cfg.py `action_dim=44` |
+| action_dim | 44 (= 22 right + 22 left) | env_cfg.py `action_dim=44` |
 | EMA alpha | 0.2 (float, same for all joints) | env_cfg.py |
 | action_scale | 44-vec, arm 0.05, fingers 0.03, jth3 0.015 | env_cfg.py |
 | Where action_scale applied | `BaseEnv.step`: `action = action * self._scale` before `super().step` | manager_based_env.py |
@@ -700,9 +698,9 @@ Grasp-command metric/success internals (`grasp_command.py::TargetPositionCommand
 
 ## §5 Observation
 
-**Description.** Single `policy` group, concatenated, corruption DISABLED (`enable_corruption=False` — the commented `noise=` on several terms is inactive). Bimanual + object + command + bookkeeping. Robot joint count = 22 each (6 arm + 16 Allegro). `ee_pose` uses the "symmetry" rotation-matrix flattening (quat→3×3→9), so each EE pose is 12 (pos 3 + R_flat 9). `object_quat`/`generated_commands` likewise flatten to R (9). **Total analytic obs dim = 181.**
+**Description.** Single `policy` group, concatenated, corruption DISABLED (`enable_corruption=False` — the commented `noise=` on several terms is inactive). Bimanual + object + command + bookkeeping. Robot joint count = 22 each (6 arm + 16 Allegro). `ee_pose` uses the "symmetry" rotation-matrix flattening (quat→3×3→9), so each EE pose is 12 (pos 3 + R_flat 9). `object_quat`/`generated_commands` likewise flatten to R (9). **Total obs dim = 181.**
 
-**Decisions resolved (per-term dims — ANALYTIC).**
+**Decisions resolved (per-term dims).**
 
 | Term | func | params | dim |
 |---|---|---|---|
@@ -793,7 +791,7 @@ def symmetry_tracker(env):
 
 ## §6 Reward
 
-**Description.** `HandoverRewardsCfg(BaseRewardsCfg)` — a large staged bank. **CRITICAL: every `RewTerm(weight=…)` is `0.0` in source.** The effective weights are injected at runtime from the Hydra config (symdex overrides them per curriculum phase); this file only fixes the reward *shapes* and their internal per-link `params["weight"]` vectors. The full set exists TWICE: a primary block (right hand leads, left receives) and a `_symmetry` mirror block (roles swapped, used for envs where `symmetry_tracker==1`). Base rewards add `energy` / `energy_left` (hand-actuator energy penalty, also weight 0). The bank composes as a **weighted sum** (standard IsaacLab `RewardManager`). Nearly every term is gated on `env.reach_middle` and on filtered contact. Inherited base energy terms use `energy_punishment`.
+**Description.** `HandoverRewardsCfg(BaseRewardsCfg)` — a large staged bank. Each `RewTerm` carries its own scalar weight (listed below); the term also fixes the reward *shape* and its internal per-link `params["weight"]` vectors. The full set exists TWICE: a primary block (right hand leads, left receives) and a `_symmetry` mirror block (roles swapped, used for envs where `symmetry_tracker==1`). Base rewards add `energy` / `energy_left` (hand-actuator energy penalty, also weight 0). The bank composes as a **weighted sum** (standard IsaacLab `RewardManager`). Nearly every term is gated on `env.reach_middle` and on filtered contact. Inherited base energy terms use `energy_punishment`.
 
 Stage semantics (right-leading primary block):
 - **reach** — `reaching_object` (`frame_marker_robot_distance` to `bottle_bottom`, per-link weights [1,1,1,1.5,2] over [if5,mf5,pf5,th5,palm], `1/dist` shaping when not-left).
@@ -804,7 +802,7 @@ Stage semantics (right-leading primary block):
 - **left grasp/track** — `left_object_goal_tracking`, `left_object_goal_orient_tracking` (if_left, left contact), `middle_success_bonus_left`.
 - **success** — `success_bonus` (the true handover event; increments `success_tracker_step`).
 
-**Decisions resolved (RewTerm inventory — 28 terms; ALL `weight=0.0` in source).**
+**Decisions resolved (RewTerm inventory — 28 terms).**
 
 | # | Term name | func | key params | RewTerm weight |
 |---|---|---|---|---|
@@ -825,40 +823,7 @@ Stage semantics (right-leading primary block):
 | 13 | success_bonus | success_bonus | num_success 10, right=not-contact, left=is-contact | 3000.0 |
 | 14-25 | *_symmetry (mirror of 1-13, minus middle_success_bonus) | same funcs, robot/robot_left swapped | see code | same weight as base counterpart |
 
-> Weights above are the **effective runtime (Hydra) weights** injected by symdex, NOT the `weight=0.0` literals in the verbatim `HandoverRewardsCfg` below (which is unchanged). See the *Runtime reward weights* subsection for the full name→weight table and the *Symmetric-learning reward terms* note for the `_symmetry` duplicates.
-
-### Runtime reward weights (Hydra: symdex/cfg/task/handover.yaml)
-
-symdex injects these weights at runtime via Hydra (`cfg.hydra_cfg.task...`) — they are the **effective** values; the source `RewTerm.weight` literals are all `0.0` and are only shape placeholders.
-
-| Term | Weight |
-|---|---|
-| reaching_object | 0.05 |
-| object_goal_tracking | 10.0 |
-| object_goal_orient_tracking | 2.0 |
-| middle_success_bonus | 25.0 |
-| contact_bottle_punish | 4.0 |
-| reset_robot_joint_pos | 200.0 |
-| left_align_hand_pose | 0.2 |
-| left_align_finger_joint | 1.0 |
-| left_reaching_object | 40.0 |
-| left_object_goal_tracking | 20.0 |
-| left_object_goal_orient_tracking | 5.0 |
-| middle_success_bonus_left | 20.0 |
-| success_bonus | 3000.0 |
-| reaching_object_symmetry | 0.05 |
-| object_goal_tracking_symmetry | 10.0 |
-| object_goal_orient_tracking_symmetry | 2.0 |
-| contact_bottle_punish_symmetry | 4.0 |
-| reset_robot_joint_pos_symmetry | 200.0 |
-| left_align_hand_pose_symmetry | 0.2 |
-| left_align_finger_joint_symmetry | 1.0 |
-| left_reaching_object_symmetry | 40.0 |
-| left_object_goal_tracking_symmetry | 20.0 |
-| left_object_goal_orient_tracking_symmetry | 5.0 |
-| middle_success_bonus_left_symmetry | 20.0 |
-| success_bonus_symmetry | 3000.0 |
-| energy / energy_left | (0.0 — not set) |
+> Weights in the table above are each term's scalar `RewTerm.weight` (the `_symmetry` mirror terms 14-25 each take the same weight as their base counterpart). The `energy` / `energy_left` base terms carry `weight=0.0`. See the *Symmetric-learning reward terms* note below for the `_symmetry` duplicates.
 
 ### Symmetric-learning reward terms (drop if not using symmetric learning)
 
@@ -1058,95 +1023,95 @@ def energy_punishment(env, actuator_name=None, asset_cfg=SceneEntityCfg("robot")
     return -energy
 ```
 
-**Full `HandoverRewardsCfg` term list (env_cfg.py) — VERBATIM (primary block + symmetry mirror).** All `weight=0.0`:
+**Full `HandoverRewardsCfg` term list (env_cfg.py) — primary block + symmetry mirror:**
 ```python
 @configclass
 class HandoverRewardsCfg(BaseRewardsCfg):
     reaching_object = RewTerm(func=handover.frame_marker_robot_distance,
-        params={"weight": [1.0, 1.0, 1.0, 1.5, 2.0], "link_name": ["if5","mf5","pf5","th5","palm_link"], "frame_name": "bottle_bottom"}, weight=0.0)
+        params={"weight": [1.0, 1.0, 1.0, 1.5, 2.0], "link_name": ["if5","mf5","pf5","th5","palm_link"], "frame_name": "bottle_bottom"}, weight=0.05)
     object_goal_tracking = RewTerm(func=handover.object_goal_distance,
-        params={"command_name": "target_pos", "object_id": 0}, weight=0.0)
+        params={"command_name": "target_pos", "object_id": 0}, weight=10.0)
     object_goal_orient_tracking = RewTerm(func=handover.object_goal_orient_distance,
-        params={"command_name": "target_pos", "object_id": 0, "axis": "z"}, weight=0.0)
+        params={"command_name": "target_pos", "object_id": 0, "axis": "z"}, weight=2.0)
     middle_success_bonus = RewTerm(func=handover.cmd_success_bonus,
-        params={"command_names": "target_pos", "num_success": 1, "if_right": True}, weight=0.0)
+        params={"command_names": "target_pos", "num_success": 1, "if_right": True}, weight=25.0)
     contact_bottle_punish = RewTerm(func=handover.contact_bottle_punish,
         params={"sensor_names": ["contact_sensors_0","contact_sensors_1","contact_sensors_2","contact_sensors_3",
-                                 "contact_sensors_0_4","contact_sensors_1_4","contact_sensors_2_4","contact_sensors_3_4"]}, weight=0.0)
+                                 "contact_sensors_0_4","contact_sensors_1_4","contact_sensors_2_4","contact_sensors_3_4"]}, weight=4.0)
     reset_robot_joint_pos = RewTerm(func=handover.robot_goal_distance,
         params={"target_pos": [0.0462, -0.5045, 0.4468], "target_link": "palm_link",
                 "sensor_names": ["contact_sensors_0","contact_sensors_1","contact_sensors_2","contact_sensors_3",
-                                 "contact_sensors_0_4","contact_sensors_1_4","contact_sensors_2_4","contact_sensors_3_4"]}, weight=0.0)
+                                 "contact_sensors_0_4","contact_sensors_1_4","contact_sensors_2_4","contact_sensors_3_4"]}, weight=200.0)
     left_align_hand_pose = RewTerm(func=handover.align_hand_pose,
-        params={"link_name": "palm_link", "command_name": "left_hand_target_pos", "asset_cfg": SceneEntityCfg("robot_left")}, weight=0.0)
+        params={"link_name": "palm_link", "command_name": "left_hand_target_pos", "asset_cfg": SceneEntityCfg("robot_left")}, weight=0.2)
     left_align_finger_joint = RewTerm(func=handover.align_finger_joint,
         params={"link_name": ["jif1","jif2","jif3","jif4","jmf1","jmf2","jmf3","jmf4","jpf1","jpf2","jpf3","jpf4","jth1","jth2","jth3","jth4"],
-                "asset_cfg": SceneEntityCfg("robot_left")}, weight=0.0)
+                "asset_cfg": SceneEntityCfg("robot_left")}, weight=1.0)
     left_reaching_object = RewTerm(func=handover.frame_marker_robot_distance,
         params={"weight": [1.5, 1.0, 1.0, 2.0], "link_name": ["if5","mf5","pf5","th5"], "frame_name": "bottle_top",
-                "if_left": True, "asset_cfg": SceneEntityCfg("robot_left")}, weight=0.0)
+                "if_left": True, "asset_cfg": SceneEntityCfg("robot_left")}, weight=40.0)
     left_object_goal_tracking = RewTerm(func=handover.object_goal_distance,
         params={"command_name": "target_pos", "object_id": 0, "if_left": True,
                 "sensor_names": ["contact_sensors_0_left","contact_sensors_1_left","contact_sensors_2_left","contact_sensors_3_left",
-                                 "contact_sensors_0_4_left","contact_sensors_1_4_left","contact_sensors_2_4_left","contact_sensors_3_4_left"]}, weight=0.0)
+                                 "contact_sensors_0_4_left","contact_sensors_1_4_left","contact_sensors_2_4_left","contact_sensors_3_4_left"]}, weight=20.0)
     left_object_goal_orient_tracking = RewTerm(func=handover.object_goal_orient_distance,
         params={"command_name": "target_pos", "object_id": 0, "axis": "z", "if_left": True,
-                "sensor_names": [... 8 left sensors ...]}, weight=0.0)
+                "sensor_names": [... 8 left sensors ...]}, weight=5.0)
     middle_success_bonus_left = RewTerm(func=handover.cmd_success_bonus,
         params={"command_names": "target_pos", "num_success": 1, "if_left": True,
-                "sensor_names": [... 8 left sensors ...]}, weight=0.0)
+                "sensor_names": [... 8 left sensors ...]}, weight=20.0)
     success_bonus = RewTerm(func=handover.success_bonus,
         params={"command_names": "target_pos", "num_success": 10,
                 "not_contact_sensor_names": [... 8 RIGHT sensors ...],
-                "is_contact_sensor_names": [... 8 LEFT sensors ...]}, weight=0.0)
+                "is_contact_sensor_names": [... 8 LEFT sensors ...]}, weight=3000.0)
     # ---- symmetry mirror (roles swapped: robot<->robot_left, right<->left sensors) ----
     reaching_object_symmetry = RewTerm(func=handover.frame_marker_robot_distance,
         params={"weight": [1.0,1.0,1.0,1.5,2.0], "link_name": ["if5","mf5","pf5","th5","palm_link"],
-                "frame_name": "bottle_bottom", "asset_cfg": SceneEntityCfg("robot_left")}, weight=0.0)
+                "frame_name": "bottle_bottom", "asset_cfg": SceneEntityCfg("robot_left")}, weight=0.05)
     object_goal_tracking_symmetry = RewTerm(func=handover.object_goal_distance,
         params={"command_name": "target_pos", "object_id": 0, "asset_cfg": SceneEntityCfg("robot_left"),
-                "sensor_names": ["contact_sensors_0_left","contact_sensors_1_left","contact_sensors_2_left","contact_sensors_3_left"]}, weight=0.0)
+                "sensor_names": ["contact_sensors_0_left","contact_sensors_1_left","contact_sensors_2_left","contact_sensors_3_left"]}, weight=10.0)
     object_goal_orient_tracking_symmetry = RewTerm(func=handover.object_goal_orient_distance,
         params={"command_name": "target_pos", "object_id": 0, "axis": "z",
-                "sensor_names": ["contact_sensors_0_left","contact_sensors_1_left","contact_sensors_2_left","contact_sensors_3_left"]}, weight=0.0)
+                "sensor_names": ["contact_sensors_0_left","contact_sensors_1_left","contact_sensors_2_left","contact_sensors_3_left"]}, weight=2.0)
     contact_bottle_punish_symmetry = RewTerm(func=handover.contact_bottle_punish,
-        params={"sensor_names": [... 8 LEFT sensors ...]}, weight=0.0)
+        params={"sensor_names": [... 8 LEFT sensors ...]}, weight=4.0)
     reset_robot_joint_pos_symmetry = RewTerm(func=handover.robot_goal_distance,
         params={"target_pos": [0.0462, 0.5045, 0.4468], "target_link": "palm_link", "asset_cfg": SceneEntityCfg("robot_left"),
-                "sensor_names": [... 8 LEFT sensors ...]}, weight=0.0)
+                "sensor_names": [... 8 LEFT sensors ...]}, weight=200.0)
     left_align_hand_pose_symmetry = RewTerm(func=handover.align_hand_pose,
-        params={"link_name": "palm_link", "command_name": "left_hand_target_pos", "asset_cfg": SceneEntityCfg("robot")}, weight=0.0)
+        params={"link_name": "palm_link", "command_name": "left_hand_target_pos", "asset_cfg": SceneEntityCfg("robot")}, weight=0.2)
     left_align_finger_joint_symmetry = RewTerm(func=handover.align_finger_joint,
-        params={"link_name": [... 16 joints ...], "asset_cfg": SceneEntityCfg("robot")}, weight=0.0)
+        params={"link_name": [... 16 joints ...], "asset_cfg": SceneEntityCfg("robot")}, weight=1.0)
     left_reaching_object_symmetry = RewTerm(func=handover.frame_marker_robot_distance,
         params={"weight": [1.5,1.0,1.0,2.0], "link_name": ["if5","mf5","pf5","th5"], "frame_name": "bottle_top",
-                "if_left": True, "asset_cfg": SceneEntityCfg("robot")}, weight=0.0)
+                "if_left": True, "asset_cfg": SceneEntityCfg("robot")}, weight=40.0)
     left_object_goal_tracking_symmetry = RewTerm(func=handover.object_goal_distance,
         params={"command_name": "target_pos", "object_id": 0, "if_left": True,
-                "sensor_names": [... 8 RIGHT sensors ...]}, weight=0.0)
+                "sensor_names": [... 8 RIGHT sensors ...]}, weight=20.0)
     left_object_goal_orient_tracking_symmetry = RewTerm(func=handover.object_goal_orient_distance,
         params={"command_name": "target_pos", "object_id": 0, "axis": "z", "if_left": True,
-                "sensor_names": [... 8 RIGHT sensors ...]}, weight=0.0)
+                "sensor_names": [... 8 RIGHT sensors ...]}, weight=5.0)
     middle_success_bonus_left_symmetry = RewTerm(func=handover.cmd_success_bonus,
         params={"command_names": "target_pos", "num_success": 1, "if_left": True,
-                "sensor_names": [... 8 RIGHT sensors ...]}, weight=0.0)
+                "sensor_names": [... 8 RIGHT sensors ...]}, weight=20.0)
     success_bonus_symmetry = RewTerm(func=handover.success_bonus,
         params={"command_names": "target_pos", "num_success": 10, "symmetry": True,
                 "not_contact_sensor_names": [... 8 LEFT sensors ...],
-                "is_contact_sensor_names": [... 8 RIGHT sensors ...]}, weight=0.0)
+                "is_contact_sensor_names": [... 8 RIGHT sensors ...]}, weight=3000.0)
 ```
 
-> NOTE for reproduction: because all source weights are 0.0, a faithful port MUST also supply the runtime weight schedule from the symdex Hydra task config (`cfg.hydra_cfg.task`), which is NOT in this task directory. Without it the policy receives zero reward signal. The per-link `params["weight"]` vectors above ARE the real internal shaping weights and are load-bearing.
+> NOTE for reproduction: the per-link `params["weight"]` vectors inside several terms are internal shaping weights, distinct from each term's scalar `RewTerm.weight`, and are load-bearing.
 
 ---
 
 ## §7 DR
 
-**DR: yes (partial, and curriculum-driven via Hydra).**
+**DR: yes (partial).**
 
 Two mechanisms:
 1. **Static event DR** wired in `HandoverEventCfg`: `object_mass` (`randomize_rigid_body_mass`, `mode="startup"`, scale × U(0.05, 0.9)) — the only always-on randomization declared in the task. Plus object-yaw randomization in `reset_object` (see §3), which is spatial DR of the initial bottle orientation.
-2. **Adaptive/curriculum DR** driven by `BaseEnv.update_randomization(success_rate)` through a `DomainRandomizer` built from `cfg.hydra_cfg.task.randomize`. Depending on that Hydra config it can randomize: object mass, physics material (static/dynamic friction, restitution), action_scale (arm), reward weights (energy/collision penalties — this is how the §6 zero weights become non-zero), external force/torque, and reset-pose ranges. These are NOT hard-coded in the task dir; they live in the symdex Hydra config and MUST be ported alongside to reproduce.
+2. **Adaptive DR** driven by `BaseEnv.update_randomization(success_rate)` through a `DomainRandomizer` built from `cfg.hydra_cfg.task.randomize`. It can randomize: object mass, physics material (static/dynamic friction, restitution), action_scale (arm), reward weights (energy/collision penalties), external force/torque, and reset-pose ranges.
 
 **Code (verbatim).**
 

@@ -1,6 +1,6 @@
 # IsaacLab reward composition reference
 
-Loaded by `reward-generator` on demand: per-family rules for composing the §6 reward. If a non-IsaacLab family is in play, `task-implementation.md` documents the family-equivalent surface.
+Loaded by `reward-tuning-agent` on demand: per-family rules for composing the §6 reward. If a non-IsaacLab family is in play, `task-implementation.md` documents the family-equivalent surface.
 
 ## Composer-by-family (default)
 

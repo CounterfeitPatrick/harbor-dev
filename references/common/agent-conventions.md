@@ -1,7 +1,7 @@
 # Shared agent conventions
 
 Conventions common to the authoring/scaffolding subagents (`dependency-generator`,
-`benchmark-generator`, `rl-integration-generator`, `task-generator`, `reward-generator`,
+`benchmark-generator`, `rl-integration-generator`, `task-generator`, `reward-tuning-agent`,
 `dr-generator`, `task-cloner`). Each agent keeps its OWN specifics inline (smoke names, file
 paths, retry budgets, schemas); this file is the canonical statement of the generic shape so
 those don't drift across agents. When an agent's body and this file disagree on a SPECIFIC

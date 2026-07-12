@@ -1,7 +1,7 @@
 # Task-library search (returns ONE selected task)
 
-Run FIRST by whoever needs a design base — `/harbor:task-create` Step 1.5, or the reward-tune main
-agent. It searches the cross-run **task-library** and returns the **single most-relevant** proven task
+Run FIRST by whoever needs a design base — `/harbor:task-create` Step 1.5, the `/harbor:reward-tune`
+orchestrator (standalone), or the `reward-tuning-agent` itself when no base was passed down. It searches the cross-run **task-library** and returns the **single most-relevant** proven task
 to adapt from. Every library spec is a verified, successfully-trained task (a full §1..§7 spec named
 `<short-task>-<repo>.md`, filled by `/harbor:update-experience target=task-library`).
 

@@ -55,7 +55,7 @@ Cloning is serialized in the caller (one clone at a time per repo), so registrat
      info_out:  <info_out abs>
    })
    ```
-   The agent copies the source's editable surface (env_cfg + the mdp modules the requested surface touches), rewires the cloned cfg's imports to the copies, registers `<dest>`, runs the clone smokes, and writes the manifest. See `agents/task-cloner.md`.
+   The agent calls the deterministic `scripts/task-cloner/clone_task.py` to copy the source's editable surface (env_cfg + the task-local mdp package the requested surface touches), rewire the cloned cfg's imports to the copies, register `<dest>`, and write the manifest — then runs the sim-side clone smokes on top. See `agents/task-cloner.md`.
 
 3. **Return** the agent verdict + manifest path. On `status: fail`, the agent has already removed any partial clone — surface the error and exit non-zero.
 
@@ -70,7 +70,14 @@ Porting a task across benchmark families (e.g. IsaacLab → Genesis) is a *desig
 
 ### op=delete
 
-Lightweight, no subagent. Read `<info_out>` (or `<repo>/harbor/clones/<dest>.json`), remove every path in `cloned_files[]` and the registration entry it recorded, then confirm the source still builds:
+Lightweight, no subagent. Route the file/registration removal through the same deterministic tool (it reads `cloned_files[]` + `cloned_dirs[]` + the registration anchor from the manifest and removes them, then asserts the source registration is intact):
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/task-cloner/clone_task.py" --op delete \
+    --repo "<repo>" --manifest "<info_out (or <repo>/harbor/clones/<dest>.json)>"
+```
+
+Then confirm the source still builds (the running-sim check the script leaves to the caller):
 
 ```bash
 .venv/bin/python -c "import gymnasium as gym; gym.make('<source_from_manifest>'); print('source still ok')" || exit 1

@@ -5,15 +5,13 @@
 - source_path: /home/steven/code/symdex/symdex/env/tasks/Threading
 - embodiment: bimanual UF850 + dual Allegro hands
 
-> **CAVEAT:** symdex is NOT a harbor benchmark repo. All dims below are **ANALYTIC from code**, not build-verified. This spec captures the **DESIGN** for reproduction, not a runnable harbor task. Follow-imports were resolved so the spec is self-contained.
-
-> **Important design note (weights):** In this source snapshot **every `RewTerm` has `weight=0.0`** and the task registers to gym id `ThreadingEnv-v0`. The reward *shaping* is fully authored (24 terms, all functions below), but the nonzero weights are expected to be injected at runtime via the hydra config / curriculum (`env.cfg.hydra_cfg.task.*`, `randomize_rew_weight`, `DomainRandomizer`). Reproduce the term set + functions verbatim; treat the weight schedule as an external (hydra) concern.
+> **Important design note (weights):** The reward is a fully authored 24-term shaping pipeline (all functions below), and the task registers to gym id `ThreadingEnv-v0`. Each term's weight is given in §6.
 
 ## Task summary
 
 Bimanual precision-insertion ("threading"). Two UF850 arms, each ending in a 4-finger Allegro hand (`Robot` = right at y=-0.475, `Robot_left` = left at y=+0.475), operate over a table. **Object_0** is a `cube_with_hole` (scaled 0.75, mass 0.2 kg); **Object_1** is a `drill` (scale 1.0, mass 0.5 kg) whose head must be threaded *through the hole* of the cube. One hand grasps and lifts/orients the holed cube, the other grasps and orients the drill, and the two must be brought into alignment so the drill head passes through the cube's hole while both are held aloft. Success is defined by a dedicated `drill_head_frame` (offset frame on the drill, `pos=(-0.15,0,0.07)`) coming within 3 cm of the cube center while the cube is above z=0.2, held **consecutively** for ≥20 steps (`success_bonus` / `max_consecutive_success`). Actions are an **EMA cumulative-relative joint-position** command over all 44 joints (22 per arm). Gravity is disabled on both robots (position-controlled arms). The env supports symmetric-env augmentation (C2 group) via `BaseEnv` and mirrors every reward term with a `_symmetry` variant.
 
-Key derived quantities (analytic):
+Key derived quantities:
 - **action_dim = 44** (22 right + 22 left; per arm = 6 arm joints + 16 Allegro joints).
 - **observation dim = 180** (see §5 breakdown).
 - **objects manipulated = 2** (cube_with_hole, drill) + kinematic table.
@@ -477,7 +475,7 @@ def max_consecutive_success(env, num_success):
 
 **Description.** Single `PolicyCfg` group, concatenated, corruption **disabled** (`enable_corruption=False`, so the per-term Gnoise/Unoise are declared but NOT applied at runtime). Bimanual: full pose+joint state for both arms, then cube/drill pose, then last action. EE pose uses rotation-matrix flattening (`symmetry=True` → 3 pos + 9 rot flat = 12). Object quat likewise flattened to 9. Joint pos normalized to explicit per-arm limits; joint vel raw.
 
-**Dim breakdown (analytic, total = 180):**
+**Dim breakdown (total = 180):**
 
 | Term | func | dim | note |
 |---|---|---|---|
@@ -536,11 +534,9 @@ class ThreadingObservationsCfg(BaseObservationsCfg):
 
 ## §6 Reward
 
-**Description.** 24 `RewTerm`s, **all with `weight=0.0` in this snapshot** (nonzero weights injected at runtime via hydra/curriculum — see header note). The design is a full staged bimanual pipeline: (right hand) reach → lift → track cube goal pos+orient → success bonus; (left hand) align palm to drill approach frame (pos+quat) → reach drill → track drill goal pos+orient → success bonus; a coupling term `drill_cube_distance` rewarding drill-head↔cube proximity while both lifted; a terminal `success_bonus` (20-step consecutive threading); plus mirrored `_symmetry` variants for every reach/lift/track/align term, and energy + collision penalties per arm.
+**Description.** 24 `RewTerm`s (weights listed below). The design is a full staged bimanual pipeline: (right hand) reach → lift → track cube goal pos+orient → success bonus; (left hand) align palm to drill approach frame (pos+quat) → reach drill → track drill goal pos+orient → success bonus; a coupling term `drill_cube_distance` rewarding drill-head↔cube proximity while both lifted; a terminal `success_bonus` (20-step consecutive threading); plus mirrored `_symmetry` variants for every reach/lift/track/align term, and energy + collision penalties per arm.
 
 **All reward terms (name · func · key params · weight).**
-
-> Weights below are the **effective runtime values** injected by symdex via Hydra (`symdex/cfg/task/threading.yaml`), not the source `weight=0.0` defaults in the verbatim `RewardsCfg`. See **Runtime reward weights** subsection below.
 
 | # | name | func | params | weight |
 |---|---|---|---|---|
@@ -569,36 +565,7 @@ class ThreadingObservationsCfg(BaseObservationsCfg):
 | 23 | collision_to_table | collision_penalty | sensors 0-3 | -0.000001 |
 | 24 | collision_to_table_symmetry | collision_penalty | sensors *_left | -0.000001 |
 
-### Runtime reward weights (Hydra: symdex/cfg/task/threading.yaml)
-
-symdex injects reward weights at runtime via Hydra (`env.cfg.hydra_cfg.task.*`); the verbatim `RewardsCfg` below ships every `RewTerm` with `weight=0.0`, so these Hydra values are the **effective** weights actually used in training. `cube_success_bonus` and `drill_success_bonus` are genuinely `0.0` in Hydra (declared but inactive).
-
-| term | weight |
-|---|---|
-| reaching_object | 0.02 |
-| object_lifting | 2.0 |
-| cube_goal_tracking | 10.0 |
-| cube_goal_orient_tracking | 2.5 |
-| cube_success_bonus | 0.0 |
-| align_hand_to_pos | 1.0 |
-| align_hand_to_quat | 0.25 |
-| reaching_drill | 0.01 |
-| drill_goal_tracking | 10.0 |
-| drill_goal_orient_tracking | 0.4 |
-| drill_success_bonus | 0.0 |
-| drill_cube_distance | 500.0 |
-| success_bonus | 2000.0 |
-| energy | 0.000001 |
-| energy_left | 0.000001 |
-| collision_to_table | -0.000001 |
-| reaching_object_symmetry | 0.02 |
-| object_lifting_symmetry | 2.0 |
-| cube_goal_tracking_symmetry | 10.0 |
-| cube_goal_orient_tracking_symmetry | 2.5 |
-| align_hand_to_pos_symmetry | 1.0 |
-| align_hand_to_quat_symmetry | 0.25 |
-| reaching_drill_symmetry | 0.01 |
-| collision_to_table_symmetry | -0.000001 |
+Note: `cube_success_bonus` and `drill_success_bonus` carry `weight=0.0` (declared but inactive).
 
 ### Symmetric-learning reward terms (drop if not using symmetric learning)
 
@@ -606,37 +573,39 @@ This task trains with **symmetric learning** (`base.yaml` → `symmetry.symmetri
 
 `_symmetry` duplicate terms: `reaching_object_symmetry`, `object_lifting_symmetry`, `cube_goal_tracking_symmetry`, `cube_goal_orient_tracking_symmetry`, `align_hand_to_pos_symmetry`, `align_hand_to_quat_symmetry`, `reaching_drill_symmetry`, `collision_to_table_symmetry`.
 
-**Code (reward config — verbatim, abridged params repeated above).**
+**Code (reward config — abridged params repeated above).**
 ```python
 # env_cfg.py
 @configclass
 class ThreadingRewardsCfg(BaseRewardsCfg):
     reaching_object = RewTerm(func=object_robot_distance,
-        params={"weight":[1.0,1.0,1.0,1.5], "link_name":["if5","mf5","pf5","th5"], "object_id":0}, weight=0.0)
+        params={"weight":[1.0,1.0,1.0,1.5], "link_name":["if5","mf5","pf5","th5"], "object_id":0}, weight=0.02)
     object_lifting = RewTerm(func=lift_distance,
-        params={"command_name":"cube_target_pos","object_id":0,"sensor_names":["contact_sensors_0","contact_sensors_1","contact_sensors_2","contact_sensors_3"]}, weight=0.0)
+        params={"command_name":"cube_target_pos","object_id":0,"sensor_names":["contact_sensors_0","contact_sensors_1","contact_sensors_2","contact_sensors_3"]}, weight=2.0)
     cube_goal_tracking = RewTerm(func=threading.object_goal_distance,
-        params={"command_name":"cube_target_pos","object_id":0,"sensor_names":["contact_sensors_0","contact_sensors_1","contact_sensors_2","contact_sensors_3"]}, weight=0.0)
+        params={"command_name":"cube_target_pos","object_id":0,"sensor_names":["contact_sensors_0","contact_sensors_1","contact_sensors_2","contact_sensors_3"]}, weight=10.0)
     cube_goal_orient_tracking = RewTerm(func=object_goal_distance_orient,
-        params={"command_name":"cube_target_pos","object_id":0,"axis":"z","sensor_names":[...0-3...],"pos_success_threshold":0.1}, weight=0.0)
+        params={"command_name":"cube_target_pos","object_id":0,"axis":"z","sensor_names":[...0-3...],"pos_success_threshold":0.1}, weight=2.5)
     cube_success_bonus = RewTerm(func=bowl.cmd_success_bonus, params={"command_names":"cube_target_pos","num_success":1}, weight=0.0)
     align_hand_to_pos = RewTerm(func=align_palm_to_pos,
-        params={"link_name":["palm_link"],"frame_name":"object_approach_frame","asset_cfg":SceneEntityCfg("robot_left")}, weight=0.0)
+        params={"link_name":["palm_link"],"frame_name":"object_approach_frame","asset_cfg":SceneEntityCfg("robot_left")}, weight=1.0)
     align_hand_to_quat = RewTerm(func=align_palm_to_quat,
-        params={"link_name":["palm_link"],"frame_name":"object_approach_frame","asset_cfg":SceneEntityCfg("robot_left")}, weight=0.0)
+        params={"link_name":["palm_link"],"frame_name":"object_approach_frame","asset_cfg":SceneEntityCfg("robot_left")}, weight=0.25)
     reaching_drill = RewTerm(func=object_robot_distance,
-        params={"weight":[1.0,1.0,1.0,1.5],"link_name":["if5","mf5","pf5","th5"],"object_id":1,"asset_cfg":SceneEntityCfg("robot_left")}, weight=0.0)
-    drill_goal_tracking = RewTerm(func=threading.object_goal_distance, params={"command_name":"drill_target_pos","object_id":1}, weight=0.0)
-    drill_goal_orient_tracking = RewTerm(func=threading.drill_goal_orient_distance, params={"command_name":"drill_target_pos","object_id":1}, weight=0.0)
+        params={"weight":[1.0,1.0,1.0,1.5],"link_name":["if5","mf5","pf5","th5"],"object_id":1,"asset_cfg":SceneEntityCfg("robot_left")}, weight=0.01)
+    drill_goal_tracking = RewTerm(func=threading.object_goal_distance, params={"command_name":"drill_target_pos","object_id":1}, weight=10.0)
+    drill_goal_orient_tracking = RewTerm(func=threading.drill_goal_orient_distance, params={"command_name":"drill_target_pos","object_id":1}, weight=0.4)
     drill_success_bonus = RewTerm(func=bowl.cmd_success_bonus, params={"command_names":"drill_target_pos","num_success":1}, weight=0.0)
-    drill_cube_distance = RewTerm(func=threading.drill_cube_distance, params={"frame_name":"drill_head_frame","cube_id":0,"drill_id":1}, weight=0.0)
-    success_bonus = RewTerm(func=threading.success_bonus, params={"num_success":20,"object_id":0,"frame_name":"drill_head_frame"}, weight=0.0)
-    # symmetry mirrors (14-20) + energy/energy_left (21-22) + collision_to_table[_symmetry] (23-24), all weight=0.0
-    energy = RewTerm(func=energy_punishment, weight=0.0,
+    drill_cube_distance = RewTerm(func=threading.drill_cube_distance, params={"frame_name":"drill_head_frame","cube_id":0,"drill_id":1}, weight=500.0)
+    success_bonus = RewTerm(func=threading.success_bonus, params={"num_success":20,"object_id":0,"frame_name":"drill_head_frame"}, weight=2000.0)
+    # symmetry mirrors (14-20): same weights as their base counterparts (reaching_object_symmetry 0.02,
+    #   object_lifting_symmetry 2.0, cube_goal_tracking_symmetry 10.0, cube_goal_orient_tracking_symmetry 2.5,
+    #   align_hand_to_pos_symmetry 1.0, align_hand_to_quat_symmetry 0.25, reaching_drill_symmetry 0.01)
+    energy = RewTerm(func=energy_punishment, weight=0.000001,
         params={"asset_cfg":SceneEntityCfg("robot"),"actuator_name":["allegro_hand_1",...,"allegro_hand_thumb_4"]})
-    energy_left = RewTerm(func=energy_punishment, weight=0.0, params={"asset_cfg":SceneEntityCfg("robot_left"),"actuator_name":[...]})
-    collision_to_table = RewTerm(func=collision_penalty, params={"sensor_names":[...0-3...]}, weight=0.0)
-    collision_to_table_symmetry = RewTerm(func=collision_penalty, params={"sensor_names":[...*_left...]}, weight=0.0)
+    energy_left = RewTerm(func=energy_punishment, weight=0.000001, params={"asset_cfg":SceneEntityCfg("robot_left"),"actuator_name":[...]})
+    collision_to_table = RewTerm(func=collision_penalty, params={"sensor_names":[...0-3...]}, weight=-0.000001)
+    collision_to_table_symmetry = RewTerm(func=collision_penalty, params={"sensor_names":[...*_left...]}, weight=-0.000001)
 ```
 
 **Code (reward function sources — verbatim).**

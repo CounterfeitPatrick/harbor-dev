@@ -1,6 +1,6 @@
 # Task Implementation Doc — Authoring Contract
 
-Read by `benchmark-generator` when filling `templates/benchmark-generator/task-implementation.md.template` into `<repo>/harbor/create-task/task-implementation.md`. The output of that step is the **input** to three future agents (`task-generator`, `reward-generator`, `dr-generator`) dispatched by `/harbor:task-create` — so the rules here exist to keep downstream behaviour stable.
+Read by `benchmark-generator` when filling `templates/benchmark-generator/task-implementation.md.template` into `<repo>/harbor/create-task/task-implementation.md`. The output of that step is the **input** to three future authoring agents (`task-generator`, `reward-tuning-agent`, `dr-generator`) dispatched by `/harbor:task-create` — so the rules here exist to keep downstream behaviour stable.
 
 ## What the doc is for
 
@@ -36,7 +36,7 @@ The folder is `create-task/` — the stable workspace root for the task-authorin
 | 3 | Init / reset | task-generator | 5 resets succeed; randomized fields differ |
 | 4 | Goal + termination | task-generator | episode ends within max_episode_steps; success/failure flag present |
 | 5 | Observation | task-generator | obs has expected keys/shape; all values finite |
-| 6 | Reward | reward-generator | reward finite at every step; per-term decomposition (if any) sums to total |
+| 6 | Reward | reward-tuning-agent | reward finite at every step; per-term decomposition (if any) sums to total |
 | 7 | Domain randomization | dr-generator | seed-matched obs trajectories diverge with vs without DR |
 
 Each section in the rendered doc has the same five sub-blocks: **Description**, **File pointers**, **Code template**, **Decisions**, **Smoke check**.

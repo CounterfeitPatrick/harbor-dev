@@ -1,6 +1,6 @@
 # Adapt-first — build from the selected base
 
-Followed by the authoring agents — `task-generator` (§1–§5), the reward-tune main agent (§6),
+Followed by the authoring agents — `task-generator` (§1–§5), `reward-tuning-agent` (§6),
 `dr-generator` (§7) — on the `design_base` that `task-library-search.md` already returned. Selection is
 done; this is how to use it.
 
@@ -17,7 +17,7 @@ Read the caller's own append-only ledger (heuristics distilled across runs):
 | Caller | Ledger |
 |---|---|
 | `task-generator` | `experiences/task-generator/task-experience.md` |
-| `/harbor:reward-tune` (main agent) | `experiences/reward-generator/reward-experience.md` |
+| `reward-tuning-agent` | `experiences/reward-generator/reward-experience.md` |
 | `dr-generator` | `experiences/dr-generator/dr-experience.md` |
 
 ## Step 2 — Adapt-first (BINDING)

@@ -1,7 +1,5 @@
 # StirBowl — Implementation Spec
 
-> **CAVEAT — DESIGN CAPTURE, NOT BUILD-VERIFIED.** symdex is **NOT** a harbor benchmark repo. This spec was reverse-engineered by reading source only; nothing here was executed or build-verified. All dimensions (observation / action) are **ANALYTIC** — derived by hand from the term functions in the source, not read back from a running env. Treat magnitudes/dims as reproduction targets to re-verify, not ground truth.
-
 - benchmark_family: isaaclab-manager-based
 - source_repo: symdex
 - source_path: /home/steven/code/symdex/symdex/env/tasks/StirBowl
@@ -9,7 +7,7 @@
 - gym_id: `StirBowlEnv-v0`
 - entry_point: `symdex.env.tasks.StirBowl.env:StirBowlEnv`
 
-**Task summary:** A bimanual dexterous stirring task. Two UF850 arms, each ending in a 16-DoF Allegro hand (`robot` = right, `robot_left` = left), sit behind a table. The **right** hand grasps an **egg-beater** tool (`object_0`) and lifts/orients it to a goal pose above the table; the **left** hand grasps and holds a **bowl** (`object_1`) steady at its goal position. Three **balls** (`object_2..4`) rest inside the bowl. The intended behavior is: keep the bowl stationary at its goal, hold the egg-beater upright at its goal pose while in fingertip contact, and *stir* — driving ball motion inside the bowl (rewarded via ball linear velocity, gated on egg-beater success AND bowl-held success). Success is the conjunction of bowl-at-goal, egg-beater-at-goal-position, and egg-beater-orientation-aligned. The action is a per-arm EMA cumulative-relative joint-position target (44-D total). NOTE: in the committed source **every reward weight is 0.0** (weights are meant to be injected at train time via the hydra task config); the term wiring below is the design, the magnitudes are placeholders.
+**Task summary:** A bimanual dexterous stirring task. Two UF850 arms, each ending in a 16-DoF Allegro hand (`robot` = right, `robot_left` = left), sit behind a table. The **right** hand grasps an **egg-beater** tool (`object_0`) and lifts/orients it to a goal pose above the table; the **left** hand grasps and holds a **bowl** (`object_1`) steady at its goal position. Three **balls** (`object_2..4`) rest inside the bowl. The intended behavior is: keep the bowl stationary at its goal, hold the egg-beater upright at its goal pose while in fingertip contact, and *stir* — driving ball motion inside the bowl (rewarded via ball linear velocity, gated on egg-beater success AND bowl-held success). Success is the conjunction of bowl-at-goal, egg-beater-at-goal-position, and egg-beater-orientation-aligned. The action is a per-arm EMA cumulative-relative joint-position target (44-D total).
 
 ---
 
@@ -486,7 +484,7 @@ def success_bonus(env, num_success: int = 0):
 
 ## §5 Observation
 
-**Description.** Single concatenated `policy` group, corruption OFF (`enable_corruption=False`). Bimanual: full pose+joint state of both arms, poses/velocities of all 5 objects, both goals, and last action. Orientations use the "symmetry" flat-rotation-matrix encoding (a quaternion is emitted as a flattened 3×3 = 9 numbers) — so each pose = 3 (pos) + 9 (R_flat) = 12. **ANALYTIC total = 225** (see table; re-verify against a running env).
+**Description.** Single concatenated `policy` group, corruption OFF (`enable_corruption=False`). Bimanual: full pose+joint state of both arms, poses/velocities of all 5 objects, both goals, and last action. Orientations use the "symmetry" flat-rotation-matrix encoding (a quaternion is emitted as a flattened 3×3 = 9 numbers) — so each pose = 3 (pos) + 9 (R_flat) = 12. **Total = 225** (see table).
 
 **Decisions resolved (per-term dims).**
 
@@ -552,9 +550,9 @@ class StirBowlObservationsCfg(BaseObservationsCfg):
 
 ## §6 Reward
 
-**Description.** 19 `RewTerm`s total: 2 inherited energy penalties (`energy`, `energy_left`), 10 task terms, and 7 symmetry-mirror terms (same funcs applied to the opposite hand / mirrored approach frame). **Every weight in the committed source is 0.0** — the reward is designed to be shaped at train time (weights injected via the hydra task config; cf. `randomize_rew_weight` / curriculum in `BaseEnv.update_randomization`). The intended shaping ladder: (1) `reaching_object` — inverse fingertip→egg-beater distance; (2) `object_lifting` — lift egg-beater to goal height, gated on 4-finger contact; (3) `egg_beater_goal_tracking` / `_orient_tracking` — reduce egg-beater pos/z-axis error, contact-gated; (4) `bowl_goal_tracking` (bowl.object_goal_distance) — hold bowl at goal, orient-gated; (5) `align_hand_to_pos`/`_quat` — align LEFT palm to bowl approach frame; (6) `ball_velocity` (bowl.object_vel) — reward ball speed inside the bowl, gated on egg-beater success AND bowl consecutive_success≥5 (the actual "stirring" signal); (7) `bowl_success_bonus` / `success_bonus` — sparse conjunction bonuses. Contact gating uses `get_allegro_contact` (index/middle/ring OR + thumb AND, force>1 N).
+**Description.** 19 `RewTerm`s total: 2 inherited energy penalties (`energy`, `energy_left`), 10 task terms, and 7 symmetry-mirror terms (same funcs applied to the opposite hand / mirrored approach frame). The shaping ladder: (1) `reaching_object` — inverse fingertip→egg-beater distance; (2) `object_lifting` — lift egg-beater to goal height, gated on 4-finger contact; (3) `egg_beater_goal_tracking` / `_orient_tracking` — reduce egg-beater pos/z-axis error, contact-gated; (4) `bowl_goal_tracking` (bowl.object_goal_distance) — hold bowl at goal, orient-gated; (5) `align_hand_to_pos`/`_quat` — align LEFT palm to bowl approach frame; (6) `ball_velocity` (bowl.object_vel) — reward ball speed inside the bowl, gated on egg-beater success AND bowl consecutive_success≥5 (the actual "stirring" signal); (7) `bowl_success_bonus` / `success_bonus` — sparse conjunction bonuses. Contact gating uses `get_allegro_contact` (index/middle/ring OR + thumb AND, force>1 N).
 
-**Decisions resolved (all weights 0.0 in source).**
+**Decisions resolved.**
 
 | Term | func | key params | weight |
 |---|---|---|---|
@@ -578,30 +576,6 @@ class StirBowlObservationsCfg(BaseObservationsCfg):
 | align_hand_to_pos_symmetry | `align_palm_to_pos` | frame …_symmetry, robot | 2.0 |
 | align_hand_to_quat_symmetry | `align_palm_to_quat` | frame …_symmetry, robot | 0.5 |
 
-### Runtime reward weights (Hydra: symdex/cfg/task/stirBowl.yaml)
-
-symdex injects these weights at runtime via Hydra — they overwrite the source's 0.0 defaults, so these are the **effective** values used during training (the verbatim `StirBowlRewardsCfg` below keeps 0.0 by design).
-
-| Term | weight |
-|---|---|
-| reaching_object | 0.01 |
-| object_lifting | 5.0 |
-| egg_beater_goal_tracking | 50.0 |
-| egg_beater_goal_orient_tracking | 20.0 |
-| ball_velocity | 1000.0 |
-| align_hand_to_pos | 2.0 |
-| align_hand_to_quat | 0.5 |
-| bowl_goal_tracking | 10.0 |
-| bowl_success_bonus | 5.0 |
-| success_bonus | 100.0 |
-| reaching_object_symmetry | 0.01 |
-| object_lifting_symmetry | 5.0 |
-| egg_beater_goal_tracking_symmetry | 50.0 |
-| egg_beater_goal_orient_tracking_symmetry | 20.0 |
-| ball_velocity_symmetry | 1000.0 |
-| align_hand_to_pos_symmetry | 2.0 |
-| align_hand_to_quat_symmetry | 0.5 |
-
 ### Symmetric-learning reward terms (drop if not using symmetric learning)
 
 This task trains with **SYMMETRIC LEARNING** (`base.yaml` → `symmetry.symmetric_envs: True`, **C2** group). The BASE terms are genuine reward terms. The `_symmetry`-suffixed terms are **DUPLICATES** of the base terms applied to the mirrored hand / mirrored approach frame, present **only** as augmentation for symmetric learning — **drop them if you are not using symmetric learning.**
@@ -613,48 +587,48 @@ This task trains with **SYMMETRIC LEARNING** (`base.yaml` → `symmetry.symmetri
 @configclass
 class StirBowlRewardsCfg(BaseRewardsCfg):
     reaching_object = RewTerm(func=object_robot_distance,
-        params={"weight": [1.0, 1.0, 1.0, 1.5], "link_name": ["if5","mf5","pf5","th5"], "object_id": 0}, weight=0.0)
+        params={"weight": [1.0, 1.0, 1.0, 1.5], "link_name": ["if5","mf5","pf5","th5"], "object_id": 0}, weight=0.01)
     object_lifting = RewTerm(func=lift_distance,
         params={"command_name": "target_pos", "object_id": 0,
-                "sensor_names": ["contact_sensors_0","contact_sensors_1","contact_sensors_2","contact_sensors_3"]}, weight=0.0)
+                "sensor_names": ["contact_sensors_0","contact_sensors_1","contact_sensors_2","contact_sensors_3"]}, weight=5.0)
     egg_beater_goal_tracking = RewTerm(func=object_goal_distance,
         params={"command_name": "target_pos", "object_id": 0,
-                "sensor_names": ["contact_sensors_0","contact_sensors_1","contact_sensors_2","contact_sensors_3"]}, weight=0.0)
+                "sensor_names": ["contact_sensors_0","contact_sensors_1","contact_sensors_2","contact_sensors_3"]}, weight=50.0)
     egg_beater_goal_orient_tracking = RewTerm(func=object_goal_distance_orient,
         params={"command_name": "target_pos", "object_id": 0, "axis": "z",
-                "sensor_names": ["contact_sensors_0","contact_sensors_1","contact_sensors_2","contact_sensors_3"]}, weight=0.0)
+                "sensor_names": ["contact_sensors_0","contact_sensors_1","contact_sensors_2","contact_sensors_3"]}, weight=20.0)
     ball_velocity = RewTerm(func=bowl.object_vel,
         params={"object_id": [2, 3, 4],
-                "sensor_names": ["contact_sensors_0","contact_sensors_1","contact_sensors_2","contact_sensors_3"]}, weight=0.0)
+                "sensor_names": ["contact_sensors_0","contact_sensors_1","contact_sensors_2","contact_sensors_3"]}, weight=1000.0)
     bowl_goal_tracking = RewTerm(func=bowl.object_goal_distance,
-        params={"command_name": "bowl_target_pos", "object_id": 1}, weight=0.0)
+        params={"command_name": "bowl_target_pos", "object_id": 1}, weight=10.0)
     align_hand_to_pos = RewTerm(func=align_palm_to_pos,
-        params={"link_name": ["palm_link"], "frame_name": "object_approach_frame", "asset_cfg": SceneEntityCfg("robot_left")}, weight=0.0)
+        params={"link_name": ["palm_link"], "frame_name": "object_approach_frame", "asset_cfg": SceneEntityCfg("robot_left")}, weight=2.0)
     align_hand_to_quat = RewTerm(func=align_palm_to_quat,
-        params={"link_name": ["palm_link"], "frame_name": "object_approach_frame", "asset_cfg": SceneEntityCfg("robot_left")}, weight=0.0)
+        params={"link_name": ["palm_link"], "frame_name": "object_approach_frame", "asset_cfg": SceneEntityCfg("robot_left")}, weight=0.5)
     bowl_success_bonus = RewTerm(func=bowl.cmd_success_bonus,
-        params={"command_names": "bowl_target_pos", "num_success": 1}, weight=0.0)
-    success_bonus = RewTerm(func=bowl.success_bonus, params={"num_success": 5}, weight=0.0)
+        params={"command_names": "bowl_target_pos", "num_success": 1}, weight=5.0)
+    success_bonus = RewTerm(func=bowl.success_bonus, params={"num_success": 5}, weight=100.0)
     # symmetry (mirrored hand / frame)
     reaching_object_symmetry = RewTerm(func=object_robot_distance,
         params={"weight": [1.0,1.0,1.0,1.5], "link_name": ["if5","mf5","pf5","th5"], "object_id": 0,
-                "asset_cfg": SceneEntityCfg("robot_left")}, weight=0.0)
+                "asset_cfg": SceneEntityCfg("robot_left")}, weight=0.01)
     object_lifting_symmetry = RewTerm(func=lift_distance,
         params={"command_name": "target_pos", "object_id": 0,
-                "sensor_names": ["contact_sensors_0_left","contact_sensors_1_left","contact_sensors_2_left","contact_sensors_3_left"]}, weight=0.0)
+                "sensor_names": ["contact_sensors_0_left","contact_sensors_1_left","contact_sensors_2_left","contact_sensors_3_left"]}, weight=5.0)
     egg_beater_goal_tracking_symmetry = RewTerm(func=object_goal_distance,
         params={"command_name": "target_pos", "object_id": 0,
-                "sensor_names": ["contact_sensors_0_left","contact_sensors_1_left","contact_sensors_2_left","contact_sensors_3_left"]}, weight=0.0)
+                "sensor_names": ["contact_sensors_0_left","contact_sensors_1_left","contact_sensors_2_left","contact_sensors_3_left"]}, weight=50.0)
     egg_beater_goal_orient_tracking_symmetry = RewTerm(func=object_goal_distance_orient,
         params={"command_name": "target_pos", "object_id": 0, "axis": "z",
-                "sensor_names": ["contact_sensors_0_left","contact_sensors_1_left","contact_sensors_2_left","contact_sensors_3_left"]}, weight=0.0)
+                "sensor_names": ["contact_sensors_0_left","contact_sensors_1_left","contact_sensors_2_left","contact_sensors_3_left"]}, weight=20.0)
     ball_velocity_symmetry = RewTerm(func=bowl.object_vel,
         params={"object_id": [2,3,4],
-                "sensor_names": ["contact_sensors_0_left","contact_sensors_1_left","contact_sensors_2_left","contact_sensors_3_left"]}, weight=0.0)
+                "sensor_names": ["contact_sensors_0_left","contact_sensors_1_left","contact_sensors_2_left","contact_sensors_3_left"]}, weight=1000.0)
     align_hand_to_pos_symmetry = RewTerm(func=align_palm_to_pos,
-        params={"link_name": ["palm_link"], "frame_name": "object_approach_frame_symmetry", "asset_cfg": SceneEntityCfg("robot")}, weight=0.0)
+        params={"link_name": ["palm_link"], "frame_name": "object_approach_frame_symmetry", "asset_cfg": SceneEntityCfg("robot")}, weight=2.0)
     align_hand_to_quat_symmetry = RewTerm(func=align_palm_to_quat,
-        params={"link_name": ["palm_link"], "frame_name": "object_approach_frame_symmetry", "asset_cfg": SceneEntityCfg("robot")}, weight=0.0)
+        params={"link_name": ["palm_link"], "frame_name": "object_approach_frame_symmetry", "asset_cfg": SceneEntityCfg("robot")}, weight=0.5)
 ```
 
 **Code (task-local reward funcs — StirBowl/mdps.py).**

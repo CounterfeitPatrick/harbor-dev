@@ -277,7 +277,7 @@ The script writes `<repo>/harbor/benchmark-generator/benchmark-spec.json` with `
 
 ## Step 3.7 — Author `create-task/task-implementation.md`
 
-`/harbor:task-create` boots three agents (`task-generator` → `reward-generator` → `dr-generator`) that each read **one shared file**: `<repo>/harbor/create-task/task-implementation.md`, authored here. They do **not** re-scan the upstream repo — they trust this doc, so getting it right is part of benchmark-generator's contract.
+`/harbor:task-create` boots three authoring agents (`task-generator` → `reward-tuning-agent` → `dr-generator`) that each read **one shared file**: `<repo>/harbor/create-task/task-implementation.md`, authored here. They do **not** re-scan the upstream repo — they trust this doc, so getting it right is part of benchmark-generator's contract.
 
 **This step delegates to `/harbor:probe-benchmark`.** The canonical procedure (family detection, canonical-example pick, template render, §1 smoke verification) lives in `${CLAUDE_PLUGIN_ROOT}/commands/probe-benchmark.md` — read that file and follow its 8-step Action block verbatim against `<repo_path>`. Re-using the command body means future probe-benchmark improvements flow through to Step 3.7 automatically.
 

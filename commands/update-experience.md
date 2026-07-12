@@ -91,7 +91,7 @@ Base path: `${CLAUDE_PLUGIN_ROOT}/experiences/task-library/<destination>`.
 
 ### B3 — Derive a short, accurate filename
 
-The filename is what `task-generator` / `reward-generator` grep when searching for relevant prior tasks, so it must be **short but accurate** — describe the task, not the gym id verbatim.
+The filename is what `task-generator` / `reward-tuning-agent` grep when searching for relevant prior tasks, so it must be **short but accurate** — describe the task, not the gym id verbatim.
 
 - Form: `<short-task-slug>-<source_repo>.md`.
 - `<source_repo>` comes from the spec's `- source_repo:` line (e.g. `IsaacLab`).

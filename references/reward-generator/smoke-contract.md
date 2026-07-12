@@ -1,6 +1,6 @@
 # §6 smoke contract
 
-Loaded by `reward-generator`. Template: `${CLAUDE_PLUGIN_ROOT}/templates/reward-generator/smokes/smoke_s6.py.template`.
+Loaded by `reward-tuning-agent`. Template: `${CLAUDE_PLUGIN_ROOT}/templates/reward-generator/smokes/smoke_s6.py.template`.
 
 ## What it verifies
 
@@ -27,7 +27,7 @@ Smoke runs at **`num_envs=128`**. Reward and per-term tensors are `(128,)`. The 
 |---|---|
 | `{{TASK_ID}}` | gym task id |
 
-The composer assertion auto-skips when `info["detailed_reward"]` is absent (Direct envs, etc.). No agent-filled blocks needed — the contract is task-agnostic at this level. **Exception:** inside a `/harbor:reward-tune` iteration the auto-skip is NOT acceptable — per-term logging is wired by the tune's Step 0 gate, so an absent `detailed_reward` there means broken wiring and the smoke verdict must be treated as FAIL (see `agents/reward-generator.md`).
+The composer assertion auto-skips when `info["detailed_reward"]` is absent (Direct envs, etc.). No agent-filled blocks needed — the contract is task-agnostic at this level. **Exception:** inside a `/harbor:reward-tune` iteration the auto-skip is NOT acceptable — per-term logging is wired by the tune's Step 0 gate, so an absent `detailed_reward` there means broken wiring and the smoke verdict must be treated as FAIL (see `agents/reward-tuning-agent.md`).
 
 ## When the contract fails
 

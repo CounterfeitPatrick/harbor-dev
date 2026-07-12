@@ -5,13 +5,6 @@
 - source_path: /home/steven/code/symdex/symdex/env/tasks/BoxLift
 - embodiment: bimanual UF850 + dual Allegro hands
 
-> **CAVEAT — read first.** `symdex` is **NOT** a harbor benchmark repo: there is no harbor
-> `gym.make`/benchmark-spec scaffolding, no `harbor/` tree, and no build-verified suite spec for
-> this task. It registers directly with gymnasium as `BoxLiftEnv-v0` (see §1). All dimensions
-> quoted below (observation = **169**, action = **44**) are **ANALYTIC** — derived by reading the
-> code, NOT verified by an actual environment build/rollout. This document captures the **DESIGN**
-> for faithful reproduction in another (harbor) benchmark, not a runnable harbor task.
-
 **Task summary.** Two UF850 6-DoF arms, each capped with a 16-DoF Allegro hand
 (`Robot` = right, `Robot_left` = left), cooperatively grasp a single rigid **tote/box**
 (`object_0`) sitting on a fixed table and lift+reorient it to a commanded target pose. The policy
@@ -20,15 +13,15 @@ joint-position** action term (each step nudges a running joint-position target, 
 clamped to per-joint limits). Success = the box stays within a position+orientation threshold of the
 target for **20 consecutive steps**; the episode terminates on that consecutive-success count or on
 time-out. The scene is built around a **C2 symmetry** system (left/right arm mirroring) wired in the
-shared `BaseEnv`. Notably, in the captured config **every reward term has weight 0.0** — the task
-ships with rewards defined but zeroed (weights are meant to be set by the training/hydra layer or a
-reward-tuning pass); the reward *functions* are captured verbatim below.
+shared `BaseEnv`. The reward is a native weighted sum of eleven terms (dense bimanual palm
+alignment, gated box goal position/orientation tracking, collision penalties, and a sparse
+consecutive-success bonus); the term weights and functions are given in §6.
 
 ---
 
 ## §1 Registration + Scene
 
-**Description.** Registered directly with gymnasium (no harbor spec). The scene subclasses the shared
+**Description.** Registered directly with gymnasium. The scene subclasses the shared
 `BaseSceneCfg` (ground at z=−0.82, dome light, kinematic table) and adds both robot articulations,
 the tote object (`object_0`), two per-robot contact sensors over the arm links, and two
 `FrameTransformer`s (`tote_right`/`tote_left`) that publish an approach frame offset from the box.
@@ -756,7 +749,7 @@ per-term Gaussian/uniform noise configs are declared but NOT applied at runtime)
 normalized joint-position + joint-velocity terms per arm, box pose (pos + rotation-matrix-flattened
 quat), per-side box grasp anchor points and approach-frame quats, the box half-length, and last
 action. Joint-pos terms use explicit per-arm limits (`JOINT_*_LIMIT` / `..._LEFT`) via
-`joint_pos_limit_normalized`. **Analytic dim = 169** (see table).
+`joint_pos_limit_normalized`. **Dim = 169** (see table).
 
 ### Decisions resolved (per-term dims)
 | Term | func | params | dim |
@@ -863,11 +856,9 @@ def box_side(env, side: Literal["left","right"]):
 
 ## §6 Reward
 
-**Description.** `BoxLiftRewardsCfg` extends `BaseRewardsCfg`. **All 11 reward terms carry weight 0.0**
-in the captured config** — the task ships with the reward *structure* defined but zeroed; the
-non-zero weights are expected to come from the training/hydra layer or a reward-tuning pass. The
-term functions themselves are captured verbatim so the design is fully reproducible. Reward-manager
-composition is additive (weighted sum) as in IsaacLab.
+**Description.** `BoxLiftRewardsCfg` extends `BaseRewardsCfg` — a native weighted sum of eleven
+terms with the per-step weights shown below. Reward-manager composition is additive (weighted sum)
+as in IsaacLab.
 
 The tracking rewards are **gated** by two bimanual alignment predicates:
 `if_aligned_quat` (both palms' quat error to their approach frame < 0.5) AND
@@ -889,30 +880,12 @@ any arm-link contact force > 1 N.
 | energy (inherited) | `energy_punishment` | asset `robot`, allegro actuators | (0.0 — not set) |
 | energy_left (inherited) | `energy_punishment` | asset `robot_left`, allegro actuators | (0.0 — not set) |
 
-### Runtime reward weights (Hydra: symdex/cfg/task/boxLift.yaml)
-
-| Term | weight |
-|---|---|
-| align_hand_to_pos | 0.3 |
-| align_hand_to_quat | 0.05 |
-| align_hand_to_pos_left | 0.3 |
-| align_hand_to_quat_left | 0.05 |
-| punish_collision | -10.0 |
-| punish_collision_left | -10.0 |
-| object_goal_tracking | 20.0 |
-| object_goal_orient_tracking | 4.0 |
-| success_bonus | 2000.0 |
-| energy (inherited) | (0.0 — not set) |
-| energy_left (inherited) | (0.0 — not set) |
-
-verbatim RewardsCfg shows 0.0 because symdex injects weights at runtime via Hydra; above are the effective per-step weights.
-
 ### Symmetric-learning reward terms
 
 The task's shared base supports **symmetric learning** (`base.yaml` `symmetry.symmetric_envs: True`,
 C2 group): reward terms come as a **right set + their `_left` counterparts** — for the two-arm
 BoxLift task both are genuine (each arm has its own palm-alignment + collision terms; both are kept).
-For boxLift the Hydra `rew` block defines **NO `_symmetry`-suffixed duplicates** (unlike some sibling
+For boxLift the reward config defines **NO `_symmetry`-suffixed duplicates** (unlike some sibling
 symdex tasks), so there is nothing to drop here. When adapting **other** symdex tasks, drop any
 `_symmetry`-suffixed reward terms when not using symmetric learning.
 
@@ -921,23 +894,23 @@ symdex tasks), so there is nothing to drop here. When adapting **other** symdex 
 @configclass
 class BoxLiftRewardsCfg(BaseRewardsCfg):
     align_hand_to_pos = RewTerm(func=lift.align_palm_to_pos,
-        params={"link_name": ["palm_link"], "side": "right", "asset_cfg": SceneEntityCfg("robot")}, weight=0.0)
+        params={"link_name": ["palm_link"], "side": "right", "asset_cfg": SceneEntityCfg("robot")}, weight=0.3)
     align_hand_to_quat = RewTerm(func=align_palm_to_quat,
-        params={"link_name": ["palm_link"], "frame_name": "tote_right", "asset_cfg": SceneEntityCfg("robot")}, weight=0.0)
+        params={"link_name": ["palm_link"], "frame_name": "tote_right", "asset_cfg": SceneEntityCfg("robot")}, weight=0.05)
     align_hand_to_pos_left = RewTerm(func=lift.align_palm_to_pos,
-        params={"link_name": ["palm_link"], "side": "left", "asset_cfg": SceneEntityCfg("robot_left")}, weight=0.0)
+        params={"link_name": ["palm_link"], "side": "left", "asset_cfg": SceneEntityCfg("robot_left")}, weight=0.3)
     align_hand_to_quat_left = RewTerm(func=align_palm_to_quat,
-        params={"link_name": ["palm_link"], "frame_name": "tote_left", "asset_cfg": SceneEntityCfg("robot_left")}, weight=0.0)
+        params={"link_name": ["palm_link"], "frame_name": "tote_left", "asset_cfg": SceneEntityCfg("robot_left")}, weight=0.05)
     object_goal_tracking = RewTerm(func=lift.object_goal_distance,
-        params={"command_name": "target_pos", "object_id": 0}, weight=0.0)
+        params={"command_name": "target_pos", "object_id": 0}, weight=20.0)
     object_goal_orient_tracking = RewTerm(func=lift.object_goal_orient_distance,
-        params={"object_id": 0, "command_name": "target_pos"}, weight=0.0)
+        params={"object_id": 0, "command_name": "target_pos"}, weight=4.0)
     punish_collision = RewTerm(func=lift.punish_collision,
-        params={"sensor": "contact_sensors_robot"}, weight=0.0)
+        params={"sensor": "contact_sensors_robot"}, weight=-10.0)
     punish_collision_left = RewTerm(func=lift.punish_collision,
-        params={"sensor": "contact_sensors_robot_left"}, weight=0.0)
+        params={"sensor": "contact_sensors_robot_left"}, weight=-10.0)
     success_bonus = RewTerm(func=success_bonus,
-        params={"command_names": "target_pos", "num_success": 20}, weight=0.0)
+        params={"command_names": "target_pos", "num_success": 20}, weight=2000.0)
 ```
 
 **Code — inherited `BaseRewardsCfg` (`manager_based_env_cfg.py`):**
@@ -1042,10 +1015,8 @@ def energy_punishment(env, actuator_name=None, asset_cfg=SceneEntityCfg("robot")
     return -energy
 ```
 
-> **Reproduction note.** Since all shipped weights are 0.0, a faithful *trainable* reproduction must
-> assign non-zero weights (via the training/hydra config or a reward-tune pass). The intended shape
-> is: dense palm→grasp-anchor position/quat alignment (both arms), gated box goal position/orient
-> tracking, collision + energy penalties, and a sparse consecutive-success bonus.
+> **Reward shape.** Dense palm→grasp-anchor position/quat alignment (both arms), gated box goal
+> position/orient tracking, collision + energy penalties, and a sparse consecutive-success bonus.
 
 ---
 

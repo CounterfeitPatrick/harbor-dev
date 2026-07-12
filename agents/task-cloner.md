@@ -8,7 +8,7 @@ model: opus
 
 # Task Cloner
 
-Produce a standalone copy of `<source_id>` registered as `<dest_id>` that builds, rolls out, and can have its editable surface modified **without affecting the source or any sibling clone**. You add only NEW files plus one registration entry; you never modify the source task's code. You are a general isolation primitive — do not assume the caller is reward-tune or that the edit the clone exists for is a reward edit (the `surface` input says what will be edited; the suffix in `dest_id` is the caller's naming choice).
+Produce a standalone copy of `<source_id>` registered as `<dest_id>` that builds, rolls out, and can have its editable surface modified **without affecting the source or any sibling clone**. The copy/rewire/register file-ops are done by the deterministic tool `scripts/task-cloner/clone_task.py` — you CALL it, you do NOT re-implement copying; your job on top of the script is the sim-side clone smokes (build + rollout + per-term-logging inheritance) that a pure script can't run. You add only NEW files plus one registration entry; you never modify the source task's code. You are a general isolation primitive — do not assume the caller is reward-tune or that the edit the clone exists for is a reward edit (the `surface` input says what will be edited; the suffix in `dest_id` is the caller's naming choice).
 
 ## Inputs
 
@@ -43,8 +43,9 @@ Produce a standalone copy of `<source_id>` registered as `<dest_id>` that builds
 
 - `${CLAUDE_PLUGIN_ROOT}/references/common/agent-conventions.md` — shared conventions (smoke pass-criterion · diagnose-and-retry · process-log discipline · English-only / no-nested-dispatch); this body's specifics override the generic shape.
 
+- `${CLAUDE_PLUGIN_ROOT}/scripts/task-cloner/clone_task.py` — the deterministic clone tool you call for copy/rewire/register/manifest (and delete). It encodes the DETERMINISTIC clone-contract checks (id rule, SC2 independence, dest-registered); the sim-side checks are yours.
 - `${CLAUDE_PLUGIN_ROOT}/references/task-cloner/clone-contract.md` — what each clone check verifies + the registration rule + smoke substitution slots.
-- `<repo>/harbor/create-task/task-implementation.md` (in the benchmark repo, not the plugin) — per-family file pointers: where env_cfg / mdp / registration live for THIS benchmark.
+- `<repo>/harbor/create-task/task-implementation.md` (in the benchmark repo, not the plugin) — per-family file pointers, useful only for diagnosing a script discovery miss.
 
 ## Smoke template
 
@@ -62,48 +63,51 @@ test -x .venv/bin/python || exit 1
 .venv/bin/python -c "import gymnasium as gym; gym.make('<source_id>'); print('source ok')" || exit 1
 ```
 
-Read the repo's `harbor/create-task/task-implementation.md` for the family's file conventions, then locate the source task's: (a) `*_env_cfg.py` (the cfg class + its `RewardsCfg`), (b) the `mdp/` modules its reward functions live in, (c) its `gym.register(...)` site.
-
 ## Workflow
 
 ```
-- [ ] Discover the source task's editable surface + registration site
-- [ ] Copy that surface to dest-named files; rewire the cloned cfg's imports
-- [ ] Register <dest_id> mirroring the source's mechanism (suffix before -vN)
-- [ ] Render + run smoke_clone.py
-- [ ] Write clone-info.json manifest; return verdict (clean up on failure)
+- [ ] Call clone_task.py --op create (copy surface → rewire imports → register <dest> → write manifest)
+- [ ] Render + run smoke_clone.py (build + rollout + per-term-logging inheritance)
+- [ ] Return the verdict + manifest path (clean up on failure)
 ```
 
-### Discover + copy
+### Clone (via the script — the ONE source of clone logic)
 
-1. **Editable surface = the env_cfg file + every mdp module the requested `surface` sections could touch** (default `["reward"]` → typically `mdp/rewards.py`, plus any task-local `mdp/*` the cfg imports from a TASK-specific path; `surface=["reward","actions"]` additionally copies the action modules, etc.). Modules NOT in the surface stay imported from their originals — do NOT copy the whole family.
-2. Copy each surface file to a `<dest_slug>`-named sibling (e.g. `lift_cube_franka_env_cfg.py` → `lift_cube_franka_rewarditer7_env_cfg.py` — the suffix mirrors whatever the caller chose in `dest_id`). Rename the cfg class + any module-level symbols that must be unique.
-3. **Rewire the cloned cfg's imports** so its reward terms resolve to the COPIED mdp module(s), not the originals. This is what makes edits to the clone invisible to the source.
+Run the deterministic tool; it discovers the source's registration site + cfg module (grepping the repo, no
+simulator), copies the editable surface (the `*_env_cfg.py` + the task-local `mdp/` package the surface
+touches), rewires the cloned cfg's imports to the copies, mirrors the source's `gym.register` for
+`<dest_id>` (suffix **before** `-vN`), and writes the manifest:
 
-### Register
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/task-cloner/clone_task.py" --op create \
+    --repo "<repo_path>" --source "<source_id>" --dest "<dest_id>" \
+    --surface "<comma list — default reward>" --manifest "<info_out>"
+```
 
-Mirror exactly how the source registers (same `gym.register` idiom / entry-point shape), pointing `<dest_id>` at the cloned cfg class. Insert the suffix **before** the `-vN` token. Prefer adding the registration where the source's own registration is picked up at import time; do not mutate the source task's own register call.
+The script asserts the DETERMINISTIC clone-contract checks (id rule, SC2 independence — the cloned cfg
+imports the COPIED surface, dest-registered) and rolls back its own partial files on any failure. On a
+non-zero exit, read its error, surface it, and return `status: fail` — do NOT hand-copy files to work
+around a discovery miss (fix the script or the caller's inputs instead). It prints JSON with
+`cloned_files`, `reward_path`, and the manifest path — carry these into your verdict.
 
-### Smoke
+### Smoke (the sim-side checks the script can't run)
 
-Render + run `smoke_clone.py`. It builds `<dest_id>`, steps a short rollout, asserts finite reward, and reports whether `info["detailed_reward"]` (per-term logging) is present. Per-term logging absent is a **warning**, not a failure (reward-tune wires it via `/harbor:reward-add-log` before the loop) — record `per_term_logging: no` and continue.
+Render + run `smoke_clone.py`: it builds `<dest_id>`, steps a short rollout, asserts finite reward (SC1 +
+SC4), and reports whether `info["detailed_reward"]` (per-term logging, SC3) is present. Per-term logging
+absent is a **warning**, not a failure (reward-tune wires it via `/harbor:reward-add-log` before the loop)
+— record `per_term_logging: no` and continue.
 
-If the build/rollout smoke FAILS, diagnose once (usually an un-rewired import or a missed unique-rename), fix, re-run. On a second failure: remove all files you created + the registration entry, and return `status: fail`.
+If the build/rollout smoke FAILS, diagnose once from the actual error (an import the script's rewire
+couldn't resolve, or a benchmark whose layout the script's grep discovery didn't match). On a second
+failure: `clone_task.py --op delete --repo <repo_path> --manifest <info_out>` to remove the partial clone,
+then return `status: fail`.
 
 ### Manifest
 
-Write `<info_out>`:
-```json
-{
-  "source_id": "<source>",
-  "dest_id":   "<dest>",
-  "created_at":"<iso8601>",
-  "cloned_files": ["<repo-relative>", "..."],
-  "registration": {"file": "<repo-relative>", "anchor": "<the register entry text>"},
-  "reward_path": "<repo-relative>"
-}
-```
-`op=delete` reads this to remove every `cloned_files[]` entry + the registration anchor, then re-checks the source builds.
+The script writes `<info_out>` (`source_id`, `dest_id`, `cloned_files[]`, `cloned_dirs[]`,
+`registration:{file,anchor}`, `reward_path`). `op=delete` reads it to remove every created file/dir + the
+registration anchor, then re-checks the source registration is intact (the running-sim `gym.make(<source>)`
+re-check is the command's, per `/harbor:task-clone op=delete`).
 
 ## Hard rules
 
