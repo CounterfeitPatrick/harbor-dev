@@ -34,6 +34,15 @@ Every gratuitous deviation from a proven base is an unforced risk.
 - **Express in the destination repo's idioms.** When the base spec and the destination family disagree
   on *how* to express something (imports, cfg field names, action-term API), follow the destination;
   borrow the *design* from the base.
+- **Idiom ≠ redesign; a missing signal is ADDED, not proxied.** "Destination idioms" above is syntax
+  only. It is NOT license to change a reward term's mathematical FORM (an unbounded `1/d` attractor
+  re-expressed as a bounded `tanh`; a contact-gated grasp re-expressed as a proximity gate) or to drop the
+  SIGNAL a term reads. If the destination scene lacks a signal the base's function needs — a fingertip
+  contact sensor, a command manager, a force/link sensor — **port it** (declare the added §1–§5 field;
+  `reward-tuning-agent` names it in `design.json:env_changes` so its IMPLEMENT step wires it in) rather than
+  re-derive the function around a weaker proxy. Re-expressing a proven reward's math is a gratuitous
+  deviation — each is a `changed:` bullet with a goal-task justification, and "the scene didn't have the
+  sensor" is never that justification; it is a trigger to add the sensor.
 - **Byte-identical → reproduce.** If the base is byte-identical to what's wanted, prefer
   `/harbor:task-create from=<that spec>` (reproduce mode) over re-authoring.
 

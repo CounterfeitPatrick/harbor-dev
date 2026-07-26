@@ -1,6 +1,6 @@
 ---
 description: Iteratively tune the §6 reward of an EXISTING task with an ASYNC fixed-pool controller. A thin orchestrator: the main agent runs pre-flight + (standalone only) picks the design base, then dispatches the self-contained `reward-tuning-agent`, which OWNS the whole loop — design each candidate's full reward spec, implement it in IsaacLab code, train + render (compute-side), score per-term curves + rendered frames → success_rate, keep `pool_size` candidates in flight (default 1 = serial; >1 = parallel, each on its own clone), and loop until `success_rate ≥ success_threshold`. Cloning is the deterministic scripts/task-cloner/clone_task.py; no agent nesting. Use when the user types /harbor:reward-tune task=<id> [algorithm=<algo>] [pool_size=N] [mode=local|cluster], or asks "tune the reward for task X".
-argument-hint: task=<id> [algorithm=<ppo|sac|td3>] [wandb=<project>] [mode=local|cluster] [pool_size=N] [success_threshold=0.5] [timesteps_per_iter=N] [seed=N]
+argument-hint: task=<id> [algorithm=<ppo|sac|td3>] [wandb=<project>] [mode=local|cluster] [pool_size=N] [success_threshold=0.5] [timesteps_per_iter=N] [seed=N] [monitor_early_stop=true|false] [monitor_interval=300]
 ---
 
 # /harbor:reward-tune — Async-Pool Reward Tuning
@@ -48,8 +48,9 @@ Step 3  (main agent)          → persist the returned verdict + tune-state.json
 
 **Rule: if an arg isn't passed, don't override the config — leave its default untouched.** Only forward a
 train-command override (`seed=`, `total_timesteps=`, …) for args the user explicitly set. The loop-control
-args (`pool_size`, `on_success`, `success_threshold`, `n_frames`, `prompt_every_n_stuck`) are reward-tune's
-own logic, so their defaults always apply.
+args (`pool_size`, `on_success`, `success_threshold`, `n_frames`, `prompt_every_n_stuck`,
+`monitor_early_stop`, `monitor_interval`, `monitor_soft_floor`) are reward-tune's own logic, so their
+defaults always apply.
 
 | Arg | Default | Effect |
 |---|---|---|
@@ -63,6 +64,9 @@ own logic, so their defaults always apply.
 | `seed` | config | Unset → config default (random). |
 | `n_frames` | `12` | Frames read per render. |
 | `prompt_every_n_stuck` | `5` | Prompt after N non-improving completions. |
+| `monitor_early_stop` | `false` | Default `false` = train every candidate to full budget. `true` opts in to the mid-run 5-min curve monitor that confidently early-stops a doomed candidate (NaN / dead policy immediately; flat/declining/diverged only past the soft-floor AND persistent). |
+| `monitor_interval` | `300` | Seconds between monitor ticks (5 min). |
+| `monitor_soft_floor` | `0.5` | Budget fraction below which soft bad patterns are only watched, never killed; hard fails ignore it. |
 | `spec_section` | (none) | §6 code block (reproduce mode); seeds iter 0 verbatim. |
 
 ## Step 0 — Pre-flight
@@ -105,6 +109,7 @@ Agent(reward-tuning-agent, prompt={
   description:        "<from spec.json — the behavior to match>",
   algorithm, wandb, mode, pool_size, on_success, success_threshold,
   timesteps_per_iter, seed, n_frames, prompt_every_n_stuck,   # forward only the ones the user set
+  monitor_early_stop, monitor_interval, monitor_soft_floor,   # monitor: forward only if user set; else defaults
   library_refs:       [<Step 1 base(s)>],
   spec_section:       "<§6 Code block>"                        # reproduce mode only — seeds iter 0 verbatim
 })

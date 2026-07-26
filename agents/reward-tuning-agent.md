@@ -24,7 +24,7 @@ freshest completed history plus the designs still running.
 | `task` | yes | Task ID; `gym.make(<task>)` must succeed. §6 may be a placeholder or a real reward. |
 | `task_dir` | yes | `<repo>/harbor/create-task/<slug>` — the loop's workspace (co-located with task-create). |
 | `algorithm` | no | `ppo` (default) → `harbor/configs/rl/<algo>.parallel.yaml`. |
-| `wandb` | no | W&B project (default `reward-tune-<task>`); run names `iter_<NNN>`. |
+| `wandb` | no | W&B project; run names `iter_<NNN>`. **When unset, resolve to `reward-tune-<task>` — NEVER `null`/off.** Candidate training runs MUST log to W&B; only the S6 structural smoke (`max_step`-capped) may disable it. |
 | `mode` | no | `local` (bg bash) or `cluster` (SLURM). Default `local`. |
 | `pool_size` | no | Candidates in flight (default 1 = serial). |
 | `on_success` | no | First convergence: `cancel` (default) or `drain` in-flight. |
@@ -33,6 +33,9 @@ freshest completed history plus the designs still running.
 | `seed` | no | Unset → config default. |
 | `n_frames` | no | Frames read per render (default 12). |
 | `prompt_every_n_stuck` | no | Prompt after N non-improving completions (default 5). |
+| `monitor_early_stop` | no | Enable the mid-run 5-min curve monitor + confident early-stop (default **false** ⇒ every candidate trains to full budget). `true` ⇒ opt in to the mid-run monitor that confidently early-stops a doomed candidate. |
+| `monitor_interval` | no | Seconds between monitor ticks (default **300** = 5 min). |
+| `monitor_soft_floor` | no | Budget fraction below which SOFT bad patterns (flat / declining / diverged) are never a kill, only `watch` (default **0.5**). Hard fails (NaN / dead policy) ignore it. |
 | `library_refs` | no | Task-library base(s) the caller already selected (adapt-first base). Empty ⇒ pure creation. |
 | `spec_section` | no | §6 Code block (reproduce mode); seeds iter 0 verbatim. |
 | `description` | yes | The behavior to match (from `spec.json`) — SCORE reads it. |
@@ -86,6 +89,7 @@ drop stale `in_flight` whose `.done` is already present (score them first). Else
 { "schema_version": 3, "task_id": "<task>", "algorithm": "<algo>", "wandb_project": "<wandb>",
   "mode": "local|cluster", "pool_size": <N>, "on_success": "cancel|drain",
   "success_threshold": 0.5, "timesteps_per_iter": <N>, "seed": <N>, "library_refs": [...],
+  "monitor_early_stop": false, "monitor_interval": 300, "monitor_soft_floor": 0.5,
   "started_at": "<iso8601>", "next_iter": 0, "best_iter": null, "best_success_rate": null,
   "best_total_return": null, "consecutive_non_improving": 0, "slots": {}, "in_flight": [], "iters": [] }
 ```
@@ -138,9 +142,21 @@ Design rules:
 - **Nominal weights.** Every `weight` is the term's nominal per-step magnitude, applied directly (a `+200`
   one-shot latch reads `200`). Plan the budget in these units.
 - **Adapt-first** — with a `library_refs` match, its §6 is the BASE: minimal modification, keep the proven
-  ladder / weights / composer / gating; carry NOMINAL weights over as-is. Pure de-novo only when
-  `library_refs=[]`. Open iter 0's `reward-history.md` with the **Adaptation delta** (base, kept-as-is,
-  per-change reason).
+  ladder / **term shape functions** / weights / composer / gating; carry the shape FUNCTIONS and NOMINAL
+  weights over as-is. Re-expressing a proven term's math (an unbounded `1/d` attractor as a bounded `tanh`,
+  a contact gate as a proximity gate) is a gratuitous deviation, NOT a destination-idiom change (see
+  `references/adapt-first.md`) — if you must, it is a `changed:` bullet with a goal-task justification. Pure
+  de-novo only when `library_refs=[]`. Open iter 0's `reward-history.md` with the **Adaptation delta** (base,
+  kept-as-is, per-change reason).
+- **Port the base's SIGNALS, not just its weights.** A reward term is only as good as the signal it reads.
+  When the base's terms key on a §1–§5 signal the freshly-authored scene lacks — fingertip **contact
+  sensors** for grasp/release, a **command manager** for the goal pose, a force/link sensor — carry it over
+  by naming it in `env_changes` (the IMPLEMENT step then wires it into §1–§5). Do NOT silently substitute a
+  weaker proxy (palm-proximity for contact-based grasp, a static obs term for a command) and tune around it;
+  if you genuinely must substitute, log it as an explicit `changed:` risk in the Adaptation delta. Once a
+  diagnosed failure recurs across iterations and traces to a proxied signal (e.g. grasp fragility from a
+  proximity gate), escalating to the real sensor via `env_changes` is **REQUIRED** — re-weighting around the
+  proxy is not a fix, and `env_changes: []` when the base needed a sensor is a design bug, not a small footprint.
 - **Magnitude budget** — plan per-stage saturated per-step values FIRST (earlier stages small, later
   larger, sparse bonuses an order above the dense sum), then back-compute each `weight = target /
   per_step_saturation`. Regularizers `|weight| ≤ 0.1`. Record in `budget_rationale`. Keep a matched base's
@@ -179,6 +195,8 @@ slug=$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/common/resolve_suite.py" --field s
 .venv/bin/python -u harbor/scripts/rl/${slug}/train.py --config-name=<algo>.parallel \
     task=<clone_or_source> [seed=<seed>] [total_timesteps=<N> max_step=<N>] \
     wandb=<wandb> wandb_run_name=iter_<NNN>
+# <wandb> = the passed project, or `reward-tune-<task>` when unset. NEVER emit `wandb=null` here —
+# that silently drops the candidate from W&B; the only W&B-off run is the S6 structural smoke.
 trial=<resolved latest trial dir>; echo "$trial" > iter_<NNN>/trial_dir.txt
 .venv/bin/python -u harbor/scripts/rl/${slug}/render.py checkpoint=$trial/checkpoint.pth task=<clone_or_source> +gpu_sim=true
 cp $trial/render.mp4 iter_<NNN>/render.mp4
@@ -197,8 +215,54 @@ LAUNCH:
 - **local:** `Bash(run_in_background=true, "bash iter_<NNN>/run.sh > iter_<NNN>/run.log 2>&1 && touch iter_<NNN>/.done")`. Local trains run sequentially (GPU-bound) even at `pool_size>1`.
 - **cluster:** `sbatch launch.sh` (SBATCH directives run `train && render` on the compute node), record `jobid`, then `Bash(run_in_background=true, "while squeue -h -j $JOBID | grep -q .; do sleep 600; done; touch iter_<NNN>/.done")`.
 
-Append to `in_flight[]`; render is folded into the job (compute-side) — never render on a login node. Do
-NOT poll; the harness notifies on `.done`.
+Append to `in_flight[]`; render is folded into the job (compute-side) — never render on a login node. With
+`monitor_early_stop` OFF (default), wait passively for each `.done`. With it ON, drive the MONITOR cadence
+(§2.3b) instead of a passive wait.
+
+### 2.3b — MONITOR (5-min cadence, confident early-stop)   [only when `monitor_early_stop` is opted in]
+
+Purpose: kill an obviously-doomed candidate early instead of burning its full budget — but ONLY when
+CONFIDENT. Early RL curves are noisy and non-monotonic — a dip at 20–40 % of budget routinely recovers
+(ledger #11 / #14 / #16). A slow or noisy run is NOT a kill candidate; a merely-underperforming run trains
+to completion and is judged at `.done` as before. This step only catches the *unambiguously* doomed.
+
+While ≥1 job is in flight, repeat this tick (no `Monitor` tool in this agent — use a bounded Bash wait):
+
+1. **Wait up to `monitor_interval` (≈300 s) for the next `.done`:**
+   `Bash(timeout≈interval+10s, "timeout <interval> bash -c 'until [ -f <task_dir>/iter_<NNN>/.done ]; do sleep 15; done'; [ -f <task_dir>/iter_<NNN>/.done ] && echo DONE || echo TICK")`
+   (at `pool_size>1`, make the `until` test cover every in-flight `.done`).
+2. **`DONE`** → process that `.done` normally (§2.4 SCORE → §2.5 DECIDE).
+3. **`TICK`** (still training) → snapshot EACH in-flight trial's LIVE curves. The live trial dir is the
+   newest `harbor/outputs/<algo>_<task>_*` (its `trial_dir.txt` is written only at completion, so resolve
+   it yourself):
+   ```bash
+   trial=$(ls -dt harbor/outputs/<algo>_<task>_* | head -1)
+   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/reward-tuning-agent/curve_health.py" \
+       --metrics "$trial/metrics.jsonl" --total-steps <this iter's total_timesteps> \
+       --success-term <design.success_term> --success-weight <its weight> \
+       --stage0-term <earliest ladder term> --soft-floor <monitor_soft_floor> \
+       | tee -a <task_dir>/iter_<NNN>/monitor.jsonl
+   ```
+   `Read` the snapshot and apply the RUBRIC. Not stopping → loop to step 1.
+
+**EARLY-STOP RUBRIC (confident-only).** Early-stop iff one holds:
+- **`concern == "hard_fail"`** (`nan_inf`, or `dead_policy` = entropy collapsed to ~0 with total flat) — act
+  on the FIRST occurrence, at any `budget_frac`. NaN / a dead-collapsed policy does not recover.
+- **`concern == "confident_bad"`** (`no_learning` / `total_declining` / `optimization_diverged` — the tool
+  already floors these to `watch` until `budget_frac ≥ monitor_soft_floor` and suppresses them when
+  `improving`) on **≥2 CONSECUTIVE ticks** (~10 min of persistent badness). One bad tick is never enough —
+  that is the dip-and-recover trap the soft-floor + persistence together guard against.
+
+NEVER early-stop on `concern ∈ {none, watch}`, an `improving` flag, a single soft tick, or a later stage
+flat while an earlier one is still climbing (tail exposure). **When unsure, KEEP the run** — a wasted run
+costs only compute; a wrongly-killed good reward costs a whole iteration AND pollutes the search.
+
+**Executing an early-stop:** `kill -TERM` the trial's process group (escalate `-KILL` after 30 s; `pkill -P`
+orphans), `touch <task_dir>/iter_<NNN>/.done`, and record `iters[NNN].status = "early_stopped"` with the
+trigger flag + the deciding snapshot(s) in `tune-state.json`. Then run §2.4 on what exists: score from the
+last checkpoint if one was written, else `success_rate = 0` (do NOT render a dead policy). Append a one-line
+`memories.jsonl` finding (WHY it was doomed — this steers the next DESIGN). In §2.5 an `early_stopped` iter
+is a non-improving completion (bumps the stuck counter) and its diagnosis feeds the next candidate.
 
 ### 2.4 — SCORE (on each `.done`) + render fallback
 

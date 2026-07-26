@@ -116,6 +116,9 @@ scripts/
                       discover_algorithms.py, validate_rl_suite.py
   rl-tuning-agent/    run_rl_trial.py, analyze_rl_trial.py, suggest_hparams.py,
                       render_trial_contact_sheet.py, write_rl_report.py
+  reward-tuning-agent/ curve_health.py  (compact health snapshot of a LIVE reward-tune
+                      metrics.jsonl → evidence + advisory concern flags for the §2.3b
+                      5-min monitor / confident early-stop; gathers, never kills)
   rl-run/             check_reward_logger.py
   rl-tricks/          apply_trick.py, list_tricks.py
   task-cloner/        clone_task.py  (deterministic same-repo clone: discover source's
