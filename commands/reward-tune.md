@@ -1,6 +1,7 @@
 ---
-description: Iteratively tune the §6 reward of an EXISTING task with an ASYNC fixed-pool controller. A thin orchestrator: the main agent runs pre-flight + (standalone only) picks the design base, then dispatches the self-contained `reward-tuning-agent`, which OWNS the whole loop — design each candidate's full reward spec, implement it in IsaacLab code, train + render (compute-side), score per-term curves + rendered frames → success_rate, keep `pool_size` candidates in flight (default 1 = serial; >1 = parallel, each on its own clone), and loop until `success_rate ≥ success_threshold`. Cloning is the deterministic scripts/task-cloner/clone_task.py; no agent nesting. Use when the user types /harbor:reward-tune task=<id> [algorithm=<algo>] [pool_size=N] [mode=local|cluster], or asks "tune the reward for task X".
-argument-hint: task=<id> [algorithm=<ppo|sac|td3>] [wandb=<project>] [mode=local|cluster] [pool_size=N] [success_threshold=0.5] [timesteps_per_iter=N] [seed=N] [monitor_early_stop=true|false] [monitor_interval=300]
+description: >-
+  Iteratively tune the §6 reward of an EXISTING task with an ASYNC fixed-pool controller. A thin orchestrator: the main agent runs pre-flight + (standalone only) picks the design base, then dispatches the self-contained `reward-tuning-agent`, which OWNS the whole loop — design each candidate's full reward spec, implement it in IsaacLab code, train + render (compute-side), score per-term curves + rendered frames → success_rate, keep `pool_size` candidates in flight (default 1 = serial; >1 = parallel, each on its own clone), and loop until `success_rate ≥ success_threshold`. Cloning is the deterministic scripts/task-cloner/clone_task.py; no agent nesting. Use when the user types /harbor:reward-tune task=<id> [algorithm=<algo>] [pool_size=N] [mode=local|cluster], or asks "tune the reward for task X".
+argument-hint: "task=<id> [algorithm=<ppo|sac|td3>] [wandb=<project>] [mode=local|cluster] [pool_size=N] [success_threshold=0.5] [timesteps_per_iter=N] [seed=N] [monitor_early_stop=true|false] [monitor_interval=300]"
 ---
 
 # /harbor:reward-tune — Async-Pool Reward Tuning
@@ -25,7 +26,7 @@ Step 3  (main agent)          → persist the returned verdict + tune-state.json
 ├── spec.json / task-history.md                 # from /harbor:task-create (if present)
 ├── tune-state.json                             # tune metadata + pool + in_flight + per-iter (agent-owned)
 ├── reward-history.md                           # SHARED; "## Iter <N>" appended per candidate
-├── handoff-reward-generator.md                 # latest BEST reward state (overwritten on new best)
+├── handoff-reward-tuning-agent.md                 # latest BEST reward state (overwritten on new best)
 ├── memories.jsonl                              # cumulative findings (cross-candidate channel)
 ├── smokes/smoke_s6.py                          # rendered per candidate
 ├── clone-slot<i>.json                          # task-cloner manifest per slot (pool_size>1)
@@ -135,7 +136,7 @@ From the agent's returned verdict:
   pool / mode : <pool_size> / <mode>
   task_dir    : <task_dir>
   history     : <task_dir>/reward-history.md
-  best reward : <task_dir>/handoff-reward-generator.md
+  best reward : <task_dir>/handoff-reward-tuning-agent.md
   ```
 
 ## Constraints
@@ -150,7 +151,7 @@ From the agent's returned verdict:
 - **No hard cap.** Stop on `success_rate ≥ threshold` or user abort; the agent prompts every
   `prompt_every_n_stuck` non-improving completions.
 - **Single source of truth per file** (all agent-owned): `reward-history.md` (cumulative, "## Iter N"),
-  `handoff-reward-generator.md` (latest best), `memories.jsonl` (findings), `tune-state.json` (metadata +
+  `handoff-reward-tuning-agent.md` (latest best), `memories.jsonl` (findings), `tune-state.json` (metadata +
   pool + in_flight + per-iter).
 
 ## Examples

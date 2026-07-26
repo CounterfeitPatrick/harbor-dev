@@ -1,6 +1,8 @@
 ---
-description: Reset a benchmark repo to its original cloned state by removing ALL harbor-plugin-generated files — the entire <repo>/harbor/ tree, the uv .venv/, the scripts/ carve-outs (run_random.py / render_random.py / _<family>_env.py), plugin caches — and (by default) reverting any task code the plugin wrote directly into the benchmark's own source tree. Runs in a subagent. DESTRUCTIVE + irreversible: shows a dry-run plan and asks to confirm first, then verifies via a git-based smoke (including hidden / ignored files) that the repo is byte-identical to its original clone before reporting success. Use when the user types /harbor:reset-workspace repo=<path> [clean_inbenchmark_tasks=true|false] or asks "reset/clean the workspace", "remove all harbor files from this repo", "restore the benchmark to its cloned state".
-argument-hint: repo=<path> [clean_inbenchmark_tasks=true|false]
+description: >-
+  Reset a benchmark repo to its original cloned state by removing ALL harbor-plugin-generated files — the entire <repo>/harbor/ tree, the uv .venv/, the scripts/ carve-outs (run_random.py / render_random.py / _<family>_env.py), plugin caches — and (by default) reverting any task code the plugin wrote directly into the benchmark's own source tree. Runs in a subagent. DESTRUCTIVE + irreversible: shows a dry-run plan and asks to confirm first, then verifies via a git-based smoke (including hidden / ignored files) that the repo is byte-identical to its original clone before reporting success. Use when the user types /harbor:reset-workspace repo=<path> [clean_inbenchmark_tasks=true|false] or asks "reset/clean the workspace", "remove all harbor files from this repo", "restore the benchmark to its cloned state".
+argument-hint: "repo=<path> [clean_inbenchmark_tasks=true|false]"
+disable-model-invocation: true
 ---
 
 # /harbor:reset-workspace — Restore a Benchmark Repo to Its Cloned State

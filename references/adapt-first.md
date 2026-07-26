@@ -17,7 +17,7 @@ Read the caller's own append-only ledger (heuristics distilled across runs):
 | Caller | Ledger |
 |---|---|
 | `task-generator` | `experiences/task-generator/task-experience.md` |
-| `reward-tuning-agent` | `experiences/reward-generator/reward-experience.md` |
+| `reward-tuning-agent` | `experiences/reward-tuning-agent/reward-experience.md` |
 | `dr-generator` | `experiences/dr-generator/dr-experience.md` |
 
 ## Step 2 — Adapt-first (BINDING)

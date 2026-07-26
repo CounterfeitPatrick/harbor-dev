@@ -96,7 +96,7 @@ Each subagent has a `experiences/<role>/` ledger that survives across runs. Entr
 
 ```
 experiences/rl-tuning-agent/tuning-experience.md      (25 entries: hp heuristics, tricks, failure signatures, …)
-experiences/reward-generator/reward-experience.md     (8 entries incl. #2 magnitude-budget [MUST], #7 obstacle-clearance gate)
+experiences/reward-tuning-agent/reward-experience.md     (8 entries incl. #2 magnitude-budget [MUST], #7 obstacle-clearance gate)
 experiences/task-generator/task-experience.md        (placeholder — promote from per-task lessons)
 experiences/dr-generator/dr-experience.md            (placeholder)
 experiences/task-library/<area>/<family>/library.md  (task-design knowledge by embodiment+family:
@@ -201,25 +201,24 @@ harbor/                                        ← plugin root
 │   ├── dependency-generator/                             render_uv.py, smoke_uv.py
 │   ├── benchmark-generator/                       capture_spec.py
 │   ├── rl-integration-generator/                  render_rl_suite.py, render_data_logger.py, discover_*.py, validate_rl_suite.py
-│   ├── rl-tuning-agent/                           run_rl_trial.py, analyze_rl_trial.py, suggest_hparams.py
 │   ├── reward-add-log/                          sanity_check.py, sanity_check_isaaclab.py
-│   ├── rl-run/  rl-tricks/  plot/  registry/  install/
+│   ├── rl-run/  rl-tricks/  plot/  install/
 │
 ├── templates/                                   ← L5 read-only: rendered into target repos
 │   ├── dependency-generator/  benchmark-generator/       includes task-implementation.md.template
 │   ├── rl-integration-generator/                  custom_torch / stable_baseline3 / local_implementation subtrees + data_logger.py.template
 │   ├── task-generator/                            per-section smokes + custom action terms
-│   ├── reward-generator/  dr-generator/           per-section smokes
+│   ├── reward-tuning-agent/  dr-generator/           per-section smokes
 │   ├── reward-add-log/                          reward_terms_block + isaaclab_env_helper templates
 │   ├── rl-tuning-agent/  rl-tune/  reward-tune/  rl-sweep/  rl-tricks/  plot/
 │
 ├── references/                                  ← L5 read-only: agent decision aids
 │   ├── dependency-generator/  benchmark-generator/  rl-integration-generator/
-│   ├── task-generator/  reward-generator/  dr-generator/  rl-tuning-agent/
+│   ├── task-generator/  reward-tuning-agent/  dr-generator/  rl-tuning-agent/
 │
 ├── experiences/                                 ← L5 cross-run ledgers (numbered, append-only)
 │   ├── rl-tuning-agent/tuning-experience.md       (25 entries)
-│   ├── reward-generator/reward-experience.md      (8 entries incl. [MUST] magnitude-budget)
+│   ├── reward-tuning-agent/reward-experience.md      (8 entries incl. [MUST] magnitude-budget)
 │   ├── task-generator/task-experience.md
 │   ├── dr-generator/dr-experience.md
 │   └── task-library/{manipulation,locomotion}/<family>/library.md  (task design by embodiment+family)

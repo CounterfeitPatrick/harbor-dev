@@ -1,6 +1,6 @@
 ---
 description: Train an RL policy on the current benchmark. Wraps harbor/scripts/rl/<impl>/train.py with the repo's `<repo>/.venv/bin/python` and Hydra overrides. Use when the user types /harbor:rl-run task=<id> algorithm=<ppo|sac|td3> [overrides...] or asks "train PPO/SAC/TD3 on task X", "kick off training".
-argument-hint: task=<id> algorithm=<ppo|sac|td3> [key=value ...]
+argument-hint: "task=<id> algorithm=<ppo|sac|td3> [key=value ...]"
 ---
 
 # /harbor:rl-run — Train an RL Policy

@@ -1,6 +1,6 @@
 ---
 description: List or inspect tasks within a Harbor benchmark. Use when the user types /harbor:task-list or asks "list tasks", "show task spec", "what tasks does this benchmark have", "show me task <id>". Reads the cwd-local `harbor/benchmark-generator/benchmark-spec.json` (populated by benchmark-generator).
-argument-hint: [list] | <task-id>
+argument-hint: "[list] | <task-id>"
 ---
 
 # /harbor:task-list — Task Browser

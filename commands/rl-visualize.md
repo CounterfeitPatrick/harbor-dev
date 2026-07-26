@@ -1,6 +1,6 @@
 ---
 description: Open a HEADED viewer (GLFW window) showing a trained RL policy in action. Loads a checkpoint, runs N steps on the CPU MuJoCo backend, displays each frame live. Use when the user types /harbor:rl-visualize checkpoint=<path> [task=<id>] or asks "show me the trained policy", "open a viewer", "watch the agent run live".
-argument-hint: checkpoint=<path> [task=<id>] [n_steps=N]
+argument-hint: "checkpoint=<path> [task=<id>] [n_steps=N]"
 ---
 
 # /harbor:rl-visualize — Open a Headed Viewer

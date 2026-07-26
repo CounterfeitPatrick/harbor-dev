@@ -1,6 +1,6 @@
 # §6 smoke contract
 
-Loaded by `reward-tuning-agent`. Template: `${CLAUDE_PLUGIN_ROOT}/templates/reward-generator/smokes/smoke_s6.py.template`.
+Loaded by `reward-tuning-agent`. Template: `${CLAUDE_PLUGIN_ROOT}/templates/reward-tuning-agent/smokes/smoke_s6.py.template`.
 
 ## What it verifies
 

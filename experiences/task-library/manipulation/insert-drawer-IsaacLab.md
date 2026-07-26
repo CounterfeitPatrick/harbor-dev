@@ -648,7 +648,7 @@ print('obs smoke OK')
 
 ### Description
 
-Composer = **sum**, sign = **positive = good**. 8 active reward terms organized into 5 phases (per [reward-experience.md entry #2](../../../reward-generator/reward-experience.md): the per-step magnitudes strictly increase across stages, and dense terms ≤ steady-state budget while sparse one-shot bonuses sit an order of magnitude above the dense sum).
+Composer = **sum**, sign = **positive = good**. 8 active reward terms organized into 5 phases (per [reward-experience.md entry #2](../../../reward-tuning-agent/reward-experience.md): the per-step magnitudes strictly increase across stages, and dense terms ≤ steady-state budget while sparse one-shot bonuses sit an order of magnitude above the dense sum).
 
 Critical mechanism: a **per-(env, key) latch buffer** (`_LATCH_BUFFERS["cube_inside_once"]`) is written when `cube_inside_bonus_once_per_episode` fires (cube geometrically inside drawer + EE far). Phase 2 dense terms (`reach_cube`, `is_lifted`, `lift_distance`, `align`) multiply by `(1 - latch_active)` so they ZERO OUT once the cube is inserted, freeing the policy to focus on retract + close without dense distractions. Phase 3 `ee_retract_to_front_face` and Phase 4 `close_drawer` multiply by `latch_active` (fires only after cube inserted). Phase 5 `success_bonus` fires once when latch + drawer-closed, paired with the §4 `success` DoneTerm for terminal collection.
 

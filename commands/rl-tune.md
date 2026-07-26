@@ -1,6 +1,6 @@
 ---
 description: Grid hyperparameter tuning across tasks × algorithms. Cartesian product → one rl-tuning-agent subagent per (task, algorithm) cell, each running an open-ended tuning loop (default-config baseline → tricks → log-driven hyperparameter edits). Local mode runs cells sequentially; cluster mode dispatches all cells in parallel (each agent submits its own SLURM jobs internally). Maintains a tune-level history.md and gathers per-cell results into a final cross-cell summary. Use when the user types /harbor:rl-tune task=<list> algorithm=<list> [mode=local|cluster] or asks "tune PPO and SAC on these tasks", "grid tune".
-argument-hint: task=<id1>[,id2,...] algorithm=<a1>[,a2,...] [mode=local|cluster] [metric_weights=<json>] [stuck_threshold=N] [max_iterations=N] [smoke=true|false]
+argument-hint: "task=<id1>[,id2,...] algorithm=<a1>[,a2,...] [mode=local|cluster] [metric_weights=<json>] [stuck_threshold=N] [max_iterations=N] [smoke=true|false]"
 ---
 
 # /harbor:rl-tune — Grid Hyperparameter Tuning

@@ -1,20 +1,20 @@
 ---
 description: Append a learned experience into a target ledger, or file a probed task into the task-library. Use when the user types /harbor:update-experience target=<name> (experience="..." | file=<path>), or asks "record this lesson", "add this to the reward experience", "file this task into the task-library", "save this implementation spec to the library".
-argument-hint: target=<name> (experience="<bullet>" | file=<path>)
+argument-hint: 'target=<name> (experience="<bullet>" | file=<path>)'
 ---
 
 # /harbor:update-experience — Append to an Experience Ledger or the Task Library
 
 Two jobs depending on `target`:
 
-1. **Agent ledger** (`target` ∈ `reward-generator` | `task-generator` | `dr-generator` | `rl-tuning-agent`) — append one new **numbered bullet** to that agent's append-only experience ledger.
+1. **Agent ledger** (`target` ∈ `reward-tuning-agent` | `task-generator` | `dr-generator` | `rl-tuning-agent`) — append one new **numbered bullet** to that agent's append-only experience ledger.
 2. **Task library** (`target = task-library`) — file a `/harbor:probe-task` implementation spec into the correct embodiment folder under `experiences/task-library/`, with a short accurate filename.
 
 ## Arguments
 
 | Arg | Notes |
 |---|---|
-| `target` | Required. One of: `reward-generator`, `task-generator`, `dr-generator`, `rl-tuning-agent`, `task-library`. |
+| `target` | Required. One of: `reward-tuning-agent`, `task-generator`, `dr-generator`, `rl-tuning-agent`, `task-library`. |
 | `experience` | Inline bullet text (ledger targets only). A single heuristic/lesson. |
 | `file` | Path to a file. For ledger targets: the file's body is appended as the entry. For `task-library`: a probe-task `*-implementation.md` to copy. |
 
@@ -24,7 +24,7 @@ Provide **exactly one** of `experience=` / `file=`. For `target=task-library`, `
 
 | `target` | Ledger file |
 |---|---|
-| `reward-generator` | `experiences/reward-generator/reward-experience.md` |
+| `reward-tuning-agent` | `experiences/reward-tuning-agent/reward-experience.md` |
 | `task-generator`   | `experiences/task-generator/task-experience.md` |
 | `dr-generator`     | `experiences/dr-generator/dr-experience.md` |
 | `rl-tuning-agent`  | `experiences/rl-tuning-agent/tuning-experience.md` |

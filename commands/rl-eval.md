@@ -1,6 +1,6 @@
 ---
 description: Evaluate a trained RL checkpoint. Runs harbor/scripts/rl/<impl>/eval.py with the given checkpoint, auto-inferring task and algorithm from the saved config. Use when the user types /harbor:rl-eval checkpoint=<path> [task=<id>] [n_envs=N] or asks "evaluate this checkpoint", "how good is the trained policy".
-argument-hint: checkpoint=<path> [task=<id>] [n_envs=N] [eval_total_steps=N] [key=value ...]
+argument-hint: "checkpoint=<path> [task=<id>] [n_envs=N] [eval_total_steps=N] [key=value ...]"
 ---
 
 # /harbor:rl-eval — Evaluate an RL Checkpoint

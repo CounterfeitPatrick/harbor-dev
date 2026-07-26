@@ -1,6 +1,6 @@
 ---
 description: Apply an RL training trick (e.g. obs_rms_jax, reward_norm_jax) to a chosen algorithm in the current benchmark repo. Modifies harbor/configs/rl/<algo>.parallel.yaml in place. Use when the user types /harbor:rl-add-trick <trick_name> [algorithm=<algo>] or asks "apply obs RMS to PPO", "enable the reward norm trick", "add this trick to my training".
-argument-hint: <trick_name> [algorithm=<ppo|sac|td3>] [--dry-run]
+argument-hint: "<trick_name> [algorithm=<ppo|sac|td3>] [--dry-run]"
 ---
 
 # /harbor:rl-add-trick — Apply an RL Trick

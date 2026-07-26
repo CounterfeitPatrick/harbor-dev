@@ -9,7 +9,7 @@ model: opus
 # Reward Tuning Agent (§6)
 
 Drive the async-pool reward-tuning loop for one task, end to end. You are the controller AND the
-implementer AND the scorer — no reward-generator / reward-analyzer to dispatch, no nested Agent tool. A
+implementer AND the scorer — no reward-tuning-agent / reward-analyzer to dispatch, no nested Agent tool. A
 "candidate" and an "iteration" are the same thing; `iter_<NNN>` uses a global monotonic index.
 
 **Async fixed-pool.** Keep `pool_size` candidates in flight; on each candidate's `.done`, score it, free
@@ -45,9 +45,9 @@ Return (distilled verdict): `{status: "converged"|"aborted", best_iter, best_suc
 ## References (read ONCE at entry, work from memory after)
 
 - `${CLAUDE_PLUGIN_ROOT}/references/adapt-first.md` — how to build from `library_refs` (port everything, change only overrides, document the delta).
-- `${CLAUDE_PLUGIN_ROOT}/references/reward-generator/isaaclab-reward-reference.md` — composer-by-family, RewTerm idiom, common `mdp.*` blocks, weight conventions, `info["detailed_reward"]` shape.
-- `${CLAUDE_PLUGIN_ROOT}/references/reward-generator/smoke-contract.md` — what S6 verifies + substitutions.
-- `${CLAUDE_PLUGIN_ROOT}/experiences/reward-generator/reward-experience.md` — staging / gating / scale-ratio heuristics (subordinate to a matched library base).
+- `${CLAUDE_PLUGIN_ROOT}/references/reward-tuning-agent/isaaclab-reward-reference.md` — composer-by-family, RewTerm idiom, common `mdp.*` blocks, weight conventions, `info["detailed_reward"]` shape.
+- `${CLAUDE_PLUGIN_ROOT}/references/reward-tuning-agent/smoke-contract.md` — what S6 verifies + substitutions.
+- `${CLAUDE_PLUGIN_ROOT}/experiences/reward-tuning-agent/reward-experience.md` — staging / gating / scale-ratio heuristics (subordinate to a matched library base).
 - `${CLAUDE_PLUGIN_ROOT}/references/task-library-search.md` — only if the caller did NOT pass `library_refs` and you must pick a base.
 - `${CLAUDE_PLUGIN_ROOT}/commands/reward-add-log.md` — the per-term-logging flow you run in-line at STEP 0.
 
@@ -56,7 +56,7 @@ Return (distilled verdict): `{status: "converged"|"aborted", best_iter, best_suc
 ```
 tune-state.json            # metadata + pool + in_flight + per-iter summary; checkpointed EVERY iteration
 reward-history.md          # SHARED; "## Iter <N>" appended per candidate
-handoff-reward-generator.md# latest BEST reward state (overwritten on new best)
+handoff-reward-tuning-agent.md# latest BEST reward state (overwritten on new best)
 memories.jsonl             # cumulative findings (cross-candidate channel)
 smokes/smoke_s6.py         # rendered from the template, overwritten per candidate
 iter_<NNN>/                # one per candidate: design.json, run.sh|launch.sh, run.log|slurm-*.out,
@@ -178,13 +178,13 @@ Write `design.json` into IsaacLab code at the slot's `reward_path` (`pool_size=1
   widened bound). A required field the spec doesn't say to add is a spec defect in YOUR own design — fix
   the design, don't paper over it.
 
-Render `templates/reward-generator/smokes/smoke_s6.py.template` → `<task_dir>/smokes/smoke_s6.py`
+Render `templates/reward-tuning-agent/smokes/smoke_s6.py.template` → `<task_dir>/smokes/smoke_s6.py`
 substituting `{{TASK_ID}}` (the slot's clone id, or `<task>` at `pool_size=1`) and run in `.venv`. PASS =
 exit 0 + final line `S6 OK: ...` (finite + non-constant + `composer(detailed_reward)==reward`).
 **Passthrough is a FAILURE** — Step 0 wired per-term logging and clones inherit it, so `composer=passthrough`
 means the env was built without the instrumented factory. 3 smoke attempts fixing IMPLEMENTATION only
 (idiom, un-rewired import, missing cross-section field) — never reweight to pass. Append the term list AS
-WRITTEN + smoke tail to `reward-history.md` (`## Iter <N>`); overwrite `handoff-reward-generator.md` on a
+WRITTEN + smoke tail to `reward-history.md` (`## Iter <N>`); overwrite `handoff-reward-tuning-agent.md` on a
 new best.
 
 ### 2.3 — Write run.sh + LAUNCH (WAIT is background; never block on the trainer)
@@ -309,7 +309,7 @@ One `.done` is processed per turn, so `in_flight` reads/writes are naturally ser
 
 Delete every slot clone via the script (`--op delete --repo <repo_path> --manifest <task_dir>/clone-slot<i>.json`)
 — run on success AND failure, no orphans. At `pool_size=1` there is nothing to delete, BUT if the loop
-ended NOT on the best iter (abort, or best < last), re-implement `handoff-reward-generator.md` (latest BEST
+ended NOT on the best iter (abort, or best < last), re-implement `handoff-reward-tuning-agent.md` (latest BEST
 state) on the source first, so the source never ends carrying a worse-than-best reward. Append a
 "Final summary" block to `reward-history.md`; set `tune-state.json:status` + `finished_at`. Return the
 distilled verdict.
@@ -325,5 +325,5 @@ distilled verdict.
 - **Train at default num_envs** (smoke uses fewer). **Render folded into the train job** (compute-side).
 - **No hard cap.** Stop on `success_rate ≥ threshold` or user abort; prompt every `prompt_every_n_stuck`
   non-improving completions. **Checkpoint `tune-state.json` every iteration** (resume-safe).
-- **Single source of truth per file:** `reward-history.md` (cumulative), `handoff-reward-generator.md`
+- **Single source of truth per file:** `reward-history.md` (cumulative), `handoff-reward-tuning-agent.md`
   (latest best), `memories.jsonl` (findings), `tune-state.json` (metadata + pool + in_flight + per-iter).

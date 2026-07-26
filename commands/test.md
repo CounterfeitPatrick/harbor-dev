@@ -1,6 +1,6 @@
 ---
 description: Run the harbor plugin test suite. L1 (contract) + L2 (unit) are deterministic pytest layers run by the main thread; L3 is an end-to-end agentic pipeline run in a subagent that drives the task-create chain module-by-module on an isolated, clean benchmark worktree. Default runs L1→L2→L3 in sequence (stop at first failure); `layers=` runs a subset. L3 is resumable Docker-layer style — each module is a fingerprinted stage; on re-run only the changed/failed stage and everything downstream re-runs. Maintains an append-only test history; on any failure it stops, reports the error + a suggested fix, and leaves state so the next run resumes from the unimpacted part. Use when the user types /harbor:test [layers=...] [repo=<path>] [task=<id>] or asks "run the tests", "test the plugin", "run the e2e pipeline".
-argument-hint: [layers=1,2,3] [repo=<path>] [task=<id>] [resume=true|false] [fresh=false]
+argument-hint: "[layers=1,2,3] [repo=<path>] [task=<id>] [resume=true|false] [fresh=false]"
 ---
 
 # /harbor:test — Plugin Test Runner
@@ -49,9 +49,9 @@ WT="$(dirname "<repo>")/.harbor-test/<repo-slug>__<task-slug>"
 [ "<fresh>" = true ] && { git -C "<repo>" worktree remove --force "$WT" 2>/dev/null; rm -rf "$WT"; }
 test -d "$WT" || git -C "<repo>" worktree add "$WT" "$HEAD"
 ```
-Then guarantee it equals the original clone (this is the "create a clean branch" step):
-```bash
-/harbor:reset-workspace repo="$WT" clean_inbenchmark_tasks=true   # dry-run+confirm internally
+Then guarantee it equals the original clone (this is the "create a clean branch" step). `/harbor:reset-workspace` is user-invocable only (`disable-model-invocation: true`), so it cannot be slash-invoked from here — instead **Read `${CLAUDE_PLUGIN_ROOT}/commands/reset-workspace.md` and execute its body** against:
+```text
+repo="$WT"  clean_inbenchmark_tasks=true      # its own dry-run + confirm gate still applies
 ```
 State + history live in `$WT/.harbor-test/`: `state.json` (stage cache) + `history.md` (append-only).
 
@@ -84,7 +84,7 @@ For each stage from `first_to_run` onward (skip `action==skip` cached stages):
 | 8 | `rl-eval` | `/harbor:rl-eval checkpoint=<ckpt>` | [beh] `metrics.json` written · [art] task/algo inferred from `resolved_config.yaml` |
 | 9 | `rl-render` | `/harbor:rl-render checkpoint=<ckpt>` | inference-moved + frame-diff smoke · [beh] non-empty `render.mp4` |
 | 10 | `rl-tricks` | `/harbor:rl-list-tricks` + `/harbor:rl-add-trick <trick>` | [art] tricks enumerated · [art] applying a trick patches the config per its manifest (then revert) |
-| 11 | `reset` | `/harbor:reset-workspace repo=$WT` (teardown ＋ its own test) | reset smoke: identical-to-clone trio · [art] `harbor/`, `.venv/`, carve-outs, caches gone |
+| 11 | `reset` | Read `commands/reset-workspace.md` + execute its body with `repo=$WT` (teardown ＋ its own test; the command is user-invocable only, so it is not slash-invoked here) | reset smoke: identical-to-clone trio · [art] `harbor/`, `.venv/`, carve-outs, caches gone |
 
 **Skipped in headless e2e (recorded as `skipped`, never failed):** `rl-visualize` ($DISPLAY), full `rl-sweep`/`rl-tune` (multi-trial hours), `plot` (needs W&B runs), `wandb-setup` (host creds), `dr-generator` (not ready).
 

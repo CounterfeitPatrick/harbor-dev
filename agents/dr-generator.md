@@ -156,7 +156,7 @@ Render → `<task_dir>/smokes/smoke_s7.py`, run inside `.venv`. Retry loop on fa
 
 ## Handoff: `<task_dir>/handoff-dr-generator.md`
 
-In the per-task workspace (`harbor/create-task/<slug>/`), next to `dr-history.md`; mirrors the reward-tune loop's `handoff-reward-generator.md`. Write on **create**, overwrite/surgically Edit on **edit** (reflects the LATEST §7 state). English only. Structure:
+In the per-task workspace (`harbor/create-task/<slug>/`), next to `dr-history.md`; mirrors the reward-tune loop's `handoff-reward-tuning-agent.md`. Write on **create**, overwrite/surgically Edit on **edit** (reflects the LATEST §7 state). English only. Structure:
 
 ```markdown
 # Domain Randomization — <TaskID>

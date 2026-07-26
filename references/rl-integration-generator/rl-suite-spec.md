@@ -7,8 +7,8 @@ Schema for `<repo>/harbor/rl-integration-generator/rl-suite-spec.json` — writt
 ```
 benchmark-generator  →  harbor/benchmark-generator/benchmark-spec.json   (category, tasks, language, gpu_sim, …)
 rl-integration-gen   →  harbor/rl-integration-generator/rl-suite-spec.json    (algorithm source, algorithms, W&B, scoring)
-rl-tuning-agent      →  harbor/rl_experiments/tunes/<tune_id>/      (per-cell tune state)
-write_rl_report.py   →  rl_experiment_report.md         (end-of-run user-facing receipt)
+rl-tuning-agent      →  harbor/rl_experiments/tunes/<tune_id>/      (per-cell tune state,
+                        incl. tuning-history.md + result.json per cell)
 ```
 
 ## Schema (v1)
@@ -77,14 +77,16 @@ write_rl_report.py   →  rl_experiment_report.md         (end-of-run user-facin
 - **`algorithm_source.parallel`** — drives which config family is selected by `algorithm_adapters.py`:
   - `true` → `configs/rl/<algo>.parallel.yaml` (GPU-batched parallel envs)
   - `false` → `configs/rl/<algo>.yaml` (gym vec-env, CPU)
-- **`selection_metric`** — used by `analyze_rl_trial.py` and `suggest_hparams.py`. Scoring formula:
+- **`selection_metric`** — the default candidate-scoring weights `rl-tuning-agent` uses in its
+  `score` phase. Each named metric is min-max normalized to `[0,1]` across the iterations seen so
+  far in that cell, then weighted:
   ```
-  score = 0.50 * normalized_success_rate
-        + 0.30 * normalized_eval_return
-        + 0.15 * normalized_sample_efficiency
-        - 0.05 * instability_penalty
+  score = Σ  weight[m] * normalized(m)          # over the metrics in `metric_weights`
   ```
-  If `tasks[].success_metric == null` for ALL tasks, success-rate term is dropped and weights re-normalize to `0.60 / 0.30 / -0.10` (eval_return / sample_efficiency / instability).
+  Default when unset: `{"sample_efficiency": 0.5, "final_return": 0.5}`. A caller may override it
+  per tune via `/harbor:rl-tune metric_weights=<json>`, which is forwarded to the agent (see
+  `agents/rl-tuning-agent.md`, `metric_weights` input). The agent computes this inline from
+  `iter_<N>/run.log` — there is no separate scoring script.
 
 ## Benchmark-spec extension
 

@@ -83,14 +83,3 @@ cri_class: MLPCritic
 policy: MlpPolicy
 policy_kwargs:
   net_arch: [256, 256]
-
-# ---- Tuning search-space ----
-search_space:
-  learning_rate:   { type: log_uniform, low: 1.0e-5, high: 1.0e-3 }
-  n_steps:         { type: choice, values: [8, 16, 32, 64] }
-  batch_size:      { type: choice, values: [8192, 16384, 32768, 65536] }
-  gamma:           { type: uniform, low: 0.95, high: 0.999 }
-  gae_lambda:      { type: uniform, low: 0.9, high: 0.99 }
-  clip_range:      { type: choice, values: [0.1, 0.2, 0.3] }
-  ent_coef:        { type: log_uniform, low: 1.0e-6, high: 1.0e-2 }
-  n_epochs:        { type: choice, values: [2, 4, 8] }

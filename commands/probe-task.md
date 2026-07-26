@@ -1,6 +1,6 @@
 ---
 description: Probe an existing task in the current benchmark repo and emit `<task-slug>-implementation.md` — a portable per-task design-choice spec capturing scene / actions / reset / termination / observation / reward / DR. Use when the user types /harbor:probe-task task=<id> [repo=<path>] [output=<path>] or asks "document this task", "make a reproduction spec for task X", "extract the design choices of task Y".
-argument-hint: task=<id> [repo=<path>] [output=<path>]
+argument-hint: "task=<id> [repo=<path>] [output=<path>]"
 ---
 
 # /harbor:probe-task — Author Per-Task Reproduction Spec
@@ -72,7 +72,7 @@ test -x "<repo>/.venv/bin/python"                         || { echo ".venv/ miss
      - `RewardsCfg`: every `RewTerm` with `func`, `params`, `weight`.
      - Composer (sum / product).
      - **Embed the full source of every reward function from `mdp/rewards.py` (verbatim, in a code block).** Include latch buffers, helpers, gate logic — everything the function needs to run.
-     - The planning-budget docstring per `experiences/reward-generator/reward-experience.md` entry #2 (per-stage saturated per-step magnitudes) — extract from the `RewardsCfg` docstring if present; else compute from the weights and note "(retro-computed)".
+     - The planning-budget docstring per `experiences/reward-tuning-agent/reward-experience.md` entry #2 (per-stage saturated per-step magnitudes) — extract from the `RewardsCfg` docstring if present; else compute from the weights and note "(retro-computed)".
    - **§7 DR**
      - `EventCfg`: every term with `mode != "reset"` (i.e. `startup` / `interval`). Function, params, ranges. If none, write `<no DR>`.
 

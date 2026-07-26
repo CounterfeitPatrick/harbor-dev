@@ -1,6 +1,6 @@
 ---
 description: Plot mean ± std curves from wandb runs grouped by task × baseline. Reads a YAML spec describing one or more subplots; each subplot averages multiple seeds for the same (task, baseline). Use when the user types /harbor:plot spec=<path> or asks "plot these wandb runs", "compare baselines on these tasks", "make a multi-panel learning curve".
-argument-hint: spec=<path-to-yaml>  [or no args to walk through writing one]
+argument-hint: "spec=<path-to-yaml>  [or no args to walk through writing one]"
 ---
 
 # /harbor:plot — Multi-panel Learning Curves from W&B

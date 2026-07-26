@@ -1,6 +1,6 @@
 ---
 description: Hyperparameter / seed sweep across multiple RL trials. Takes any keys (task, algorithm, seed, learning_rate, ...) where each value may be a comma-separated list. Computes the Cartesian product, then either dispatches one sub-agent per trial (default) OR — when `cluster=...` is given — renders a SLURM launch.sh that the user submits with `sbatch`. All results land under harbor/rl_experiments/sweeps/<sweep_id>/. Use when the user types /harbor:rl-sweep ... or asks "sweep these hyperparameters", "run a grid over seeds and learning rates", "generate a SLURM launch script for this sweep".
-argument-hint: task=<id1>[,id2,...] algorithm=<ppo,sac,...> [key=v1,v2,...] [parallelism=N] [cluster=<true|path>]
+argument-hint: "task=<id1>[,id2,...] algorithm=<ppo,sac,...> [key=v1,v2,...] [parallelism=N] [cluster=<true|path>]"
 ---
 
 # /harbor:rl-sweep — Multi-Trial Hyperparameter Sweep

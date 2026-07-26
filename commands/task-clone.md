@@ -1,6 +1,6 @@
 ---
 description: Clone a task into an isolated, independently-editable copy — a GENERAL primitive, not tied to any single caller. Same-repo mode registers the copy under a new suffixed gym id (suffix is caller-chosen, e.g. -rewarditer7, -abtest1); cross-benchmark mode (dest_repo=) migrates the task's DESIGN to another benchmark/simulator (sim2sim, e.g. IsaacLab → Genesis) by composing probe-task + task-create reproduce. `op=create` dispatches the task-cloner subagent (copy source's editable surface → rewire imports → register <dest> → run clone smokes). `op=delete` removes the clone's files and confirms the source still builds. Use when the user types /harbor:task-clone op=create source=<TaskID> dest=<TaskID> | op=delete dest=<TaskID>, or asks "clone task X for isolated editing", "copy this task under a new id", "port this task to <other benchmark>".
-argument-hint: op=create source=<TaskID> dest=<TaskID> [repo=<path>] [dest_repo=<path>] [surface=<sections>] [info_out=<path>] | op=delete dest=<TaskID> [repo=<path>]
+argument-hint: "op=create source=<TaskID> dest=<TaskID> [repo=<path>] [dest_repo=<path>] [surface=<sections>] [info_out=<path>] | op=delete dest=<TaskID> [repo=<path>]"
 ---
 
 # /harbor:task-clone — Isolated Task Clone (general primitive)

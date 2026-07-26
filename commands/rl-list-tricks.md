@@ -1,6 +1,6 @@
 ---
 description: List all available RL training tricks (in-network obs RMS, reward normalization, etc.) with descriptions, applicable algorithms, and references. Use when the user types /harbor:rl-list-tricks or asks "list tricks", "show available rl tricks", "what tricks can I apply", "what tricks are available".
-argument-hint: (no args)
+argument-hint: "(no args)"
 ---
 
 # /harbor:rl-list-tricks — List Available RL Tricks

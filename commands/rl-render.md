@@ -1,6 +1,6 @@
 ---
 description: Render a trained RL checkpoint to MP4 and verify the policy actually moves (frame-difference sanity check). Use when the user types /harbor:rl-render checkpoint=<path> [task=<id>] [key=value ...] or asks "render this checkpoint to a video", "make an MP4 of the trained policy", "show the policy as a video file (not a viewer)". For a headed live viewer use /harbor:rl-visualize instead.
-argument-hint: checkpoint=<path> [task=<id>] [render_max_steps=N] [key=value ...]
+argument-hint: "checkpoint=<path> [task=<id>] [render_max_steps=N] [key=value ...]"
 ---
 
 # /harbor:rl-render — Render an RL Checkpoint to MP4

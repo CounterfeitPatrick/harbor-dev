@@ -21,10 +21,14 @@ The harness is structured as six layers with different cardinality, lifecycle, a
 
 ```
 L1   AGENT (intelligence)         — Claude itself; not in code
-L2   ENTRY POINTS                 — User-facing surfaces. Two flavours:
-                                    · commands/<name>.md   = explicit slash /harbor:<name>
-                                    · skills/<name>/SKILL.md = description-driven auto-load (also slash-able)
-                                      (harbor ships none today — all current entry points are commands)
+L2   ENTRY POINTS                 — User-facing surfaces. commands/<name>.md and
+                                    skills/<name>/SKILL.md are the SAME mechanism upstream
+                                    (custom commands were merged into skills); both create
+                                    /harbor:<name> and support the same frontmatter. Skills
+                                    add only a per-entry-point directory for supporting files.
+                                    harbor uses commands/ throughout: its supporting files
+                                    (references/, templates/, experiences/) are shared across
+                                    entry points, not owned by one.
 L3   SUBAGENTS (roles)            — agents/<name>.md   (fresh context, isolated agent loop)
 L4   TOOLS (deterministic)        — scripts/<owner>/*.py + Bash + Read/Write/Edit
 L5   SHARED KNOWLEDGE (read-only) — templates/, references/, experiences/
@@ -43,6 +47,8 @@ Q4: Read-only doc / data?
     Q4.2: Per-run process record?                → L6a process log
     Q4.3: End-of-run user-facing summary?        → L6b receipt
 ```
+
+**Invocation boundary (L2).** By default an entry point is both user- and model-invocable. Exactly ONE command is gated with `disable-model-invocation: true` — **`reset-workspace`**, the only irreversible operation (`git reset --hard` + `git clean -fdx`). Everything else stays model-invocable **on purpose**: harbor's commands compose (`rl-sweep` → `rl-run`, `task-create` → `reward-tune`, `test` → the whole chain), and a gated command cannot be invoked by another command at all — gating a building block silently breaks every chain that calls it. When a chain needs gated behavior, it **Reads the command body and executes it** rather than slash-invoking (see `test.md` stage 11 and `task-create.md` §6). Enforced by `tests/contract/test_invocation.py`: the gated set is exactly `GATED`, nothing else carries the flag, no gated command is slash-invoked internally, and all frontmatter is valid YAML (a malformed block silently drops every field, gating included).
 
 L2 vs L3 are **not the same axis**:
 - L2 asks "how does the user wake it up" (slash invocation)
@@ -89,7 +95,7 @@ Commands are grouped by area via filename prefix (Claude Code commands have no t
 - `commands/wandb-setup.md` — `/harbor:wandb-setup` — inspect / re-login / switch the host's W&B account
 - `commands/reset-workspace.md` — `/harbor:reset-workspace repo=<path> [clean_inbenchmark_tasks=true|false]` — **destructive**: remove ALL plugin output from a benchmark repo (`harbor/`, `.venv/`, `scripts/` carve-outs, caches) and (default) `git reset --hard` + `git clean -fdx` it back to its original cloned HEAD. Runs in a subagent with a dry-run + confirm gate and a git-based smoke (incl. hidden / ignored files) that must fully pass before reporting success
 - `commands/test.md` — `/harbor:test [layers=1,2,3] [repo=<path>] [task=<id>] [from_spec=<path>]` — plugin test runner. L1 (contract) + L2 (unit) are deterministic `pytest tests/{contract,unit}` (main thread). L3 is an e2e pipeline (subagent) driving the task-create→train→reset chain module-by-module on an isolated clean benchmark **worktree**, using a benchmark-agnostic stack-two-cube fixture (create mode) with §6 bounded to one iteration (`success_threshold=0`). Resumable Docker-layer style via `scripts/test/pipeline.py` (per-module fingerprints → re-run only changed/failed stages onward); append-only `history.md`; fail-fast with suggested fix; skips dr-generator + headless modules
-- `commands/update-experience.md` — `/harbor:update-experience target=<name> (experience="..." | file=<path>)` — append a numbered bullet to an agent ledger (`reward-generator`/`task-generator`/`dr-generator`/`rl-tuning-agent`; hand-written bullets capped at 5 lines), OR file a `/harbor:probe-task` spec into the right `experiences/task-library/` embodiment folder (classify manipulation vs humanoid/quadrupedal locomotion; short `<task>-<repo>.md` name, `-vN` on collision)
+- `commands/update-experience.md` — `/harbor:update-experience target=<name> (experience="..." | file=<path>)` — append a numbered bullet to an agent ledger (`reward-tuning-agent`/`task-generator`/`dr-generator`/`rl-tuning-agent`; hand-written bullets capped at 5 lines), OR file a `/harbor:probe-task` spec into the right `experiences/task-library/` embodiment folder (classify manipulation vs humanoid/quadrupedal locomotion; short `<task>-<repo>.md` name, `-vN` on collision)
 
 ### L3 — Subagents (heavy, multi-step; main thread dispatches; no nesting)
 
@@ -112,8 +118,6 @@ scripts/
   benchmark-generator/ capture_spec.py, list_tasks.py, render_task_overview.py
   rl-integration-generator/ render_rl_suite.py, render_data_logger.py, discover_rl_tasks.py,
                       discover_algorithms.py, validate_rl_suite.py
-  rl-tuning-agent/    run_rl_trial.py, analyze_rl_trial.py, suggest_hparams.py,
-                      render_trial_contact_sheet.py, write_rl_report.py
   reward-tuning-agent/ curve_health.py  (compact health snapshot of a LIVE reward-tune
                       metrics.jsonl → evidence + advisory concern flags for the §2.3b
                       5-min monitor / confident early-stop; gathers, never kills)
@@ -151,10 +155,7 @@ templates/
                                rl-integration.md.template (Layer 6b user receipt: train / eval / render / override-hparams)
                                tune.py.template (top-level cross-impl tuning entry)
                                data_logger.py.template (rendered to <repo>/harbor/utils/data_logger.py by render_data_logger.py)
-  rl-tuning-agent/       tuning-history.md.template (per-cell ledger),
-                         (legacy: history.md.template, trial_summary.md.template,
-                          video_analysis.md.template, rl_experiment_report.md.template
-                          — kept for back-compat, not used by the current agent)
+  rl-tuning-agent/       tuning-history.md.template (per-cell ledger)
   rl-tune/               history.md.template (tune-level ledger written by /harbor:rl-tune)
   reward-tune/           history.md.template (tune-level ledger written by /harbor:reward-tune)
   task-generator/        smokes/smoke_s{1..5}.py.template (per-section behavioral smokes,
@@ -172,7 +173,7 @@ templates/
                          action_terms/ema_delta_ee_pose{,_cfg}.py.template (custom
                            EMACumulativeDeltaPoseAction — task-space analog;
                            rendered when §2 mode == ema_delta_ee_pose)
-  reward-generator/      smokes/smoke_s6.py.template (reward finite + non-constant +
+  reward-tuning-agent/   smokes/smoke_s6.py.template (reward finite + non-constant +
                            composer assertion via info["detailed_reward"])
   task-cloner/           smokes/smoke_clone.py.template (cloned task builds + rolls out
                            with finite reward + reports per-term-logging inheritance;
@@ -202,7 +203,7 @@ references/
   task-generator/        isaaclab-code-reference (action / scene / obs / termination /
                            command APIs the agent calls), smoke-contracts (what each S1..S6
                            verifies + substitution slot specs)
-  reward-generator/      isaaclab-reward-reference (composer-by-family, RewTerm idiom,
+  reward-tuning-agent/   isaaclab-reward-reference (composer-by-family, RewTerm idiom,
                            common mdp.* building blocks, weight conventions),
                          smoke-contract (what S6 verifies + substitutions)
   task-cloner/           clone-contract (the 5 clone checks SC1..SC5, the registration
@@ -215,7 +216,7 @@ references/
 experiences/             cross-run heuristic ledgers (numbered, append-only)
   rl-tuning-agent/       tuning-experience.md
   task-generator/        task-experience.md
-  reward-generator/      reward-experience.md
+  reward-tuning-agent/   reward-experience.md
   dr-generator/          dr-experience.md
   task-library/          task-design knowledge indexed by embodiment + family (not by agent);
                          one self-contained <task>-<repo>.md probe-task spec per task (+ README.md):

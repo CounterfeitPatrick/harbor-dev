@@ -42,7 +42,8 @@ def load_frontmatter(path):
             i += 1
             continue
         key, val = km.group(1), km.group(2)
-        if val.strip() in ("|", ">"):  # block scalar — gather indented lines
+        # block scalar, incl. chomping/indent indicators (`|`, `>`, `>-`, `|+`, ...)
+        if re.fullmatch(r"[|>][-+]?\d?", val.strip()):
             i += 1
             block = []
             while i < len(lines) and (lines[i].startswith("  ") or not lines[i].strip()):

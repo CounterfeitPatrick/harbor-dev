@@ -1,6 +1,6 @@
 ---
 description: Probe an already-set-up benchmark repo and author <repo>/harbor/create-task/task-implementation.md — the per-family task-authoring guide consumed by /harbor:task-create. Use when the user types /harbor:probe-benchmark [repo=<path>] [canonical_task=<id>] or asks "probe this benchmark", "author task-implementation.md", "scaffold the create-task guide for this repo".
-argument-hint: [repo=<path>] [canonical_task=<id>]
+argument-hint: "[repo=<path>] [canonical_task=<id>]"
 ---
 
 # /harbor:probe-benchmark — Author `task-implementation.md`
