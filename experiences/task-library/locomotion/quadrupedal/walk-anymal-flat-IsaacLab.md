@@ -1,10 +1,7 @@
 # Isaac-Velocity-Flat-Anymal-C-v0 — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: IsaacLab
-- probed_from_commit: 0fac17cc55038809fd57b8af1e950a940bf1324b
-- probed_at: 2026-06-02T16:48:24Z
-- canonical_build: not captured (Isaac `pxr` unavailable in `.venv` → `gym.make` cannot boot Isaac Sim). Analytic dims: `observation_space = Box(-inf, inf, (48,))`, `action_space = Box(-inf, inf, (12,))`. (Flat variant: 12-DoF JointPositionAction; obs = base_lin_vel[3] + base_ang_vel[3] + projected_gravity[3] + velocity_commands[3] + joint_pos[12] + joint_vel[12] + last_action[12] = 48; height_scan term removed on flat.)
+- robot: ANYbotics ANYmal-C quadruped (12 DoF)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
 This is a **quadruped velocity-command tracking** task. The ANYmal-C robot must track a commanded base linear velocity (x, y) and yaw angular velocity on **flat ground**, with a rich shaped reward (exponential velocity tracking + many regularization penalties) and substantial domain randomization (startup friction/mass/CoM, reset pose/joint scale, interval velocity pushes).
 

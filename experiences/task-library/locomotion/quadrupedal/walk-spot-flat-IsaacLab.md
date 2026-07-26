@@ -1,10 +1,7 @@
 # Isaac-Velocity-Flat-Spot-v0 — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: IsaacLab
-- probed_from_commit: 0fac17cc55038809fd57b8af1e950a940bf1324b
-- probed_at: 2026-06-02T18:58:12+02:00
-- canonical_build: not captured (Isaac `pxr` module unavailable in `.venv`; `gym.make` fails at `from pxr import Usd, UsdGeom`). Analytic dims: `observation_space = Box(48,)`, `action_space = Box(12,)` — see §5 / §2 derivations below.
+- robot: Boston Dynamics Spot quadruped (12 DoF, remotized-PD knee)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
 > Boston Dynamics **Spot** quadruped, flat-terrain velocity tracking, manager-based RL env (`ManagerBasedRLEnv`). Spot is notable because it ships its **own** `mdp/` subtree (`config/spot/mdp/rewards.py`, `config/spot/mdp/events.py`) with a **distinct reward set** — gait-enforcement, foot-air-time, foot-clearance, foot-slip, air-time-variance, plus a remotized-PD knee actuator — that differs from the shared Anymal-style velocity reward (`track_lin_vel_xy_exp` / `track_ang_vel_z_exp` + L2 penalties). The whole point of this spec is to capture Spot's own reward functions verbatim.
 

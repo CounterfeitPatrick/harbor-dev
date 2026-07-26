@@ -1,10 +1,7 @@
 # Isaac-Push-Block-Franka-v0 — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: IsaacLab
-- probed_from_commit: 0fac17cc55038809fd57b8af1e950a940bf1324b
-- probed_at: 2026-06-02T18:27:34+02:00
-- canonical_build: not captured (upstream registered task; verified via source read — `pxr` unavailable in .venv, Isaac boot skipped). Analytically resolved: `observation_space = Box(-inf, inf, (36,))`, `action_space = Box(-inf, inf, (8,))`.
+- robot: Franka Emika Panda (gripper forced closed, used as a flat pusher)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
 This is a **non-prehensile planar push** task. A Franka Panda (gripper forced closed, used as a flat pusher) must push a small DexCube block across a table to a commanded 2-D goal position. Absolute joint-position control on the 7 arm joints; the goal is a `UniformPoseCommand` resampled every 4 s; success = block within 5 cm of the goal (logging-only). Modeled on `manipulation/lift` but planar (no lift gate, no `ee_frame` FrameTransformer).
 

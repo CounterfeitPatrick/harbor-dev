@@ -1,10 +1,7 @@
 # Isaac-Velocity-Rough-H1-v0 — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: IsaacLab
-- probed_from_commit: 0fac17cc55038809fd57b8af1e950a940bf1324b
-- probed_at: 2026-06-02T17:07:14Z
-- canonical_build: not captured (Isaac `pxr`/sim deps unavailable in `.venv`; `gym.make` fails before registration loads). Analytic dims: `observation_space = Box(256,)`, `action_space = Box(19,)`.
+- robot: Unitree H1 bipedal humanoid (19 DoF)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
 > **Task in one line:** Unitree H1 humanoid (19 DoF) tracks a commanded base velocity (lin_vel_x, lin_vel_y, ang_vel_z) while walking over procedurally generated ROUGH terrain (stairs / boxes / slopes / random rough), using a torso-mounted height-scan ray-caster + a terrain-level curriculum.
 

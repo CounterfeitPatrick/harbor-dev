@@ -1,22 +1,20 @@
 ---
-description: Show the full harbor plugin surface — slash commands, subagents, MCP tools, hooks. Use when the user types /harbor:help or asks "what can harbor do", "harbor help", "harbor overview", "list harbor features", "list harbor commands".
+description: Show the full harbor plugin surface — slash commands, subagents, hooks. Use when the user types /harbor:help or asks "what can harbor do", "harbor help", "harbor overview", "list harbor features", "list harbor commands".
 ---
 
 # /harbor:help — Plugin Overview
 
-The user wants a tour of everything this plugin offers. **Print the static block below verbatim**, then append a live registry-count line fetched from MCP. Do not paraphrase the static block — it is the canonical surface description.
+The user wants a tour of everything this plugin offers. **Print the static block below verbatim.** Do not paraphrase it — it is the canonical surface description.
 
 ## Action
 
 1. Print the static block (everything between the `BEGIN STATIC` and `END STATIC` markers below) verbatim, omitting the markers themselves.
-2. Call `mcp__plugin_harbor_harbor__list_benchmarks` (no args).
-3. Append a final line: `Current registry: <B> verified benchmark(s).` using the `count` field from the response.
 
 ---
 
 <!-- BEGIN STATIC -->
 
-**harbor** — Set up Python GPU repos with uv and curate verified benchmark entries.
+**harbor** — Set up Python GPU robotics repos with uv and author RL tasks end-to-end.
 
 ## Slash commands
 
@@ -64,24 +62,10 @@ Invoke via `Task('<agent-name>')`. Subagents do not nest-dispatch — main threa
 | `rl-integration-generator` | After benchmark-generator finishes. Renders `harbor/scripts/rl/<impl>/{train,eval,render,env_wrapper}.py`, `harbor/configs/rl/{ppo,sac,td3}{,.parallel}.yaml`, and `harbor/rl-integration-generator/rl-suite-spec.json`. Smokes each algorithm. |
 | `rl-tuning-agent` | Per-algorithm hyperparameter tuning loop: train → eval → render → analyze metrics + behavior → suggest next config. Per-cell tune state under `harbor/rl_experiments/tunes/<tune_id>/<wandb_project>/`. |
 
-## MCP tools (read-only registry access)
-
-Server: `mcp/harbor/server.py`. Exposed under the `mcp__plugin_harbor_harbor__*` namespace.
-
-| Tool | Returns |
-|---|---|
-| `list_benchmarks(status?, category?)` | `{count, benchmarks, formatted_table}`. Default `status="verified"`; pass `null` for all. |
-| `lookup_benchmark(name_or_url)` | by name **or** github URL (fork-tolerant fuzzy match). `{found, benchmark?, match_type?}`. |
-| `get_benchmark_spec(name)` | obs / action layout JSON. |
-| `list_tasks(benchmark_name?)` | per-task metadata across registry benchmark specs. |
-
-The MCP server has **no write API**. Registry mutation goes through `scripts/registry/registry_submit.py` and `registry_verify.py`, which produce yaml diffs reviewed in git.
-
 ## Lifecycle hooks
 
 | Hook | Effect |
 |---|---|
-| `SessionStart` | Inject one line: `[harbor] benchmarks=N verified \| last update=<date>`. |
 | `PostToolUse` | Truncate noisy Bash stdout to keep the conversation lean. |
 | `Stop` / `SubagentStop` | Append a one-line audit entry. |
 
@@ -91,6 +75,5 @@ The MCP server has **no write API**. Registry mutation goes through `scripts/reg
 - `CLAUDE.md` — 6-layer mental model + "where things live".
 - `agents/<name>.md` — each subagent's contract, phase breakdown, exit-code semantics.
 - `references/{env,benchmark,rl-integration}-generator/` — decision matrices, smoke contracts, install-plan schema, RL suite spec, decision protocol.
-- `mcp/harbor/data/benchmarks.yaml` — the live registry (read via MCP, never `cat` directly).
 
 <!-- END STATIC -->

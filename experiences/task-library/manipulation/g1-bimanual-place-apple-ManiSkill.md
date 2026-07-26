@@ -1,10 +1,7 @@
 # UnitreeG1PlaceAppleInBowl-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T22:06:59+02:00
-- canonical_build: `Box(-inf, inf, (1, 74), float32)` (obs), `Box(-1.0, 1.0, (25,), float32)` (action), control_mode `pd_joint_delta_pos`
+- robot: Unitree G1 humanoid, simplified upper body, bimanual (25 DoF, fixed base)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 **Task:** Control the humanoid Unitree G1 (simplified upper body, fixed/seated base) to grasp an apple with its RIGHT arm and place it in a bowl beside it. Bimanual-capable robot (both arms + both 6-DoF hands actuated) but only the right side is used by the reward/success logic.
 

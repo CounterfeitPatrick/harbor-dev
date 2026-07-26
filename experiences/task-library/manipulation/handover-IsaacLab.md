@@ -1,9 +1,10 @@
 # Handover — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: symdex
-- source_path: /home/steven/code/symdex/symdex/env/tasks/Handover
-- embodiment: bimanual UF850 + dual Allegro hands
+- robot: Bimanual UF850 arms + dual Allegro hands (44 DoF)
+- simulator: IsaacLab (Isaac Sim, manager-based)
+
+> Source package name anonymized as `bimanual_suite`. This task comes from an internal
+> bimanual manipulation suite rather than a public repo; the design below is otherwise verbatim.
 
 ## Task summary
 
@@ -21,7 +22,7 @@ Key design notes that are easy to miss:
 
 ## §1 Registration + Scene
 
-**Description.** `HandoverEnv(BaseEnv)` overrides `step()` (to advance `reach_middle` and optionally visualize palms) and the pre/post-reset hooks (to allocate/zero `reach_middle` and `success_tracker_step`). Registration in symdex is by config class, not `gym.register` in the task dir — the env class + cfg class pair (`HandoverEnv` / `HandoverEnvCfg`) is the unit; `name="Handover"`. The scene declares BOTH robots (right/left UF850+Allegro USDs, gravity disabled, 16-iter position solver), the single handover object `object_0` (`orange_bottle.usd`, mass 1.0 kg, scale 1.0), a kinematic table (from `BaseSceneCfg`), ground @ z=-0.82, a dome light, 16 filtered contact sensors per hand-set (tip `*f5` + mid `*f4` × 4 fingers × 2 hands), and two `FrameTransformer` frames on the bottle (`bottle_top` @ +0.07 z, `bottle_bottom` @ −0.08 z) used as reach targets. `num_envs=4096`, `env_spacing=3.0`, `replicate_physics=False`.
+**Description.** `HandoverEnv(BaseEnv)` overrides `step()` (to advance `reach_middle` and optionally visualize palms) and the pre/post-reset hooks (to allocate/zero `reach_middle` and `success_tracker_step`). Registration in bimanual_suite is by config class, not `gym.register` in the task dir — the env class + cfg class pair (`HandoverEnv` / `HandoverEnvCfg`) is the unit; `name="Handover"`. The scene declares BOTH robots (right/left UF850+Allegro USDs, gravity disabled, 16-iter position solver), the single handover object `object_0` (`orange_bottle.usd`, mass 1.0 kg, scale 1.0), a kinematic table (from `BaseSceneCfg`), ground @ z=-0.82, a dome light, 16 filtered contact sensors per hand-set (tip `*f5` + mid `*f4` × 4 fingers × 2 hands), and two `FrameTransformer` frames on the bottle (`bottle_top` @ +0.07 z, `bottle_bottom` @ −0.08 z) used as reach targets. `num_envs=4096`, `env_spacing=3.0`, `replicate_physics=False`.
 
 **Decisions resolved.**
 
@@ -64,8 +65,8 @@ from typing import Any, ClassVar
 from isaacsim.core.version import get_version
 from isaaclab.envs.common import VecEnvStepReturn
 
-from symdex.env.tasks.manager_based_env import BaseEnv
-from symdex.env.tasks.Handover.env_cfg import HandoverEnvCfg
+from bimanual_suite.env.tasks.manager_based_env import BaseEnv
+from bimanual_suite.env.tasks.Handover.env_cfg import HandoverEnvCfg
 
 class HandoverEnv(BaseEnv):
     is_vector_env: ClassVar[bool] = True
@@ -115,16 +116,16 @@ from isaaclab.sensors import FrameTransformerCfg
 from isaaclab.sensors.frame_transformer import OffsetCfg
 from isaaclab.markers.config import FRAME_MARKER_CFG 
 
-import symdex
-from symdex.env.tasks.manager_based_env_cfg import *
-from symdex.env.mdps.obs_mdps import *
-from symdex.env.mdps.reset_mdps import *
-from symdex.env.mdps.reward_mdps import *
-from symdex.env.mdps.termination_mdps import *
-from symdex.env.mdps.command_mdps.grasp_command_cfg import TargetPositionCommandCfg
-from symdex.env.mdps.command_mdps.reach_command_cfg import TargetPositionCommandCfg as ReachCommandCfg
-from symdex.env.action_managers.actions_cfg import EMACumulativeRelativeJointPositionActionCfg
-from symdex.env.tasks.Handover import mdps as handover
+import bimanual_suite
+from bimanual_suite.env.tasks.manager_based_env_cfg import *
+from bimanual_suite.env.mdps.obs_mdps import *
+from bimanual_suite.env.mdps.reset_mdps import *
+from bimanual_suite.env.mdps.reward_mdps import *
+from bimanual_suite.env.mdps.termination_mdps import *
+from bimanual_suite.env.mdps.command_mdps.grasp_command_cfg import TargetPositionCommandCfg
+from bimanual_suite.env.mdps.command_mdps.reach_command_cfg import TargetPositionCommandCfg as ReachCommandCfg
+from bimanual_suite.env.action_managers.actions_cfg import EMACumulativeRelativeJointPositionActionCfg
+from bimanual_suite.env.tasks.Handover import mdps as handover
 
 FRAME_MARKER_SMALL_CFG = FRAME_MARKER_CFG.copy()
 FRAME_MARKER_SMALL_CFG.markers["frame"].scale = (0.10, 0.10, 0.10)
@@ -135,7 +136,7 @@ class HandoverSceneCfg(BaseSceneCfg):
     robot = ArticulationCfg(
         prim_path="/World/envs/env_.*/Robot",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/ufactory850/uf850_allegro_right_colored.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/ufactory850/uf850_allegro_right_colored.usd",
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=True,
@@ -179,7 +180,7 @@ class HandoverSceneCfg(BaseSceneCfg):
     robot_left = ArticulationCfg(
         prim_path="/World/envs/env_.*/Robot_left",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/ufactory850/uf850_allegro_left_colored.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/ufactory850/uf850_allegro_left_colored.usd",
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=True,
@@ -224,7 +225,7 @@ class HandoverSceneCfg(BaseSceneCfg):
     object_0 = RigidObjectCfg(
         prim_path=f"/World/envs/env_.*/Object_0",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/object/orange_bottle.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/object/orange_bottle.usd",
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 kinematic_enabled=False,
                 disable_gravity=False,
@@ -309,7 +310,7 @@ class BaseSceneCfg(InteractiveSceneCfg):
     table: RigidObjectCfg = RigidObjectCfg(
         prim_path="/World/envs/env_.*/Table",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/object/table.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/object/table.usd",
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 kinematic_enabled=True, disable_gravity=False,
@@ -677,7 +678,7 @@ def max_consecutive_success(env: ManagerBasedRLEnv, num_success: int) -> torch.T
 Grasp-command metric/success internals (`grasp_command.py::TargetPositionCommand`):
 ```python
     def _update_metrics(self):
-        from symdex.utils.isaac_utils import get_angle_from_quat
+        from bimanual_suite.utils.isaac_utils import get_angle_from_quat
         target_axis = get_angle_from_quat(self.quat_command_w, axis="z", normalize=True)
         cur_axis = get_angle_from_quat(self.object.data.root_quat_w, axis="z", normalize=True)
         self.metrics["orientation_error"] = torch.sum(target_axis * cur_axis, dim=-1)
@@ -941,7 +942,7 @@ def object_goal_orient_distance(env, command_name, object_id=0, if_left=False, a
     command_term = env.command_manager.get_term(command_name)
     des_orient_w = command_term.quat_command_w
     if axis is not None:
-        from symdex.utils.isaac_utils import get_angle_from_quat
+        from bimanual_suite.utils.isaac_utils import get_angle_from_quat
         target_axis = get_angle_from_quat(des_orient_w, axis=axis, normalize=True)
         cur_axis = get_angle_from_quat(object.data.root_quat_w, axis=axis, normalize=True)
         distance = torch.sum(target_axis * cur_axis, dim=-1) * (2**0.5)

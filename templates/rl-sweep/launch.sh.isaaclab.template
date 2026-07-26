@@ -24,11 +24,23 @@
 
 set -e
 
-# Repo path convention: $HOME/code/agentic/<repo-name>.
+# Repo root is baked in at render time (the absolute path of the repo the sweep
+# was generated from). Override with HARBOR_REPO_ROOT when submitting from a
+# host where the repo lives elsewhere.
 # (sbatch copies the script to a spool dir, so $0-relative path resolution is
-# unreliable on SLURM -- we hardcode the canonical clone location instead.)
-REPO_ROOT="$HOME/code/agentic/{{REPO_NAME}}"
+# unreliable on SLURM -- an absolute path is required.)
+REPO_ROOT="${HARBOR_REPO_ROOT:-{{REPO_PATH}}}"
 SIF="$REPO_ROOT/harbor/apptainer/isaaclab.sif"
+
+# Mount point inside the container. Must match the path the .sif's editable
+# install expects; the renderer derives it from the repo directory name.
+CONTAINER_ROOT="/repo/{{REPO_NAME}}"
+
+if [ ! -d "$REPO_ROOT" ]; then
+    echo "[ERROR] repo root not found: $REPO_ROOT" >&2
+    echo "        Re-submit with HARBOR_REPO_ROOT=/path/to/repo" >&2
+    exit 1
+fi
 
 if [ ! -f "$SIF" ]; then
     echo "[ERROR] $SIF missing -- build it once with:" >&2
@@ -42,12 +54,13 @@ fi
 export WANDB_API_KEY=${WANDB_API_KEY:-{{WANDB_API_KEY}}}
 
 # Most HPC sites firewall outbound HTTPS from compute nodes; Kit needs S3
-# access to fetch USD assets and wandb needs the API. Set HTTP(S)_PROXY to
-# your site's proxy (FAU NHR Alex: http://proxy.nhr.fau.de:80). Pass an empty
-# string to disable. {{PROXY_DEFAULT}} is the renderer-injected default.
+# access to fetch USD assets and wandb needs the API. Set your site's proxy
+# with the `proxy=` arg to /harbor:rl-sweep, or export HTTP(S)_PROXY in the
+# SLURM environment. Empty default = no proxy. Add your site's internal
+# domains to NO_PROXY so intra-cluster traffic bypasses the proxy.
 export HTTP_PROXY=${HTTP_PROXY-{{PROXY_DEFAULT}}}
 export HTTPS_PROXY=${HTTPS_PROXY-{{PROXY_DEFAULT}}}
-export NO_PROXY=${NO_PROXY:-localhost,127.0.0.1,.fau.de,.nhr.fau.de,.rrze.uni-erlangen.de}
+export NO_PROXY=${NO_PROXY:-localhost,127.0.0.1}
 
 # --- Trial table (parallel arrays; index = $SLURM_ARRAY_TASK_ID) ---
 TRIAL_IDS=(
@@ -62,7 +75,7 @@ CMD="${TRIAL_CMDS[$SLURM_ARRAY_TASK_ID]}"
 echo "[sweep {{SWEEP_ID}}] trial $SLURM_ARRAY_TASK_ID :: $ID"
 echo "[host] $(hostname); GPU(s):"
 nvidia-smi -L 2>&1 | head -5
-echo "[cmd] apptainer exec --nv --writable-tmpfs --bind $REPO_ROOT:/repo/IsaacLab --pwd /repo/IsaacLab $SIF $CMD"
+echo "[cmd] apptainer exec --nv --writable-tmpfs --bind $REPO_ROOT:$CONTAINER_ROOT --pwd $CONTAINER_ROOT $SIF $CMD"
 
 # --writable-tmpfs gives Kit a RAM-backed overlay so its writes to
 # /opt/venv/.../isaacsim/kit/{cache,data} succeed (the .sif is read-only).
@@ -70,8 +83,8 @@ echo "[cmd] apptainer exec --nv --writable-tmpfs --bind $REPO_ROOT:/repo/IsaacLa
 apptainer exec \
     --nv \
     --writable-tmpfs \
-    --bind "$REPO_ROOT:/repo/IsaacLab" \
-    --pwd /repo/IsaacLab \
+    --bind "$REPO_ROOT:$CONTAINER_ROOT" \
+    --pwd "$CONTAINER_ROOT" \
     --env OMNI_KIT_ACCEPT_EULA=YES \
     --env PRIVACYACCEPT=YES \
     --env WANDB_API_KEY="$WANDB_API_KEY" \

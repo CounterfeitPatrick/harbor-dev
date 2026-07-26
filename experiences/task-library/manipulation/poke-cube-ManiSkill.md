@@ -1,10 +1,7 @@
 # PokeCube-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T19:28:10Z
-- canonical_build: `Box(-inf, inf, (1, 54), float32)` (obs), `Box(-1.0, 1.0, (8,), float32)` (action), control_mode=`pd_joint_delta_pos`, max_episode_steps=50
+- robot: Franka Panda (default; Fetch also supported)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 > ManiSkill task. Unlike IsaacLab manager-based tasks, all design choices live as methods on a single
 > `BaseEnv` subclass (`PokeCubeEnv`) decorated with `@register_env`. There is no `RewardsCfg` / `ObservationsCfg` /

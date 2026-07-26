@@ -1,10 +1,7 @@
 # Isaac-Lift-Cube-Franka-v0 — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: IsaacLab
-- probed_from_commit: 0fac17cc55038809fd57b8af1e950a940bf1324b
-- probed_at: 2026-06-02
-- canonical_build: not captured (upstream registered task; verified via source read). Analytic resolution — observation_space Box(36,) [joint_pos 9 + joint_vel 9 + object_position 3 + target_object_position 7 + last_action 8], action_space Box(8,) [7 arm joint targets + 1 binary gripper command]. Headless AppLauncher boot via `parse_env_cfg` did not return stdout within the time budget (Isaac Sim / Nucleus asset boot); values above are derived from the cfg.
+- robot: Franka Emika Panda (7 DoF arm + parallel gripper)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
 This is the **joint-position-control** Franka cube-lift task. A Franka Panda must reach a cube on a table, lift it above 4 cm, then carry it to a randomly commanded 3D goal pose. Manager-based RL env (`isaaclab.envs:ManagerBasedRLEnv`). The arm is driven by absolute joint-position targets (scaled relative deltas off the default pose), the gripper by a binary open/close command.
 

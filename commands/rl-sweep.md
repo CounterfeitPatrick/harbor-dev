@@ -42,7 +42,7 @@ Any other `key=value` is forwarded to `/harbor:rl-run`. Comma-separated lists (N
 |---|---|---|
 | `time_limit` | `24:00:00` | `--time` SLURM directive |
 | `gpu_type` | `a40` | passed to `--gres=gpu:<type>` |
-| `proxy` | `http://proxy.nhr.fau.de:80` (IsaacLab template only) | renders `{{PROXY_DEFAULT}}`; pass empty (`proxy=`) to skip |
+| `proxy` | empty (no proxy) | renders `{{PROXY_DEFAULT}}` in both templates — set to your site's proxy URL if compute nodes are firewalled off outbound HTTPS (wandb, and USD asset fetches under IsaacLab) |
 
 ## Action
 
@@ -178,7 +178,7 @@ Triggered when `cluster=` is in args. **No sub-agents are spawned.**
 1. **Resolve template path:**
    - `cluster=<path>` → that path (absolute, repo-relative, or `~`-expanded). Wins over auto-detection.
    - `cluster=true` (or `cluster=default`):
-     - **IsaacLab auto-detect**: read `harbor/benchmark-generator/benchmark-spec.json:benchmark.name`. If it equals `"IsaacLab"` (case-insensitive), OR if `harbor/apptainer/isaaclab.def` exists, pick `${CLAUDE_PLUGIN_ROOT}/templates/rl-sweep/launch.sh.isaaclab.template`. The IsaacLab variant runs the trial inside an apptainer image (handles glibc 2.34+ requirement, NVIDIA Vulkan ICD injection, Kit cache writes via `--writable-tmpfs`, FAU NHR proxy).
+     - **IsaacLab auto-detect**: read `harbor/benchmark-generator/benchmark-spec.json:benchmark.name`. If it equals `"IsaacLab"` (case-insensitive), OR if `harbor/apptainer/isaaclab.def` exists, pick `${CLAUDE_PLUGIN_ROOT}/templates/rl-sweep/launch.sh.isaaclab.template`. The IsaacLab variant runs the trial inside an apptainer image (handles glibc 2.34+ requirement, NVIDIA Vulkan ICD injection, Kit cache writes via `--writable-tmpfs`, optional site proxy).
      - Otherwise → `${CLAUDE_PLUGIN_ROOT}/templates/rl-sweep/launch.sh.template` (bare-metal venv flavor).
    - If the resolved template does not exist → error out with the path.
 
@@ -216,13 +216,13 @@ Triggered when `cluster=` is in args. **No sub-agents are spawned.**
    | `{{N_TRIALS}}` | `len(trials)` |
    | `{{PARSED_ARGS_SUMMARY}}` | one-line `key=v1,v2,...` summary |
    | `{{SWEEP_ID}}` | `<sweep_id>` |
-   | `{{REPO_PATH}}` | `$(pwd)` — informational comment only |
-   | `{{REPO_NAME}}` | `os.path.basename($(pwd))` — used at runtime to assemble `$HOME/code/agentic/<name>` (canonical cluster clone location; sbatch spools the script so $0-relative resolution is unreliable) |
+   | `{{REPO_PATH}}` | `$(pwd)` — the absolute repo root baked into `REPO_ROOT` (sbatch spools the script, so $0-relative resolution is unreliable). Overridable at submit time via `HARBOR_REPO_ROOT` |
+   | `{{REPO_NAME}}` | `os.path.basename($(pwd))` — (isaaclab template only) the container mount point `/repo/<name>` |
    | `{{GENERATED_AT}}` | ISO8601 UTC |
    | `{{TIME_LIMIT}}` | `time_limit` arg or `24:00:00` |
    | `{{GPU_TYPE}}` | `gpu_type` arg or `a40` |
    | `{{WANDB_API_KEY}}` | empty string (the launch file falls back to a pre-set env var) |
-   | `{{PROXY_DEFAULT}}` | (isaaclab template only) `proxy` arg or `http://proxy.nhr.fau.de:80`; user can override at runtime via `HTTP(S)_PROXY` env var, or set to empty to disable |
+   | `{{PROXY_DEFAULT}}` | `proxy` arg, else empty string (no proxy). Overridable at submit time via the `HTTP(S)_PROXY` env var |
    | `{{TRIAL_IDS}}` | one-line-per-id, double-quoted (`"000_ppo_UnitreeH1_<hash>"\n  ...`) |
    | `{{TRIAL_COMMANDS}}` | one-line-per-cmd, double-quoted |
 
@@ -265,4 +265,5 @@ In cluster mode, aggregation happens **after** the user has submitted and the SL
 - **Each trial's training cmd is identical** to a manual `/harbor:rl-run` — predictable behavior, easy to debug a failing trial in isolation.
 - **Cluster mode does NOT submit jobs.** It writes the launch script and stops. The user submits with `sbatch`. This keeps the plugin agnostic to the cluster's auth/quota policies.
 - **Cluster template is a starting point.** Two ship-with templates: `launch.sh.template` (bare-metal venv via `module load python` + `.venv/bin/activate`) and `launch.sh.isaaclab.template` (apptainer-wrapped, used automatically when `harbor/benchmark-generator/benchmark-spec.json:benchmark.name == "IsaacLab"` or `harbor/apptainer/isaaclab.def` exists). Both target SLURM with a40 / 24 h defaults. For other schedulers (PBS, LSF, k8s) or sites pass `cluster=<your_template>` with the same `{{...}}` placeholders.
+- **No site-specific defaults are baked in.** The shipped templates assume nothing about proxies, module names, or where the repo is cloned: proxy defaults to empty (set `proxy=`), `module load python` is skipped when no module system is present, and `REPO_ROOT` is the render-time absolute repo path (override at submit time with `HARBOR_REPO_ROOT`). Site-specific values belong in the `proxy=` arg, the SLURM environment, or a custom `cluster=<template>` — not in the shipped files.
 - The sweep folder is `harbor/rl_experiments/sweeps/<sweep_id>/`; per-train artifact dirs still go to `harbor/outputs/<algo>_<task>_<ts>/` (unchanged from `/harbor:rl-run`). Symlinks bridge the two.

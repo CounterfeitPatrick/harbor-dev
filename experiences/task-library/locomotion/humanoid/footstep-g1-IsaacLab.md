@@ -1,9 +1,7 @@
 # Isaac-Footstep-G1-v0 — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: IsaacLab
-- source_path: source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/footstep
-- embodiment: G1 bipedal humanoid (locomotion)
+- robot: Unitree G1 bipedal humanoid (37 DoF, hand-equipped)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
 > **CAVEAT:** All dims / counts below are **ANALYTIC** from reading the source (not build-verified here).
 > This captures the DESIGN for reproduction / adaptation, not a runtime trace.

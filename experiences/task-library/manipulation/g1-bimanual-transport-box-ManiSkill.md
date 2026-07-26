@@ -1,12 +1,7 @@
 # UnitreeG1TransportBox-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T20:09:35Z
-- canonical_build: `Box(-inf, inf, (1, 77), float32) Box(-1.0, 1.0, (25,), float32)`
-- robot: Unitree G1 (simplified upper body + head camera), bimanual humanoid
-- task type: HUMANOID BIMANUAL pick-and-place — pick a box off one table and transport/place it on another table
+- robot: Unitree G1 humanoid, simplified upper body + head camera, bimanual (25 DoF, fixed base)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 ManiSkill tasks are SAPIEN `BaseEnv` subclasses decorated with `@register_env`. There is no IsaacLab-style manager-based config tree: scene / actions / reset / termination / observation / reward are all *methods* on the env class. The §1..§7 mapping below adapts the Harbor section model onto these methods.
 

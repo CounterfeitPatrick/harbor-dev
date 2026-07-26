@@ -1,13 +1,7 @@
 # PushCube-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T19:20:16Z
-- canonical_build: `Box(-inf, inf, (1, 35), float32)` (obs) / `Box(-1.0, 1.0, (8,), float32)` (action)
-- default robot: panda (SUPPORTED_ROBOTS = ["panda", "fetch"])
-- default control_mode: `pd_joint_delta_pos`
-- default obs_mode: `state`
+- robot: Franka Panda (default; Fetch also supported)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 > ManiSkill maps to the §1..§7 sections as: §1 = `@register_env` + `SUPPORTED_ROBOTS` + `_load_agent` + `_load_scene` + sim cfg; §2 = controller / control_mode + action space; §3 = `_initialize_episode`; §4 = `evaluate()` + `max_episode_steps`; §5 = `_get_obs_extra` + obs modes; §6 = `compute_dense_reward` / `compute_normalized_dense_reward`; §7 = domain randomization.
 

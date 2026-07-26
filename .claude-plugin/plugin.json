@@ -1,11 +1,13 @@
 {
   "name": "harbor",
-  "description": "Set up Python GPU repos with uv and track verified benchmark entries. Includes dependency-generator + benchmark/rl-integration/rl-tuning generator subagents, MCP registry server, and lifecycle hooks.",
+  "description": "Set up Python GPU robotics repos with uv, scaffold the RL stack (train / eval / render / sweep / tune), and author tasks end-to-end (scene → reward → DR). Includes dependency-generator + benchmark/rl-integration/task/reward/dr generator subagents and lifecycle hooks.",
   "version": "0.2.0",
   "author": {
-    "name": "yufengjin",
-    "email": "jyf931118@gmail.com"
+    "name": "Steven Li",
+    "url": "https://github.com/supersglzc"
   },
+  "homepage": "https://github.com/supersglzc/harbor",
+  "repository": "https://github.com/supersglzc/harbor",
   "license": "MIT",
   "keywords": [
     "robotics",

@@ -2,7 +2,7 @@
 name: benchmark-generator
 description: |
   Adds benchmark sanity scaffolding to a Python env that dependency-generator already built and verified (uv backend — host venv at `<repo>/.venv/`). Reads repo markdown for benchmark-level context, renders TWO scripts (random-action rollout + render-to-MP4), runs a 2-tier smoke (L1 random / L2 render), captures the suite spec into <repo>/harbor/benchmark-generator/benchmark-spec.json, and emits history.md + benchmark.md receipts. Does NOT generate train/eval scripts — that scaffolding is owned by rl-integration-generator. Does NOT modify the env config or dependencies — dependency-generator owns the environment, including the `imageio[ffmpeg]` extras line. The ONE deliberate env-source edit it makes is the IsaacLab dt-strip (Step 3.4): a single-line, idempotent reward-semantics normalization of the vendored `RewardManager.compute()`. PREREQUISITE: dependency-generator already set up the environment (`<repo>/.venv/` ready and the import smoke test green). Invoke ONLY after dependency-generator finished cleanly.
-tools: [Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, mcp__plugin_harbor_harbor__get_benchmark_spec, mcp__plugin_harbor_harbor__lookup_benchmark]
+tools: [Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion]
 model: opus
 ---
 
@@ -44,7 +44,6 @@ After returning the verdict, **the closing user-facing summary MUST end with a s
 
 > Next step: dispatch `rl-integration-generator` to scaffold training/eval/render scripts and configs.
 
-This subagent does **not** write to the plugin registry — use `scripts/registry/registry_submit.py` + maintainer `registry_verify.py` to graduate the entry (see "How to graduate to verified" below).
 
 ## When NOT to Use
 
@@ -349,11 +348,6 @@ Worked references (annotated diffs + validated smoke snippets): `${CLAUDE_PLUGIN
 - **ManiSkill** — Vulkan + SAPIEN physx warmup; `env.render_cameras()[0]['rgb']` for L2
 - **loco-mujoco** — uv + MuJoCo + MJX; in-tree baselines move to rl-integration-generator
 
-## How to graduate to verified
+## After Step 4
 
-This subagent stops after Step 4. To list the entry in the registry:
-
-1. **User**: `python scripts/registry/registry_submit.py` (name, GitHub user, repo URL, commit, notes) → appends `status: unverified` to `mcp/harbor/data/benchmarks.yaml` + prints `git checkout / commit / push / gh pr create` block.
-2. **Maintainer** (PR merged): `python scripts/registry/registry_verify.py <name>` → flips status to `verified`.
-
-Until verify runs, `source .venv/bin/activate` + `python scripts/run_random.py` works exactly the same — the registry is a discovery index, not a runtime dep.
+This subagent stops after Step 4. Everything it produced is local to the repo: `source .venv/bin/activate` + `python scripts/run_random.py` reproduces the L1 smoke, and `<repo>/harbor/benchmark-generator/benchmark-spec.json` is the record of what was captured. There is no central index to publish to — a new user on a new benchmark simply runs the pipeline again.

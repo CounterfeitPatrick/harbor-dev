@@ -1,12 +1,7 @@
 # RotateSingleObjectInHandLevel1-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T19:50:53Z
-- canonical_build: `Box(-inf, inf, (1, 105), float32)` (obs) / `Box(-1.0, 1.0, (16,), float32)` (action)
-- robot: `allegro_hand_right_touch` (AllegroHandRightTouch — 16-DoF right Allegro hand with FSR touch links, fixed base, palm-up)
-- task family: DEXTEROUS in-hand reorientation — a fixed Allegro hand rotates a single object held in-hand about a fixed body axis; success = cumulative rotation angle exceeds `4π` (two full turns).
+- robot: Allegro right hand with FSR touch links (16 DoF, fixed base)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 > **One env class, 4 levels.** `RotateSingleObjectInHand(BaseEnv)` is the shared base. The four registered ids (`Level0..3-v1`) are thin subclasses that pass a single `difficulty_level` int (0/1/2/3) and otherwise share identical noise (`robot_init_qpos_noise=0.02`, `obj_init_pos_noise=0.02`). **Level1 sets `difficulty_level=1`**, which selects a *size-randomized white box* (each parallel env gets an independently sampled half-size). Everything else below is the shared base behavior; per-level deltas are called out inline.
 

@@ -1,11 +1,7 @@
 # AnymalC-Spin-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T20:21:27Z
-- canonical_build: **not captured (verified via source read)** — `gym.make('AnymalC-Spin-v1')` aborts with `EOFError` at `download_asset.prompt_yes_no` because the `anymal_c` URDF asset is not present on disk. WARN: download the asset first (`python -m mani_skill.utils.download_asset anymal_c`), then the analytic dims below should be confirmed.
-  - **Analytic** (obs_mode="state", control_mode="pd_joint_delta_pos"): `observation_space = Box(-inf, inf, (30,))` ; `action_space = Box(-1.0, 1.0, (12,))`.
+- robot: ANYbotics ANYmal-C quadruped (12 DoF)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 ManiSkill task: the Anymal-C quadruped (12 leg DoF) must spin in place about its vertical (yaw/z) axis as fast as possible. Reward is the base yaw angular velocity, minus stability/control penalties; a large terminal penalty applies if the body falls.
 

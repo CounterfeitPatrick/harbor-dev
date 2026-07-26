@@ -97,8 +97,8 @@ The filename is what `task-generator` / `reward-tuning-agent` grep when searchin
 - `<source_repo>` comes from the spec's `- source_repo:` line (e.g. `IsaacLab`).
 - `<short-task-slug>`: a concise kebab-case description of what the task DOES, ≤ ~4 words. Derive from the Task summary, not a mechanical lowercase of the TaskID. Examples (TaskID → slug):
   - `Isaac-Dex-Grasp` → `dexterous-grasp` → `dexterous-grasp-IsaacLab.md`
-  - `Triton-Franka-StackCube` (stacks three cubes) → `stack-three-cube` → `stack-three-cube-IsaacLab.md`
-  - `Triton-Lift-Box` (two arms lift a box) → `lift-box` → `lift-box-IsaacLab.md`
+  - `IsaacLab-Franka-StackCube` (stacks three cubes) → `stack-three-cube` → `stack-three-cube-IsaacLab.md`
+  - `IsaacLab-Lift-Box` (two arms lift a box) → `lift-box` → `lift-box-IsaacLab.md`
 
 ### B4 — Collision-safe copy
 

@@ -1,11 +1,7 @@
 # AnymalC-Reach-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T20:18:19Z
-- canonical_build: not captured (verified via source read) — `gym.make` aborts at robot-asset download prompt (`EOFError` on the `anymal_c` URDF auto-download). Analytic dims below.
-  - Expected (obs_mode="state", default): `observation_space = Box(-inf, inf, (35,), float32)`, `action_space = Box(-1.0, 1.0, (12,), float32)`
+- robot: ANYbotics ANYmal-C quadruped (12 DoF)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 > Task type: **goal-directed quadruped locomotion**. The Anymal-C quadruped must walk to a target sphere placed ~2.5 m in front of it (within ±0.5 m fwd, ±1 m lateral) and stop within 0.35 m of it without falling over. This is NOT velocity-command tracking — there is no commanded base velocity; the agent is rewarded purely on shrinking distance-to-goal plus stability penalties. The same env class (`QuadrupedReachEnv`) backs both `AnymalC-Reach-v1` (anymal_c) and `UnitreeGo2-Reach-v1` (go2); this spec documents the AnymalC subclass.
 

@@ -2,7 +2,7 @@
 
 Rendered by task-generator when the user picks `ema_delta_joint_pos` as the §2
 action mode. Drop into the new task's `mdp/actions.py`. Reference implementation:
-https://github.com/<symdex-repo>/symdex/env/action_managers/actions.py
+an internal bimanual manipulation suite's `env/action_managers/actions.py`.
 
 Per-step processing (raw action `a_t`, scale `s`, offset `o`, alpha `α`,
 init joint pose captured at reset `q_init`):

@@ -1,10 +1,7 @@
 # LiftPegUpright-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T19:30:38Z
-- canonical_build: `Box(-inf, inf, (1, 32), float32)` (observation_space) · `Box(-1.0, 1.0, (8,), float32)` (action_space)
+- robot: Franka Panda (default; Fetch also supported)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 ManiSkill task: move a peg lying flat on the table into an upright orientation. Subclasses `mani_skill.envs.sapien_env.BaseEnv`; registered with `@register_env("LiftPegUpright-v1", max_episode_steps=50)`. Robots supported: `panda` (default), `fetch`.
 

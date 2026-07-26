@@ -1,10 +1,7 @@
 # PickCube-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` subclass, `@register_env`-registered; NOT IsaacLab manager-based)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T19:07:10Z
-- canonical_build: `Box(-inf, inf, (1, 42), float32)` (obs) / `Box(-1.0, 1.0, (8,), float32)` (action) / control_mode=`pd_joint_delta_pos` / obs_mode=`state`
+- robot: Franka Panda (default; Fetch / xArm6-Robotiq / SO100 / WidowXAI also supported)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 > ManiSkill maps the IsaacLab §1..§7 sections onto methods of a single `BaseEnv` subclass (`PickCubeEnv`) rather than onto manager Cfg dataclasses. The mapping used below:
 > - §1 = `@register_env` + `SUPPORTED_ROBOTS` + `__init__`/cfg + `_load_agent` + `_load_scene` + sim/scene/camera config

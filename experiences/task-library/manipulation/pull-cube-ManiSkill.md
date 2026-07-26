@@ -1,10 +1,7 @@
 # PullCube-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T19:22:32Z
-- canonical_build: `OBS Box(-inf, inf, (1, 35), float32)  ACT Box(-1.0, 1.0, (8,), float32)  CTRL pd_joint_delta_pos`
+- robot: Franka Panda (default; Fetch also supported)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 A simple tabletop manipulation task: a Panda arm must pull a blue cube along the table surface onto a red-and-white target region using a pushing/pulling motion from behind the cube. Single-stage, dense-reward, 50-step episodes.
 

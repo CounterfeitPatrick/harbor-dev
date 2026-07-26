@@ -1,10 +1,7 @@
 # PlugCharger-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T19:44:07Z
-- canonical_build: `Box(-inf, inf, (1, 46), float32) Box(-1.0, 1.0, (8,), float32)` (obs_mode=state, control_mode=pd_joint_delta_pos, reward_mode=none, num_envs=1)
+- robot: Franka Panda with wrist camera (`panda_wristcam`)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 A precision two-prong insertion task: the robot must grasp a wall-charger (a base block with two thin metal prongs) and plug it into a matching wall receptacle (a kinematic socket with two prong holes). Success requires the charger to reach the goal pose (receptacle pose rotated 180° about z) within a very tight `5e-3 m` position tolerance AND `0.2 rad` orientation tolerance. Both charger and receptacle are procedurally built from primitive boxes (no external assets); prong clearance is `5e-4 m` single-sided. The receptacle is kinematic. **This env is sparse-only** — it declares `SUPPORTED_REWARD_MODES = ["none", "sparse"]` and provides no dense reward; staging (grasp→align→insert) must be supplied externally if dense shaping is desired.
 

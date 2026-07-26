@@ -101,7 +101,7 @@ On **all stages pass**: the `reset` stage already restored `$WT`; remove the wor
 ```text
 /harbor:test                                  # L1→L2→L3 (needs repo/task for L3; errors if absent)
 /harbor:test layers=1,2                        # fast deterministic gate, no GPU
-/harbor:test layers=3 repo=/data/IsaacLab                # builds the stack-two-cube fixture for IsaacLab (Franka)
-/harbor:test layers=3 repo=/data/ManiSkill              # same fixture, ManiSkill's arm
-/harbor:test layers=3 repo=/data/IsaacLab fresh=true    # ignore cache, full clean run
+/harbor:test layers=3 repo=/path/to/IsaacLab                # builds the stack-two-cube fixture for IsaacLab (Franka)
+/harbor:test layers=3 repo=/path/to/ManiSkill              # same fixture, ManiSkill's arm
+/harbor:test layers=3 repo=/path/to/IsaacLab fresh=true    # ignore cache, full clean run
 ```

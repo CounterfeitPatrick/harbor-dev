@@ -1,10 +1,7 @@
 # Isaac-Open-Drawer-Franka-v0 — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: IsaacLab
-- probed_from_commit: 0fac17cc55038809fd57b8af1e950a940bf1324b
-- probed_at: 2026-06-02T16:23:17Z
-- canonical_build: not captured (upstream registered task; verified via source read — `pxr` / Isaac Sim core not importable in this `.venv`). Analytically resolved: `observation_space = Box(-inf, inf, (31,))`, `action_space = Box(-inf, inf, (8,))` (see §5 / §2 for derivation).
+- robot: Franka Emika Panda (7 DoF arm + parallel gripper)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
 Manager-based RL task: a Franka Panda arm must reach, align with, grasp, and pull open the **top drawer** of an articulated Sektion cabinet. The manipulated object is an `ArticulationCfg` (the cabinet) whose `drawer_top_joint` is the controlled DOF; `FrameTransformerCfg`s track the gripper TCP/fingertips and the drawer handle. Reward is a 9-term sum implementing a staged approach → align → grasp → open curriculum.
 

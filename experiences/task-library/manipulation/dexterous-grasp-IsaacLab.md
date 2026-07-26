@@ -1,10 +1,7 @@
 # Isaac-Dex-Grasp — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: IsaacLab
-- probed_from_commit: 15b9942d2ccaaff092c70f4bdb71e1efd136852a
-- probed_at: 2026-05-24T16:48:52Z
-- canonical_build: `gym.make("Isaac-Dex-Grasp")` succeeds inside `isaaclab.app.AppLauncher`; `action_space.shape[-1] == 22`, `observation_space == Box(47,)`, `num_envs == 4096` (train) / `50` (PLAY), `episode_length_s = 8.3333` → 166 control steps @ 20 Hz. The repo's `pxr` module is only importable through AppLauncher, so a bare-shell `gym.make(...)` pre-flight does NOT work; the canonical-build proof is `.venv/bin/python harbor/create-task/isaac-dex-grasp/smokes/smoke_s1.py` (exit 0).
+- robot: UFactory UF850 arm + Allegro right hand (22 DoF)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
 Task summary: a single UFactory 850 + Allegro right hand (22-DoF: 6 arm + 16 hand) sits at env-local `(-0.274, -0.475, 0.01)` and must grasp + lift a small "dog" rigid object (0.11 kg, dynamic) sitting at env-local `(0.05, -0.35, 0.0)` on a lab table. Goal: drive the dog to env-local target `(0.05, -0.35, 0.30)` — same xy as spawn, +30 cm in z — within 10 cm tolerance before the 8.33-s horizon expires. Scene + actuator stack + init pose mirror the source repo `InsertDrawer`'s right-robot half byte-for-byte (USD, init pos, joint qpos, 9-group ImplicitActuatorCfg blocks). Controller is the **joint-space** EMA cumulative-relative action vendored verbatim from the source repo into `mdp/actions.py` + `mdp/actions_cfg.py` (no runtime cross-repo import). Reward composer is `sum` over 6 dense-then-sparse terms. No DR is wired (`EventCfg` only has reset terms).
 

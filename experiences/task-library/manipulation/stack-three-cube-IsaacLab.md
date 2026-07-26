@@ -1,10 +1,7 @@
-# Triton-Franka-StackCube — Implementation Spec
+# IsaacLab-Franka-StackCube — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: IsaacLab
-- probed_from_commit: 15b9942d2ccaaff092c70f4bdb71e1efd136852a
-- probed_at: 2026-05-23T10:59:17Z
-- canonical_build: `gym.make("Triton-Franka-StackCube")` succeeds inside `isaaclab.app.AppLauncher`; `smoke_s1.py` asserts `action_space.shape[-1] == 4`, `observation_space == Box(19,)`, `num_envs == 4096` (or `128` under smoke override), `max_episode_length == 180` (= 9.0 s × 20 Hz). Because IsaacLab's `pxr` module is only importable through `AppLauncher`, the canonical build proof is `.venv/bin/python harbor/create-task/triton-franka-stackcube/smokes/smoke_s1.py` (exit 0).
+- robot: Franka FR3 arm + Franka hand (single arm)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
 Task summary: a single FR3 + Franka-hand robot stacks **three** identical 4.3 cm DexCubes into a tower on a lab table. The robot base sits at world `(-0.274, +0.49, 0.01)` with `joint1=-0.785` so the EE arcs over the table. Three cubes (`cube_0` / `cube_1` / `cube_2`) spawn at staggered xy positions with ±5 cm uniform jitter (no z jitter). Goal (implicit — no `CommandsCfg`): build a 3-tier tower with `cube_1` (base, on table) ← `cube_0` ← `cube_2` (top). Two intermediate latched bonuses fire on (a) cube_0 stacked on cube_1 with the EE retreated and (b) the full 3-tier tower assembled. Episode horizon = 9.0 s @ 20 Hz = 180 control steps. Action = 3-D Cartesian EE-delta (RPY locked) + 1-D binary gripper = 4-D. Observation = 19-D, gated by a stateless mux that swaps the "currently grasping" cube between `cube_0` (state A) and `cube_2` (state B) on the predicate `cube_0_on_cube_1`.
 
@@ -14,13 +11,13 @@ Task summary: a single FR3 + Franka-hand robot stacks **three** identical 4.3 cm
 
 ### Description
 
-`gym.register` exposes `Triton-Franka-StackCube` (training) and `Triton-Franka-StackCube-Play` (eval-friendly, fewer envs, observation corruption disabled). Both use `isaaclab.envs:ManagerBasedRLEnv` with the abstract `StackCubeEnvCfg` base and `FrankaStackCubeEnvCfg` subclass that fills in the single FR3 articulation, three identical DexCube `RigidObjectCfg`s, a single `ee_frame` FrameTransformer (LiftCube convention: `fr3_link0` → `fr3_hand` with `OffsetCfg(pos=[0, 0, 0.2])`), and three contact sensors (`finger_left_contact`, `finger_right_contact`, `hand_contact`) all filtered against `Cube_{0,1,2}`. Sim timing follows LiftCube (`sim.dt=1/120`, `decimation=6 → 20 Hz`, `episode_length_s=9.0`). The `FR3_FRANKA_HAND_CFG` and `FRANKA_INIT_JOINT_POS` constants are **defined locally** in this task's `config/franka/joint_pos_env_cfg.py` (NOT imported from `insert_drawer` — divergence from `lift_box`).
+`gym.register` exposes `IsaacLab-Franka-StackCube` (training) and `IsaacLab-Franka-StackCube-Play` (eval-friendly, fewer envs, observation corruption disabled). Both use `isaaclab.envs:ManagerBasedRLEnv` with the abstract `StackCubeEnvCfg` base and `FrankaStackCubeEnvCfg` subclass that fills in the single FR3 articulation, three identical DexCube `RigidObjectCfg`s, a single `ee_frame` FrameTransformer (LiftCube convention: `fr3_link0` → `fr3_hand` with `OffsetCfg(pos=[0, 0, 0.2])`), and three contact sensors (`finger_left_contact`, `finger_right_contact`, `hand_contact`) all filtered against `Cube_{0,1,2}`. Sim timing follows LiftCube (`sim.dt=1/120`, `decimation=6 → 20 Hz`, `episode_length_s=9.0`). The `FR3_FRANKA_HAND_CFG` and `FRANKA_INIT_JOINT_POS` constants are **defined locally** in this task's `config/franka/joint_pos_env_cfg.py` (NOT imported from `insert_drawer` — divergence from `lift_box`).
 
 ### Decisions resolved
 
 | Knob | Value |
 |---|---|
-| Task ID (train / play) | `Triton-Franka-StackCube` / `Triton-Franka-StackCube-Play` |
+| Task ID (train / play) | `IsaacLab-Franka-StackCube` / `IsaacLab-Franka-StackCube-Play` |
 | Robot | FR3 + Franka hand, single instance at `{ENV_REGEX_NS}/Robot` |
 | Robot init pos (env-local) | `(-0.274, 0.49, 0.01)` |
 | Robot init joint pose | `fr3_joint1=-0.785, joint2=-0.785, joint3=0.0, joint4=-2.655, joint5=0.0, joint6=1.87, joint7=0.0, fr3_finger_joint.*=0.04` |
@@ -69,7 +66,7 @@ import gymnasium as gym
 ##
 
 gym.register(
-    id="Triton-Franka-StackCube",
+    id="IsaacLab-Franka-StackCube",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
@@ -78,7 +75,7 @@ gym.register(
 )
 
 gym.register(
-    id="Triton-Franka-StackCube-Play",
+    id="IsaacLab-Franka-StackCube-Play",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
@@ -347,7 +344,7 @@ class FrankaStackCubeEnvCfg_PLAY(FrankaStackCubeEnvCfg):
 ### Smoke
 
 ```bash
-.venv/bin/python harbor/create-task/triton-franka-stackcube/smokes/smoke_s1.py
+.venv/bin/python harbor/create-task/isaaclab-franka-stackcube/smokes/smoke_s1.py
 # exit 0 (asserts action_space + observation_space non-None, max_episode_length > 0, num_envs == 128 under smoke override)
 ```
 
@@ -664,7 +661,7 @@ self.actions.gripper_action = mdp.BinaryJointPositionActionCfg(
 ### Smoke
 
 ```bash
-.venv/bin/python harbor/create-task/triton-franka-stackcube/smokes/smoke_s2.py
+.venv/bin/python harbor/create-task/isaaclab-franka-stackcube/smokes/smoke_s2.py
 # exit 0 (asserts action_space.shape[-1] == 4, env.step(action) returns finite obs/reward)
 ```
 
@@ -753,7 +750,7 @@ This module is kept (rather than deleted) so ``mdp/__init__.py``'s
 ### Smoke
 
 ```bash
-.venv/bin/python harbor/create-task/triton-franka-stackcube/smokes/smoke_s3.py
+.venv/bin/python harbor/create-task/isaaclab-franka-stackcube/smokes/smoke_s3.py
 # exit 0 (asserts env.reset() places robot at URDF home and each cube within its declared xy range)
 ```
 
@@ -856,7 +853,7 @@ def _no_contact_between_cube_and_gripper_or_ee(
 ### Smoke
 
 ```bash
-.venv/bin/python harbor/create-task/triton-franka-stackcube/smokes/smoke_s4.py
+.venv/bin/python harbor/create-task/isaaclab-franka-stackcube/smokes/smoke_s4.py
 # exit 0 (asserts time_out fires at step >= max_episode_length and no other termination triggers)
 # Optional: smoke_success.py / smoke_success_visualize.py write cube poses directly to test the
 # success-bonus latching path (not present as a DoneTerm — fires only inside the §6 reward).
@@ -1063,7 +1060,7 @@ def grasping_target_position_in_robot_root_frame(env: "ManagerBasedRLEnv") -> to
 ### Smoke
 
 ```bash
-.venv/bin/python harbor/create-task/triton-franka-stackcube/smokes/smoke_s5.py
+.venv/bin/python harbor/create-task/isaaclab-franka-stackcube/smokes/smoke_s5.py
 # exit 0 (asserts observation_space == Box(19,), per-term dims match the expected layout 7+3+3+2+4=19)
 ```
 
@@ -1719,7 +1716,7 @@ def release_bonus_in_drop_zone(
 ### Smoke
 
 ```bash
-.venv/bin/python harbor/create-task/triton-franka-stackcube/smokes/smoke_s6.py
+.venv/bin/python harbor/create-task/isaaclab-franka-stackcube/smokes/smoke_s6.py
 # exit 0 (asserts: active reward terms registered, per-step reward finite + non-constant,
 #         composer = sum (passthrough), latch state resets on env.reset())
 ```
@@ -1730,7 +1727,7 @@ def release_bonus_in_drop_zone(
 
 `<no DR>` — `EventCfg` contains only the four reset terms above (`reset_robot_joints`, `reset_cube_0`, `reset_cube_1`, `reset_cube_2`). No `EventTerm` has `mode="startup"` or `mode="interval"`. The `mdp/events.py` module is intentionally empty (only a docstring) — its purpose is to keep `from .events import *` working. The `dr-generator` was not run on this task; the env_cfg `EventCfg` docstring notes "DR terms are added by `dr-generator` in §7" but none have been added.
 
-To add later: `/harbor:create-task name=Triton-Franka-StackCube description="add startup mass + friction + cube pose DR" sections=7`.
+To add later: `/harbor:create-task name=IsaacLab-Franka-StackCube description="add startup mass + friction + cube pose DR" sections=7`.
 
 ---
 
@@ -1739,7 +1736,7 @@ To add later: `/harbor:create-task name=Triton-Franka-StackCube description="add
 | File | Lines | What's there |
 |---|---:|---|
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/__init__.py` | 7 | Family-level module docstring (no re-export of `mdp` — divergence from `lift_box`). |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/config/franka/__init__.py` | 32 | `gym.register` for `Triton-Franka-StackCube` and `-Play`. |
+| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/config/franka/__init__.py` | 32 | `gym.register` for `IsaacLab-Franka-StackCube` and `-Play`. |
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/config/franka/joint_pos_env_cfg.py` | 1–255 | Local `FR3_FRANKA_HAND_CFG` constant + `FRANKA_INIT_JOINT_POS` + cube spawn + per-robot action stack + ee_frame; PLAY subclass. |
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/stack_cube_env_cfg.py` | 1–422 | Abstract SceneCfg + ActionsCfg + ObservationsCfg + EventCfg + RewardsCfg + TerminationsCfg + (empty) CurriculumCfg + EnvCfg + sim/physx knobs. |
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/mdp/__init__.py` | 18 | Re-exports `isaaclab.envs.mdp` + task-local actions / observations / rewards / events / terminations. |
@@ -1781,12 +1778,12 @@ External imports the task relies on:
 
 ```bash
 # Same source repo:
-/harbor:create-task name=Triton-Franka-StackCube-v2 from=harbor/create-task/triton-franka-stackcube-implementation.md
+/harbor:create-task name=IsaacLab-Franka-StackCube-v2 from=harbor/create-task/isaaclab-franka-stackcube-implementation.md
 
 # Different repo: pass asset overrides if the local harbor/assets tree differs
-/harbor:create-task name=FrankaStack3Cubes from=triton-franka-stackcube-implementation.md \
+/harbor:create-task name=FrankaStack3Cubes from=isaaclab-franka-stackcube-implementation.md \
   assets=path/to/dest/fr3.usd,path/to/dest/table.usd
 ```
 
-> probe-task: wrote `harbor/create-task/triton-franka-stackcube-implementation.md` (sections §1..§7, 8 active reward funcs + 1 inactive `release_bonus`, 5 obs terms / 19-D obs, 3-D position EMA action + binary gripper / 4-D action).
+> probe-task: wrote `harbor/create-task/isaaclab-franka-stackcube-implementation.md` (sections §1..§7, 8 active reward funcs + 1 inactive `release_bonus`, 5 obs terms / 19-D obs, 3-D position EMA action + binary gripper / 4-D action).
 > Reproduce via: `/harbor:create-task name=<new_task_id> from=<output>`.

@@ -1,10 +1,7 @@
 # PlaceSphere-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T19:33:15Z
-- canonical_build: `OBS Box(-inf, inf, (1, 39), float32)` / `ACT Box(-1.0, 1.0, (8,), float32)` (obs_mode="state", control_mode="pd_joint_delta_pos", 1 env)
+- robot: Franka Panda (default; Fetch also supported)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 Task: place a dynamic sphere onto the top of a shallow kinematic bin; the robot must end static with the gripper open (not grasping).
 

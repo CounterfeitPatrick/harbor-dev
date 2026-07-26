@@ -157,14 +157,14 @@ From the agent's returned verdict:
 
 ```text
 # Serial (pool_size=1) — the default
-/harbor:reward-tune task=Triton-Franka-StackCup wandb=Isaac_exp
+/harbor:reward-tune task=IsaacLab-Franka-StackCup wandb=Isaac_exp
 
 # Parallel pool of 4 on the cluster — 4 candidates always in flight, each on its own slot clone
-/harbor:reward-tune task=Triton-Franka-StackCup pool_size=4 mode=cluster
+/harbor:reward-tune task=IsaacLab-Franka-StackCup pool_size=4 mode=cluster
 
 # Tighter threshold; let in-flight candidates drain on first success
-/harbor:reward-tune task=Triton-Franka-StackCup success_threshold=0.8 on_success=drain
+/harbor:reward-tune task=IsaacLab-Franka-StackCup success_threshold=0.8 on_success=drain
 
 # Resume (tune-state.json present)
-/harbor:reward-tune task=Triton-Franka-StackCup
+/harbor:reward-tune task=IsaacLab-Franka-StackCup
 ```

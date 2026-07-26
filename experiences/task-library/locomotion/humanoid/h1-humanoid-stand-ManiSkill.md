@@ -1,11 +1,7 @@
 # UnitreeH1Stand-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T20:15:17Z
-- canonical_build: `Box(-inf, inf, (1, 38), float32)  Box([-0.43 ...], [0.43 ...], (19,), float32)` (obs_mode=state, control_mode=pd_joint_pos, reward_mode=sparse)
-- task_type: humanoid locomotion / balance — Unitree H1 humanoid must stand upright and not fall
+- robot: Unitree H1 humanoid, simplified (19 DoF, floating base)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 > NOTE: This is a SAPIEN ManiSkill task, NOT an IsaacLab manager-based task. There is no `mdp/` tree, no `RewardsCfg`/`ObservationsCfg`/`EventCfg` managers. All §1..§7 wiring lives directly on the `BaseEnv` subclass (`HumanoidStandEnv` / `UnitreeH1StandEnv`) and its agent (`UnitreeH1Simplified`). Sections below map the IsaacLab §1..§7 contract onto ManiSkill's hook methods.
 

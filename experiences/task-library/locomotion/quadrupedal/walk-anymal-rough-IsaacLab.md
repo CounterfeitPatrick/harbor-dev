@@ -1,10 +1,7 @@
 # Isaac-Velocity-Rough-Anymal-C-v0 — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: IsaacLab
-- probed_from_commit: 0fac17cc55038809fd57b8af1e950a940bf1324b
-- probed_at: 2026-06-02T18:53:20+02:00
-- canonical_build: not captured (Isaac `pxr`/USD runtime unavailable in `.venv`; `gym.make` fails at sim import). Analytic dims: `observation_space = Box(235,)`, `action_space = Box(12,)`.
+- robot: ANYbotics ANYmal-C quadruped (12 DoF)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
 > **DELTA vs flat (`Isaac-Velocity-Flat-Anymal-C-v0`):** ROUGH is the *base* config (`AnymalCRoughEnvCfg`); FLAT *subclasses* it and strips the rough additions. The three rough-specific additions are:
 > 1. **height-scan ray-caster sensor** (`scene.height_scanner`) + the `height_scan` policy obs term → adds **187** obs dims (17×11 grid). Flat sets both to `None` → obs dim **48** instead of **235**.

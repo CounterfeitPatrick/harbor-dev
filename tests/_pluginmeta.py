@@ -17,7 +17,7 @@ REFERENCES = sorted((ROOT / "references").rglob("*.md"))
 _TEXT_GLOBS = [
     "commands/*.md", "agents/*.md", "references/**/*.md",
     "templates/**/*.template", "templates/**/*.yaml", "templates/**/*.py",
-    "scripts/**/*.py", "scripts/**/*.sh", "mcp/**/*.py", "*.md",
+    "scripts/**/*.py", "scripts/**/*.sh", "*.md",
 ]
 
 KNOWN_TOOLS = {

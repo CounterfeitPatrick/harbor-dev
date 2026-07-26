@@ -1,15 +1,13 @@
 # harbor
 
-Plugin for setting up Python GPU repos via uv and tracking verified benchmark entries.
+Plugin for setting up Python GPU robotics repos via uv and authoring RL tasks end-to-end.
 
 ## Hard constraints (apply to ALL tasks)
 
 1. Generated `install.md` / `history.md` / `benchmark.md` MUST be English-only — regardless of chat language.
-2. The registry stores source URL + commit hash for verified benchmarks (no docker image tags). Reproduction is via `/harbor:env-install-uv` against the source repo.
-3. Registry access is via MCP tools (`mcp__plugin_harbor_harbor__*`). Never `cat registry.yaml` directly.
-4. Subagents do not nest-dispatch. Main thread orchestrates `dependency-generator` → `benchmark-generator`.
-5. **All plugin-generated files live under `<repo>/harbor/`** — except `scripts/_<family>_env.py` / `scripts/run_random.py` / `scripts/render_random.py` (user-facing smoke entry points). Each generator agent writes its receipts + metadata into **its own subdir**: `harbor/dependency-generator/{setup_uv.sh, probe.json, install_plan.json, install.md}`, `harbor/benchmark-generator/{benchmark-spec.json, task_overview.md, .task_list.json, history.md, benchmark.md}`, `harbor/rl-integration-generator/{rl-suite-spec.json, rl-integration.md, history.md}`. The shared RL training tree stays at the top level: training scripts at `<repo>/harbor/scripts/rl/`, configs at `<repo>/harbor/configs/rl/`, training output at `<repo>/harbor/outputs/`, the DataLogger at `<repo>/harbor/utils/data_logger.py`; the create-task workspace at `<repo>/harbor/create-task/`. There is NO shared `run-log/` folder — each agent's per-run process log is the `history.md` inside its own subdir. The folder name is `harbor/` (no dot) so it doubles as a valid Python package — imports like `from utils.data_logger import DataLogger` resolve against `<repo>/harbor/` after `sys.path.insert(0, HARBOR_ROOT)`.
-6. Code style across main thread AND all subagents:
+2. Subagents do not nest-dispatch. Main thread orchestrates `dependency-generator` → `benchmark-generator`.
+3. **All plugin-generated files live under `<repo>/harbor/`** — except `scripts/_<family>_env.py` / `scripts/run_random.py` / `scripts/render_random.py` (user-facing smoke entry points). Each generator agent writes its receipts + metadata into **its own subdir**: `harbor/dependency-generator/{setup_uv.sh, probe.json, install_plan.json, install.md}`, `harbor/benchmark-generator/{benchmark-spec.json, task_overview.md, .task_list.json, history.md, benchmark.md}`, `harbor/rl-integration-generator/{rl-suite-spec.json, rl-integration.md, history.md}`. The shared RL training tree stays at the top level: training scripts at `<repo>/harbor/scripts/rl/`, configs at `<repo>/harbor/configs/rl/`, training output at `<repo>/harbor/outputs/`, the DataLogger at `<repo>/harbor/utils/data_logger.py`; the create-task workspace at `<repo>/harbor/create-task/`. There is NO shared `run-log/` folder — each agent's per-run process log is the `history.md` inside its own subdir. The folder name is `harbor/` (no dot) so it doubles as a valid Python package — imports like `from utils.data_logger import DataLogger` resolve against `<repo>/harbor/` after `sys.path.insert(0, HARBOR_ROOT)`.
+4. Code style across main thread AND all subagents:
    - **Think before coding** — state assumptions explicitly; if uncertain, ask. Don't pick silently between alternatives.
    - **Simplicity first** — minimum code that solves the problem; no speculative features, abstractions, configurability, or error handling for impossible scenarios.
    - **Surgical changes** — touch only what the task requires; don't "improve" adjacent code, refactor things that aren't broken, or remove pre-existing dead code unless asked.
@@ -28,8 +26,8 @@ L2   ENTRY POINTS                 — User-facing surfaces. Two flavours:
                                     · skills/<name>/SKILL.md = description-driven auto-load (also slash-able)
                                       (harbor ships none today — all current entry points are commands)
 L3   SUBAGENTS (roles)            — agents/<name>.md   (fresh context, isolated agent loop)
-L4   TOOLS (deterministic)        — scripts/<owner>/*.py + MCP functions + Bash + Read/Write/Edit
-L5   SHARED KNOWLEDGE (read-only) — templates/, references/, mcp/data/
+L4   TOOLS (deterministic)        — scripts/<owner>/*.py + Bash + Read/Write/Edit
+L5   SHARED KNOWLEDGE (read-only) — templates/, references/, experiences/
 L6a  WORKSPACE PROCESS LOGS       — <repo>/harbor/<agent>/history.md   (per-run, append-only, inside each agent's subdir)
 L6b  WORKSPACE RECEIPTS           — <repo>/harbor/<agent>/{install,history,benchmark,rl-integration}.md  (end-of-run user summary, in each agent's subdir)
 ```
@@ -68,7 +66,7 @@ Commands are grouped by area via filename prefix (Claude Code commands have no t
 - `commands/probe-benchmark.md` — `/harbor:probe-benchmark [repo=<path>] [canonical_task=<id>]` — author `<repo>/harbor/create-task/task-implementation.md` (Step 3.7 of `benchmark-generator`, extracted so it can be re-run standalone or delegated from the agent)
 - `commands/probe-task.md` — `/harbor:probe-task task=<id> [repo=<path>] [output=<path>]` — emit a per-task `<task-slug>-implementation.md` capturing every design choice (scene / actions / reset / termination / observation / reward / DR) with verbatim code. **Runs in a subagent** (context-saving). Feed back into `/harbor:task-create from=<path>` to clone the task identically into another benchmark.
 - `commands/task-create.md` — `/harbor:task-create name=<TaskID> (description="..." | from=<spec.md>) [sections=<list>] [assets=<paths>]` — author a NEW task in the current benchmark repo, or reproduce one from a `/harbor:probe-task` spec. Pre-flight checks the `dependency-generator` → `benchmark-generator` → `rl-integration-generator` chain in sequence and dispatches any missing stage first (rl-integration defaults to `custom_torch` unless the user specifies an algorithm source). Then runs `task-generator` (§1–§5, per-section smoke gates) → the `/harbor:reward-tune` loop (§6 — dispatches `reward-tuning-agent`, validated by actual training until success_rate ≥ threshold in ALL modes; reproduce mode seeds iter 0 with the spec's reward pasted verbatim) → `dr-generator` (§7, **opt-in**: skipped unless the user explicitly requests DR). The main agent is **orchestrator-only** — it selects the design base and passes it down, but makes no §1–§7 design decisions (those belong to the authoring subagents).
-- `commands/task-list.md` — `/harbor:task-list` — list/inspect tasks in a benchmark; defaults to cwd-local `harbor/benchmark-generator/benchmark-spec.json`, falls back to registry via `list_tasks` MCP tool
+- `commands/task-list.md` — `/harbor:task-list` — list/inspect tasks in a benchmark; reads the cwd-local `harbor/benchmark-generator/benchmark-spec.json`
 - `commands/task-clone.md` — `/harbor:task-clone op=create source=<TaskID> dest=<TaskID> [info_out=<path>] | op=delete dest=<TaskID>` — clone a task into an isolated, independently-editable copy registered under a new suffixed gym id (`-rewarditer<NNN>` before `-vN`); `create` dispatches the `task-cloner` subagent, `delete` removes the clone. The isolation primitive `/harbor:reward-tune` uses to give each parallel reward candidate its own collision-free task
 
 **reward — reward engineering**
@@ -104,7 +102,7 @@ Commands are grouped by area via filename prefix (Claude Code commands have no t
 - `agents/reward-tuning-agent.md` — the self-contained §6 reward-tuning loop for ONE task. Owns the WHOLE loop: DESIGN (B1 — adapt-first, magnitude budget, concrete weights/gates/composer, in-flight-aware distinctness) → IMPLEMENT (write the spec into IsaacLab code + S6 smoke) → train+render (compute-side) → SCORE (per-term curves + rendered frames → success_rate), as an async fixed pool of `pool_size` candidates until `success_rate ≥ threshold`. **No nested dispatch** (no Agent tool): cloning is the deterministic `scripts/task-cloner/clone_task.py`; per-term logging is the `/harbor:reward-add-log` flow run in-line. Dispatched by `/harbor:reward-tune` (standalone) and `/harbor:task-create` (§6). Checkpoints `tune-state.json` every iteration (resume-safe).
 - `agents/dr-generator.md` — authors §7 (domain randomization) across 3 groups (robot · object · observation-noise) at the placeholder, once-per-episode-per-env (`mode="reset"`). Discovers available terms per group and wires EVERY available term by default (comprehensive, not minimal — hard constraint; un-wired terms need a logged reason) (modes: multiplicative/additive/direct for groups 1–2 default `(0.9,1.1)`; uniform/gaussian for obs noise default σ=0.01), runs the §7 smoke (exact value read-back at num_envs=16 + after-reset re-check), and writes a handoff at `harbor/create-task/<slug>/handoff-dr-generator.md`. Final agent in the `/create-task` chain; `skipped` is a valid success when no DR is requested and the canonical example has none.
 
-### L4 — Tools (deterministic CLIs and MCP functions)
+### L4 — Tools (deterministic CLIs)
 
 ```
 scripts/
@@ -128,11 +126,8 @@ scripts/
                       SC1/SC3/SC4 sim smokes stay with the task-cloner agent)
   reward-add-log/     sanity_check.py, sanity_check_isaaclab.py
   plot/               render_plot.py
-  registry/           registry_submit.py, registry_verify.py
   install/            install_prerequisites.sh, install_uv.sh
 ```
-
-MCP functions (read-only): `list_benchmarks`, `lookup_benchmark`, `get_benchmark_spec`, `list_tasks`.
 
 ### L5 — Shared knowledge (read-only)
 
@@ -226,9 +221,6 @@ experiences/             cross-run heuristic ledgers (numbered, append-only)
                          one self-contained <task>-<repo>.md probe-task spec per task (+ README.md):
                            manipulation/*.md
                            locomotion/{humanoid, quadrupedal}/*.md
-
-mcp/harbor/data/       benchmarks.yaml  (live registry)
-mcp/harbor/specs/      benchmarks/<name>.json
 ```
 
 ### L6a — Process logs (per-run engineering record)
@@ -281,7 +273,6 @@ Hydra `config_path="../../../configs/rl"` is unchanged (3 ups from `harbor/scrip
 
 ### Hooks
 
-- `hooks/session_start_inject_registry.sh` — one-line registry summary at session start / clear / compact
 - `hooks/pretool_safety_check.sh` — refuses obviously-destructive Bash patterns (`rm -rf /`, fork bomb, mkfs, …)
 - `hooks/post_tool_truncate.sh` — truncates noisy Bash output
 - `hooks/stop_audit_log.sh` — appends one-line audit entry on Stop / SubagentStop
@@ -289,10 +280,6 @@ Hydra `config_path="../../../configs/rl"` is unchanged (3 ups from `harbor/scrip
 ### Plugin-level permissions
 
 `settings.json` (at plugin root, sibling to `.claude-plugin/`) ships an allowlist for the python / uv / bash subcommands the plugin's subagents need to run unattended. The pretool-safety hook still blocks the destructive cases — the allowlist only removes the prompt; the safety net stays.
-
-### MCP
-
-`mcp/harbor/server.py` — FastMCP, read-only benchmark registry tools. Registered in `.mcp.json`.
 
 ### Historical / archived
 

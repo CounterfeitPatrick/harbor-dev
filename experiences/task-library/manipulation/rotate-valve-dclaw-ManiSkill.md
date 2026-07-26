@@ -1,12 +1,7 @@
 # RotateValveLevel1-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T19:54:26Z
-- canonical_build: `OBS Box(-inf, inf, (1, 51), float32)` · `ACT Box(-1.0, 1.0, (9,), float32)` · `CTRL pd_joint_delta_pos`
-- task_type: DEXTEROUS — a 9-DOF D'Claw three-finger hand rotates an articulated multi-headed (ROBEL) valve about its revolute joint to a target angle.
-- difficulty: Level1 sets `difficulty_level=1`, `success_threshold = π` (half… actually one full π / "half round"), `max_episode_steps=150`. Levels 0–4 share the single env class `RotateValveEnv`; the subclass only fixes `difficulty_level` (and Level0/Level4 change `max_episode_steps` to 80/300).
+- robot: D'Claw three-finger hand (9 DoF, fixed base)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 > NOTE: All five `RotateValveLevel{0..4}-v1` ids are registered on subclasses of one base `RotateValveEnv`. Behaviour differs only through `self.difficulty_level`, which gates (a) `success_threshold`, (b) the valve-head angle sampling in `_load_articulations`, (c) valve radius randomization (level ≥ 3), and (d) the rotation direction (level 4 randomizes sign). This spec captures the full base design and annotates exactly what Level1 selects.
 

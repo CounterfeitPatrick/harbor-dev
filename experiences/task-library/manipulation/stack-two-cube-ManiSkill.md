@@ -1,10 +1,7 @@
 # StackCube-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` subclass, `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T19:14:23Z
-- canonical_build: `Box(-inf, inf, (1, 48), float32) Box(-1.0, 1.0, (8,), float32)` (control_mode=`pd_joint_delta_pos`, obs_mode=`state`)
+- robot: Franka Panda with wrist camera (`panda_wristcam`; Panda / Fetch also supported)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 ManiSkill maps to the Harbor §1..§7 schema as follows. A ManiSkill task is a single `BaseEnv` subclass — there is no separate per-robot `env_cfg`/`mdp/` tree. All design choices live in one file (`mani_skill/envs/tasks/tabletop/stack_cube.py`) plus shared base classes (`Panda` agent, `TableSceneBuilder`, `BaseEnv`). Code below is verbatim.
 

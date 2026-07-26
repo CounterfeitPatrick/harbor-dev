@@ -1,10 +1,7 @@
 # Isaac-Repose-Cube-Allegro-v0 — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: IsaacLab
-- probed_from_commit: 0fac17cc55038809fd57b8af1e950a940bf1324b
-- probed_at: 2026-06-02T16:31:20Z
-- canonical_build: not captured (upstream registered task; verified via source read). Analytically resolved: `observation_space = Box(-inf, inf, (72,), float32)`, `action_space = Box(-inf, inf, (16,), float32)`. (See §5 for the per-term obs-dim derivation; action_dim = 16 = number of Allegro hand joints.)
+- robot: Allegro hand (16 DoF, fixed in air, no arm)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
 This is the **in-hand cube reorientation** task: a *fixed* Allegro hand (16-DoF, gravity disabled on the hand bodies) must reorient a free-floating cube resting in its palm to a commanded goal orientation. There is no arm and no base — the hand never translates. The goal is an orientation-only command (constant position, sampled quaternion); on each success the goal is immediately resampled, so a single episode chains many consecutive reorientations. The task has rich domain randomization (friction, mass, actuator gains) and Gaussian observation noise.
 

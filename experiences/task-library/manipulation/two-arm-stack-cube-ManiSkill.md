@@ -1,11 +1,7 @@
 # TwoRobotStackCube-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T20:03:27Z
-- canonical_build: `OBS Box(-inf, inf, (1, 76), float32)` / `ACT Dict('panda_wristcam-0': Box(-1.0, 1.0, (8,), float32), 'panda_wristcam-1': Box(-1.0, 1.0, (8,), float32))`
-- robots: MULTI-ARM cooperative — two `panda_wristcam` arms (`SUPPORTED_ROBOTS = [("panda_wristcam", "panda_wristcam")]`), wrapped in `MultiAgent[Tuple[Panda, Panda]]`. `agents[0]` = left robot (placed at y=+1), `agents[1]` = right robot (placed at y=−1). Left picks/holds the **blue** cube (cubeB); right pushes/places the **green** cube (cubeA). Stacking goal: green (cubeA) ends up on top of blue (cubeB), blue placed on the red/white target, both released.
+- robot: Two Franka Panda arms with wrist cameras (`panda_wristcam` x2, multi-agent)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 > Family note: ManiSkill tasks subclass `mani_skill.envs.sapien_env.BaseEnv` and self-register via `@register_env(id, max_episode_steps=...)`. There is **no** IsaacLab manager-based `*Cfg` split (no `ActionsCfg`/`ObservationsCfg`/`RewardsCfg`/`EventCfg`). All seven sections map onto `BaseEnv` method overrides:
 > - §1 → `@register_env` + `SUPPORTED_ROBOTS` + `_load_agent` + `_load_scene` + `_default_sim_config`/`_default_sensor_configs`

@@ -1,10 +1,7 @@
 # Isaac-Velocity-Flat-H1-v0 — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: IsaacLab
-- probed_from_commit: 0fac17cc55038809fd57b8af1e950a940bf1324b
-- probed_at: 2026-06-02T17:02:36Z
-- canonical_build: not captured (Isaac `pxr` unavailable in this env — `gym.make('Isaac-Velocity-Flat-H1-v0')` raises `NameNotFound` because the registration module never imports without omni/pxr). Analytic dims: observation_space = Box(69,), action_space = Box(19,). See §5 for the obs-dim derivation and §2 for the action-dim derivation.
+- robot: Unitree H1 bipedal humanoid (19 DoF)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
 This is an UPSTREAM IsaacLab manager-based **locomotion / velocity-tracking** task for the **Unitree H1 bipedal humanoid** on **flat ground**. The agent tracks a commanded base velocity (lin_x, lin_y, ang_z) via direct joint-position targets over all 19 joints.
 

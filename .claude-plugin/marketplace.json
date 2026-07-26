@@ -1,21 +1,22 @@
 {
   "name": "harbor",
   "owner": {
-    "name": "yufengjin",
-    "email": "jyf931118@gmail.com"
+    "name": "Steven Li",
+    "url": "https://github.com/supersglzc"
   },
   "metadata": {
-    "description": "Marketplace for the harbor plugin (set up Python GPU robotics repos with uv, track verified benchmark entries).",
+    "description": "Marketplace for the harbor plugin (set up Python GPU robotics repos with uv and author RL tasks end-to-end).",
     "version": "0.1.0"
   },
   "plugins": [
     {
       "name": "harbor",
       "source": "./",
-      "description": "Set up Python GPU repos with uv and track verified benchmark entries. Includes dependency-generator + role-specific generator subagents, MCP registry server, and lifecycle hooks.",
-      "version": "0.1.0",
+      "description": "Set up Python GPU robotics repos with uv, scaffold the RL stack (train / eval / render / sweep / tune), and author tasks end-to-end (scene → reward → DR). Includes dependency-generator + benchmark/rl-integration/task/reward/dr generator subagents and lifecycle hooks.",
+      "version": "0.2.0",
       "author": {
-        "name": "yufengjin"
+        "name": "Steven Li",
+        "url": "https://github.com/supersglzc"
       },
       "keywords": ["robotics", "uv", "benchmark", "rl"],
       "category": "workflow"

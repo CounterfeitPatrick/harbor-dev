@@ -18,17 +18,33 @@
 # Generated: {{GENERATED_AT}}
 
 # --- Site environment (edit for your cluster) ---
-# The venv below is self-contained (uv-managed Python), but `module load python`
-# is needed on most SLURM sites to put a Python on PATH so `.venv/bin/activate`
-# can find the right interpreter symlink target.
-module load python
-export HTTPS_PROXY=http://proxy/
+# The venv below is self-contained (uv-managed Python), but most SLURM sites
+# still need a Python on PATH so `.venv/bin/activate` can resolve its
+# interpreter symlink target. Guarded so sites without an environment-module
+# system (or with a differently-named module) don't hard-fail here.
+if command -v module >/dev/null 2>&1; then
+    module load python 2>/dev/null || true
+fi
+
+# Many HPC sites firewall outbound HTTPS from compute nodes, which wandb needs.
+# Set your site's proxy with the `proxy=` arg to /harbor:rl-sweep, or export
+# HTTP(S)_PROXY in the SLURM environment. Empty default = no proxy.
+export HTTP_PROXY=${HTTP_PROXY-{{PROXY_DEFAULT}}}
+export HTTPS_PROXY=${HTTPS_PROXY-{{PROXY_DEFAULT}}}
+export NO_PROXY=${NO_PROXY:-localhost,127.0.0.1}
 export WANDB_API_KEY=${WANDB_API_KEY:-{{WANDB_API_KEY}}}
 
-# Repo path convention: $HOME/code/agentic/<repo-name>.
+# Repo root is baked in at render time (the absolute path of the repo the sweep
+# was generated from). Override with HARBOR_REPO_ROOT when submitting from a
+# host where the repo lives elsewhere.
 # (sbatch copies the script to a spool dir, so $0-relative path resolution is
-# unreliable on SLURM — we hardcode the canonical clone location instead.)
-REPO_ROOT="$HOME/code/agentic/{{REPO_NAME}}"
+# unreliable on SLURM — an absolute path is required.)
+REPO_ROOT="${HARBOR_REPO_ROOT:-{{REPO_PATH}}}"
+if [ ! -d "$REPO_ROOT" ]; then
+    echo "[ERROR] repo root not found: $REPO_ROOT" >&2
+    echo "        Re-submit with HARBOR_REPO_ROOT=/path/to/repo" >&2
+    exit 1
+fi
 cd "$REPO_ROOT"
 
 # Activate the uv venv created by `bash harbor/dependency-generator/setup_uv.sh`.

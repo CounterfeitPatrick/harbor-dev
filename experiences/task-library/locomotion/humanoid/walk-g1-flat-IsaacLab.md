@@ -1,10 +1,7 @@
 # Isaac-Velocity-Flat-G1-v0 — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: IsaacLab
-- probed_from_commit: 0fac17cc55038809fd57b8af1e950a940bf1324b
-- probed_at: 2026-06-02T17:12:30Z
-- canonical_build: not captured (Isaac `pxr` unavailable in `.venv`; `gym.make` cannot import the IsaacLab task plugins headless). Analytic dims: **action_space = Box(num_joints,)** via `JointPositionActionCfg(joint_names=[".*"])`; the full-hand G1 USD has **37 actuated DOF** (the reward cfg references finger joints `.*_five/three/six/four/zero/one/two_joint`, confirming the hand-equipped USD). **observation_space = Box(12 + 3·N,)** with N = num_joints; flat variant drops `height_scan`, so obs = `base_lin_vel(3) + base_ang_vel(3) + projected_gravity(3) + velocity_commands(3) + joint_pos(N) + joint_vel(N) + last_action(N)` → **Box(123,)** at N=37.
+- robot: Unitree G1 bipedal humanoid (37 DoF, hand-equipped)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
 This is an UPSTREAM IsaacLab manager-based **bipedal locomotion** task: Unitree **G1** humanoid tracking a commanded base velocity (`lin_vel_x`, `lin_vel_y`, `ang_vel_z`) on **flat** ground. `G1FlatEnvCfg` subclasses `G1RoughEnvCfg` (config/g1/flat_env_cfg.py), which subclasses the abstract `LocomotionVelocityRoughEnvCfg` (velocity_env_cfg.py). The flat subclass swaps terrain to a plane, removes the height scanner + height-scan obs + terrain curriculum, and retunes a few reward weights / command ranges.
 

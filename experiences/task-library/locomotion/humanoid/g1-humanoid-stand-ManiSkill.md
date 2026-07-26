@@ -1,11 +1,7 @@
 # UnitreeG1Stand-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T20:12:51Z
-- canonical_build: `Box(-inf, inf, (1, 74), float32)` (obs) / `Box(lo, hi, (37,), float32)` (action) — see §5 for full bounds
-- task_type: HUMANOID LOCOMOTION/BALANCE — full Unitree G1 humanoid (simplified legs URDF, 37 DoF) must stand/balance upright.
+- robot: Unitree G1 humanoid, simplified-legs URDF (37 DoF, floating base)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 ManiSkill differs structurally from IsaacLab manager-based tasks: there is no `RewardsCfg`/`ObservationsCfg`/`EventCfg`/`TerminationsCfg`. Instead the task is a single `BaseEnv` subclass whose hooks (`_load_scene`, `_initialize_episode`, `evaluate`, `_get_obs_extra`, `compute_*_reward`) and the chosen robot agent (`UnitreeG1Simplified`) collectively define §1..§7. Sections below map those hooks onto the §1..§7 schema.
 

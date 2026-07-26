@@ -1,10 +1,7 @@
 # Isaac-Reach-Franka-v0 — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: IsaacLab
-- probed_from_commit: 0fac17cc55038809fd57b8af1e950a940bf1324b
-- probed_at: 2026-06-02T00:00:00Z
-- canonical_build: `Dict('policy': Box(-inf, inf, (N, 32), float32))` || `Box(-inf, inf, (N, 7), float32)`  (per-env obs dim 32, action dim 7)
+- robot: Franka Emika Panda (7 DoF arm, no gripper action)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
 This is a manager-based reaching task: a Franka Emika Panda arm must drive its `panda_hand`
 end-effector to a randomly commanded 6-DoF pose (position + orientation) in the workspace.

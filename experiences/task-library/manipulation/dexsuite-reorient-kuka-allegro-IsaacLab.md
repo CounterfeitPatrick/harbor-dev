@@ -1,10 +1,7 @@
 # Isaac-Dexsuite-Kuka-Allegro-Reorient-v0 — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: IsaacLab
-- probed_from_commit: 0fac17cc55038809fd57b8af1e950a940bf1324b
-- probed_at: 2026-06-02T16:39:10Z
-- canonical_build: not captured (Isaac Sim `pxr` USD bindings unavailable in `.venv`; the env cannot be imported/registered without booting Isaac Sim — `import isaaclab_tasks` fails with `ModuleNotFoundError: No module named 'pxr'`). Dims resolved analytically below.
+- robot: Kuka LBR iiwa7 arm + Allegro hand (23 DoF)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
 > **Build caveat (read first).** This task is an UPSTREAM IsaacLab manager-based env registered inside `isaaclab_tasks` (NOT in `harbor/benchmark-spec.json`). `gym.make` requires `import isaaclab_tasks` first, which in turn imports `isaaclab.envs.mdp` → `isaaclab.utils.mesh` → `from pxr import Usd` and fails because the host `.venv` does not ship the Omniverse `pxr` package. The whole spec below is from a verbatim source read; the §1 build smoke and obs/action spaces were NOT executed. Resolved dims are analytic (see §2 / §5).
 

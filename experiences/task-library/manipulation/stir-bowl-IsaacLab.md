@@ -1,11 +1,10 @@
 # StirBowl — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: symdex
-- source_path: /home/steven/code/symdex/symdex/env/tasks/StirBowl
-- embodiment: bimanual UF850 + dual Allegro hands
-- gym_id: `StirBowlEnv-v0`
-- entry_point: `symdex.env.tasks.StirBowl.env:StirBowlEnv`
+- robot: Bimanual UF850 arms + dual Allegro hands (44 DoF)
+- simulator: IsaacLab (Isaac Sim, manager-based)
+
+> Source package name anonymized as `bimanual_suite`. This task comes from an internal
+> bimanual manipulation suite rather than a public repo; the design below is otherwise verbatim.
 
 **Task summary:** A bimanual dexterous stirring task. Two UF850 arms, each ending in a 16-DoF Allegro hand (`robot` = right, `robot_left` = left), sit behind a table. The **right** hand grasps an **egg-beater** tool (`object_0`) and lifts/orients it to a goal pose above the table; the **left** hand grasps and holds a **bowl** (`object_1`) steady at its goal position. Three **balls** (`object_2..4`) rest inside the bowl. The intended behavior is: keep the bowl stationary at its goal, hold the egg-beater upright at its goal pose while in fingertip contact, and *stir* — driving ball motion inside the bowl (rewarded via ball linear velocity, gated on egg-beater success AND bowl-held success). Success is the conjunction of bowl-at-goal, egg-beater-at-goal-position, and egg-beater-orientation-aligned. The action is a per-arm EMA cumulative-relative joint-position target (44-D total).
 
@@ -13,7 +12,7 @@
 
 ## §1 Registration + Scene
 
-**Description.** Registered as `StirBowlEnv-v0` with custom env class `StirBowlEnv(BaseEnv)`. `BaseEnv` is symdex's shared `ManagerBasedRLEnv` subclass (scales raw actions by `cfg.action_scale`, tracks per-object init pose/orient, runs C2-symmetry env mirroring, wires a hydra-driven `DomainRandomizer`). Scene = two arm+hand articulations (gravity disabled on both), 5 rigid objects (egg-beater tool, bowl, 3 balls), a kinematic table, ground @ z=-0.82, a dome light, 8 fingertip↔`Object_0` contact sensors (4 per hand), and two `FrameTransformer` approach frames on the bowl (nominal + symmetry). num_envs=4096, env_spacing=3.0. sim dt=1/120, decimation=6 (→ 20 Hz control), episode_length_s=8.3333. Asset USDs are under `{symdex.LIB_PATH}/assets/…` where `LIB_PATH` = repo root (`Path(symdex/__init__.py).parent.parent`).
+**Description.** Registered as `StirBowlEnv-v0` with custom env class `StirBowlEnv(BaseEnv)`. `BaseEnv` is bimanual_suite's shared `ManagerBasedRLEnv` subclass (scales raw actions by `cfg.action_scale`, tracks per-object init pose/orient, runs C2-symmetry env mirroring, wires a hydra-driven `DomainRandomizer`). Scene = two arm+hand articulations (gravity disabled on both), 5 rigid objects (egg-beater tool, bowl, 3 balls), a kinematic table, ground @ z=-0.82, a dome light, 8 fingertip↔`Object_0` contact sensors (4 per hand), and two `FrameTransformer` approach frames on the bowl (nominal + symmetry). num_envs=4096, env_spacing=3.0. sim dt=1/120, decimation=6 (→ 20 Hz control), episode_length_s=8.3333. Asset USDs are under `{bimanual_suite.LIB_PATH}/assets/…` where `LIB_PATH` = repo root (`Path(bimanual_suite/__init__.py).parent.parent`).
 
 **Decisions resolved.**
 
@@ -48,11 +47,11 @@
 
 **Code (registration).**
 ```python
-# symdex/env/__init__.py
+# bimanual_suite/env/__init__.py
 from .tasks.StirBowl.env_cfg import StirBowlEnvCfg
 gym.register(
     id="StirBowlEnv-v0",
-    entry_point="symdex.env.tasks.StirBowl.env:StirBowlEnv",
+    entry_point="bimanual_suite.env.tasks.StirBowl.env:StirBowlEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": StirBowlEnvCfg,
@@ -106,7 +105,7 @@ class StirBowlSceneCfg(BaseSceneCfg):
     robot = ArticulationCfg(
         prim_path="/World/envs/env_.*/Robot",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/ufactory850/uf850_allegro_right_colored.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/ufactory850/uf850_allegro_right_colored.usd",
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=True,
@@ -145,7 +144,7 @@ class StirBowlSceneCfg(BaseSceneCfg):
     robot_left = ArticulationCfg(
         prim_path="/World/envs/env_.*/Robot_left",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/ufactory850/uf850_allegro_left_colored.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/ufactory850/uf850_allegro_left_colored.usd",
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=True, max_depenetration_velocity=1000.0, max_linear_velocity=1000, max_angular_velocity=1000,
@@ -180,7 +179,7 @@ class StirBowlSceneCfg(BaseSceneCfg):
     object_0 = RigidObjectCfg(  # EGG-BEATER (stirring tool), grasped by RIGHT hand
         prim_path=f"/World/envs/env_.*/Object_0",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/object/egg_beater.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/object/egg_beater.usd",
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 kinematic_enabled=False, disable_gravity=False, max_linear_velocity=1000, max_angular_velocity=1000,
                 solver_position_iteration_count=16, solver_velocity_iteration_count=1, max_depenetration_velocity=1000.0,
@@ -195,7 +194,7 @@ class StirBowlSceneCfg(BaseSceneCfg):
     object_1 = RigidObjectCfg(  # BOWL, held by LEFT hand
         prim_path=f"/World/envs/env_.*/Object_1",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/object/bowl.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/object/bowl.usd",
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 kinematic_enabled=False, disable_gravity=False, max_linear_velocity=1000, max_angular_velocity=1000,
                 solver_position_iteration_count=16, solver_velocity_iteration_count=1, max_depenetration_velocity=1000.0,
@@ -269,7 +268,7 @@ class StirBowlSceneCfg(BaseSceneCfg):
     table: RigidObjectCfg = RigidObjectCfg(
         prim_path="/World/envs/env_.*/Table",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/object/table.usd", activate_contact_sensors=True,
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/object/table.usd", activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True, disable_gravity=False,
                 solver_position_iteration_count=16, solver_velocity_iteration_count=1, max_depenetration_velocity=10.0),
             scale=(1.0, 1.0, 1.0)),
@@ -452,7 +451,7 @@ class StirBowlTerminationsCfg(BaseTerminationsCfg):
 **Code (command metric/success bookkeeping — grasp_command.py `_update_metrics`).**
 ```python
     def _update_metrics(self):
-        from symdex.utils.isaac_utils import get_angle_from_quat
+        from bimanual_suite.utils.isaac_utils import get_angle_from_quat
         target_axis = get_angle_from_quat(self.quat_command_w, axis="z", normalize=True)
         cur_axis = get_angle_from_quat(self.object.data.root_quat_w, axis="z", normalize=True)
         self.metrics["orientation_error"] = torch.sum(target_axis * cur_axis, dim=-1)
@@ -738,7 +737,7 @@ def object_goal_distance_orient(env, command_name, object_id=0, axis="z", pos_su
     command = env.command_manager.get_command(command_name)
     des_orient_w = command[:, 3:]
     if axis is not None:
-        from symdex.utils.isaac_utils import get_angle_from_quat
+        from bimanual_suite.utils.isaac_utils import get_angle_from_quat
         target_axis = get_angle_from_quat(des_orient_w, axis=axis, normalize=True)
         init_axis = get_angle_from_quat(env.object_init_orient[object_id], axis=axis, normalize=True)
         cur_axis = get_angle_from_quat(object.data.root_quat_w, axis=axis, normalize=True)

@@ -1,10 +1,7 @@
 # StackPyramid-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T19:17:26Z
-- canonical_build: `OBS Box(-inf, inf, (1, 64), float32)` / `ACT Box(-1.0, 1.0, (8,), float32)`
+- robot: Franka Panda with wrist camera (`panda_wristcam`; Panda / Fetch also supported)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 ManiSkill maps onto the §1..§7 design-choice schema as follows. There is no IsaacLab-style `*Cfg` manager tree; every section is a method on the `BaseEnv` subclass. All section code is pasted verbatim from `mani_skill/envs/tasks/tabletop/stack_pyramid.py` unless noted.
 

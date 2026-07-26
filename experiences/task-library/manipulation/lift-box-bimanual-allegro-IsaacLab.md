@@ -1,9 +1,10 @@
 # BoxLift — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: symdex
-- source_path: /home/steven/code/symdex/symdex/env/tasks/BoxLift
-- embodiment: bimanual UF850 + dual Allegro hands
+- robot: Bimanual UF850 arms + dual Allegro hands (44 DoF)
+- simulator: IsaacLab (Isaac Sim, manager-based)
+
+> Source package name anonymized as `bimanual_suite`. This task comes from an internal
+> bimanual manipulation suite rather than a public repo; the design below is otherwise verbatim.
 
 **Task summary.** Two UF850 6-DoF arms, each capped with a 16-DoF Allegro hand
 (`Robot` = right, `Robot_left` = left), cooperatively grasp a single rigid **tote/box**
@@ -30,7 +31,7 @@ because the object uses a `MultiAssetSpawnerCfg` with `random_choice`). Sim: `dt
 `decimation = 6` (→ 20 Hz control), `episode_length_s = 8.3333` (~166 control steps),
 `render_interval = decimation`. Physx: `gpu_max_rigid_contact_count = gpu_max_rigid_patch_count =
 2**24`. Default `num_envs = 4096`, `env_spacing = 3.0`. Physics material:
-static_friction=1.5, dynamic_friction=1.0, restitution=0.0. Asset roots: `symdex.LIB_PATH`
+static_friction=1.5, dynamic_friction=1.0, restitution=0.0. Asset roots: `bimanual_suite.LIB_PATH`
 (= repo root, `Path(__file__).resolve().parent.parent`) and IsaacLab's `ISAAC_NUCLEUS_DIR`
 (used only by the goal marker in the command term).
 
@@ -41,7 +42,7 @@ joints ordered as index/middle/pinky finger groups `jif1..4, jmf1..4, jpf1..4` (
 ### Decisions resolved
 | Question | Resolution |
 |---|---|
-| Gym id / entry point | `BoxLiftEnv-v0` → `symdex.env.tasks.BoxLift.env:BoxLiftEnv`, cfg `BoxLiftEnvCfg` |
+| Gym id / entry point | `BoxLiftEnv-v0` → `bimanual_suite.env.tasks.BoxLift.env:BoxLiftEnv`, cfg `BoxLiftEnvCfg` |
 | num_envs / spacing | 4096 / 3.0 |
 | Right robot USD | `{LIB_PATH}/assets/ufactory850/uf850_allegro_right_colored.usd` |
 | Left robot USD | `{LIB_PATH}/assets/ufactory850/uf850_allegro_left_colored.usd` |
@@ -58,12 +59,12 @@ joints ordered as index/middle/pinky finger groups `jif1..4, jmf1..4, jpf1..4` (
 | action_dim | 44 |
 | Sim timing | dt=1/120, decimation=6, episode_length_s=8.3333, render_interval=6 |
 
-**Code — registration (`symdex/env/__init__.py`):**
+**Code — registration (`bimanual_suite/env/__init__.py`):**
 ```python
 from .tasks.BoxLift.env_cfg import BoxLiftEnvCfg
 gym.register(
     id="BoxLiftEnv-v0",
-    entry_point="symdex.env.tasks.BoxLift.env:BoxLiftEnv",
+    entry_point="bimanual_suite.env.tasks.BoxLift.env:BoxLiftEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": BoxLiftEnvCfg,
@@ -81,8 +82,8 @@ from typing import Any, ClassVar
 from isaacsim.core.version import get_version
 from isaaclab.envs.common import VecEnvStepReturn
 
-from symdex.env.tasks.manager_based_env import BaseEnv
-from symdex.env.tasks.BoxLift.env_cfg import BoxLiftEnvCfg
+from bimanual_suite.env.tasks.manager_based_env import BaseEnv
+from bimanual_suite.env.tasks.BoxLift.env_cfg import BoxLiftEnvCfg
 
 
 class BoxLiftEnv(BaseEnv):
@@ -101,7 +102,7 @@ class BoxLiftEnv(BaseEnv):
         super().step(action)
         # Debug only
         if self.cfg.visualize_marker:
-            from symdex.env.tasks.BoxLift.mdps import compute_side_points
+            from bimanual_suite.env.tasks.BoxLift.mdps import compute_side_points
             right_frame = compute_side_points(self.scene["object_0"].data.root_state_w, self.side_points, side="right")
             self.markers['arm_r']['ee_marker'].visualize(right_frame, self.scene["tote_right"].data.target_quat_w.reshape(-1, 4))
             left_frame = compute_side_points(self.scene["object_0"].data.root_state_w, self.side_points, side="left")
@@ -153,7 +154,7 @@ class BoxLiftSceneCfg(BaseSceneCfg):
     robot = ArticulationCfg(
         prim_path="/World/envs/env_.*/Robot",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/ufactory850/uf850_allegro_right_colored.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/ufactory850/uf850_allegro_right_colored.usd",
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=True,
@@ -197,7 +198,7 @@ class BoxLiftSceneCfg(BaseSceneCfg):
     robot_left = ArticulationCfg(
         prim_path="/World/envs/env_.*/Robot_left",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/ufactory850/uf850_allegro_left_colored.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/ufactory850/uf850_allegro_left_colored.usd",
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=True,
@@ -247,7 +248,7 @@ class BoxLiftSceneCfg(BaseSceneCfg):
                 # sim_utils.CuboidCfg(size=(0.19, 0.275, 0.215)),
                 # sim_utils.CuboidCfg(size=(0.18, 0.26, 0.13)),
                 sim_utils.UsdFileCfg(
-                    usd_path=f"{symdex.LIB_PATH}/assets/object/tote.usd",
+                    usd_path=f"{bimanual_suite.LIB_PATH}/assets/object/tote.usd",
                     scale=(0.8, 0.6, 1.0),
                 ),
             ],
@@ -317,7 +318,7 @@ class BaseSceneCfg(InteractiveSceneCfg):
     table: RigidObjectCfg = RigidObjectCfg(
         prim_path="/World/envs/env_.*/Table",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/object/table.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/object/table.usd",
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 kinematic_enabled=True,
@@ -701,7 +702,7 @@ def max_consecutive_success(env, num_success: int, command_names) -> torch.Tenso
 **Code — `TargetPositionCommand` metrics/resample (`command_mdps/grasp_command.py`, key methods):**
 ```python
 def _update_metrics(self):
-    from symdex.utils.isaac_utils import get_angle_from_quat
+    from bimanual_suite.utils.isaac_utils import get_angle_from_quat
     target_axis = get_angle_from_quat(self.quat_command_w, axis="z", normalize=True)
     cur_axis = get_angle_from_quat(self.object.data.root_quat_w, axis="z", normalize=True)
     self.metrics["orientation_error"] = torch.sum(target_axis * cur_axis, dim=-1)
@@ -886,7 +887,7 @@ The task's shared base supports **symmetric learning** (`base.yaml` `symmetry.sy
 C2 group): reward terms come as a **right set + their `_left` counterparts** — for the two-arm
 BoxLift task both are genuine (each arm has its own palm-alignment + collision terms; both are kept).
 For boxLift the reward config defines **NO `_symmetry`-suffixed duplicates** (unlike some sibling
-symdex tasks), so there is nothing to drop here. When adapting **other** symdex tasks, drop any
+bimanual_suite tasks), so there is nothing to drop here. When adapting **other** bimanual_suite tasks, drop any
 `_symmetry`-suffixed reward terms when not using symmetric learning.
 
 **Code — `BoxLiftRewardsCfg` (`env_cfg.py`):**

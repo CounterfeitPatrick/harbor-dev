@@ -1,10 +1,7 @@
 # PegInsertionSide-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T19:41:09Z
-- canonical_build: `Box(-inf, inf, (1, 43), float32) Box(-1.0, 1.0, (8,), float32)` (obs_mode=state, control_mode=pd_joint_delta_pos, num_envs=1)
+- robot: Franka Panda with wrist camera (`panda_wristcam`)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 A precision peg-insertion task: pick up an orange-white peg laid flat on the table and insert its orange (head) end into a side hole of a box. Hole clearance is a tight `0.003 m` over the peg radius; success requires the peg head to be inserted past the mid-depth with sub-`box_hole_radii` lateral tolerance.
 

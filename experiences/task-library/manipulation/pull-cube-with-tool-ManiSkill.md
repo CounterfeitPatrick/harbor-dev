@@ -1,11 +1,7 @@
 # PullCubeTool-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T19:24:46Z
-- canonical_build: `Box(-inf, inf, (1, 39), float32)` (obs) / `Box(-1.0, 1.0, (8,), float32)` (action), control_mode=`pd_joint_delta_pos`, obs_mode=`state`
-- task_type: tool-use — an L-shaped tool is grasped and used as a hook to pull a cube that starts out of the arm's direct reach back into reach of the arm base.
+- robot: Franka Panda (default; Fetch also supported)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 ---
 

@@ -1,12 +1,7 @@
 # Isaac-PickPlace-GR1T2-Abs-v0 — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: IsaacLab
-- probed_from_commit: 0fac17cc55038809fd57b8af1e950a940bf1324b
-- probed_at: 2026-06-02T18:44:03+02:00
-- canonical_build: not captured (Isaac `pxr`/SimulationApp unavailable in `.venv`; `gym.make` raises `NameNotFound` because the task registers only after the Isaac Kit app boots). Analytic dims below.
-  - **action_space**: `Box(36,)` — PinkInverseKinematicsAction = 2 FrameTask × pose_dim(7) + num_hand_joints(22) = 14 + 22 = **36**. Confirmed by the 36-element `idle_action` tensor in the env_cfg.
-  - **observation_space**: `Dict` (NOT concatenated — `concatenate_terms = False`). Per-term dims (single-env): `actions`(36), `robot_joint_pos`(N_dof, full GR1T2 articulation), `robot_root_pos`(3), `robot_root_rot`(4), `object_pos`(3), `object_rot`(4), `robot_links_state`(N_links×13), `left_eef_pos`(3), `left_eef_quat`(4), `right_eef_pos`(3), `right_eef_quat`(4), `hand_joint_state`(≈22, `R_.*`+`L_.*`), `head_joint_state`(3), `object`(13 = obj_pos3+obj_quat4+left_eef_to_obj3+right_eef_to_obj3). Exact N_dof / N_links resolve only at runtime against the GR1T2 USD.
+- robot: Fourier GR1T2 bimanual humanoid (two 7-DoF arms + dexterous hands)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
 > **CAVEAT (teleop / IL task).** This is the absolute-IK (`-Abs`) Pink-IK pipeline used for OpenXR/Manus-Vive teleoperation + robomimic BC (imitation learning). `rewards = None`, `commands = None`, `curriculum = None` in the env_cfg. **There is no shaped RL reward (§6 is absent).** Success is a binary termination term only. The reusable value of this spec is the **bimanual scene / 36-D dual-arm absolute-pose action / Dict observation / success-termination** structure (§1–§5). To use as an RL task, a §6 reward must be authored from scratch.
 

@@ -1,6 +1,6 @@
 ---
-description: List or inspect tasks within a Harbor benchmark. Use when the user types /harbor:task-list or asks "list tasks", "show task spec", "what tasks does this benchmark have", "show me task <id>". Defaults to the cwd-local `harbor/benchmark-generator/benchmark-spec.json` (rich, populated by benchmark-generator for RL benchmarks); falls back to the registry-side spec when given a benchmark name.
-argument-hint: [list] | list <benchmark-name> | list all | <task-id>
+description: List or inspect tasks within a Harbor benchmark. Use when the user types /harbor:task-list or asks "list tasks", "show task spec", "what tasks does this benchmark have", "show me task <id>". Reads the cwd-local `harbor/benchmark-generator/benchmark-spec.json` (populated by benchmark-generator).
+argument-hint: [list] | <task-id>
 ---
 
 # /harbor:task-list — Task Browser
@@ -13,8 +13,6 @@ The user invoked `/harbor:task-list` with optional sub-command args. **Parse the
 |---|---|
 | `/harbor:task-list` (no args) | **list local** |
 | `/harbor:task-list list` | **list local** |
-| `/harbor:task-list list <benchmark-name>` | **list registry** (one benchmark) |
-| `/harbor:task-list list all` | **list registry** (all benchmarks) |
 | `/harbor:task-list <task-id>` (arg contains `/`, e.g. `cartpole/swingup`) | **show one** |
 
 Anything else: print the dispatch table above and stop.
@@ -30,7 +28,7 @@ Tasks captured by `benchmark-generator` into the **current repo's** `harbor/benc
    ls "$(pwd)/harbor/benchmark-generator/benchmark-spec.json"
    ```
    If missing, print:
-   > `harbor/benchmark-generator/benchmark-spec.json` not found in `<cwd>`. Either `cd` into a benchmark repo (one that has been processed by `benchmark-generator`) and retry, or pass a registered benchmark name: `/harbor:task-list list <name>` (see MCP `list_benchmarks` for valid names).
+   > `harbor/benchmark-generator/benchmark-spec.json` not found in `<cwd>`. `cd` into a benchmark repo that has been processed by `benchmark-generator` and retry. If this repo has not been set up yet, run `/harbor:env-install-uv` and then the `benchmark-generator` subagent first.
 
 2. Tabulate via inline Bash:
    ```bash
@@ -41,7 +39,7 @@ Tasks captured by `benchmark-generator` into the **current repo's** `harbor/benc
    tasks = spec.get("tasks") or []
    bench = spec.get("benchmark_name") or "(unknown)"
    if not tasks:
-       print(f"benchmark '{bench}' has no enumerated tasks (likely an IL benchmark — its task is the obs/action contract; use get_benchmark_spec).")
+       print(f"benchmark '{bench}' has no enumerated tasks in benchmark-spec.json.")
        sys.exit(0)
    headers = ["id", "max_episode_steps", "success_metric", "reward_implemented", "reward_metric"]
    widths = [len(h) for h in headers]
@@ -59,19 +57,6 @@ Tasks captured by `benchmark-generator` into the **current repo's** `harbor/benc
    ```
 
 3. Print the script's stdout verbatim. Do not paraphrase.
-
----
-
-## Action: list registry
-
-Aggregates `tasks[]` from registry-side specs at `mcp/harbor/specs/benchmarks/<name>.json`.
-
-1. Call `mcp__plugin_harbor_harbor__list_tasks`:
-   - `list <benchmark-name>`: pass `{benchmark_name: "<name>"}`.
-   - `list all`: no args (aggregates across all specs).
-
-2. Print the returned `formatted_table` field **verbatim**. If `count == 0`, also print this hint:
-   > Registry specs currently capture obs/action layout but not enumerated `tasks[]` for most verified benchmarks (IL benchmarks have a single obs/action contract; RL benchmarks populate `tasks[]` only at scaffold time in the local `harbor/benchmark-generator/benchmark-spec.json`). To see live tasks, `cd` into a benchmark repo and run `/harbor:task-list` with no args.
 
 ---
 
@@ -104,6 +89,5 @@ Show the full task entry for `<task-id>` from the cwd-local benchmark-spec.
 
 ## Constraints
 
-- Local mode is the default — it carries the rich per-task metadata; registry mode is informational and currently sparse.
+- The cwd-local `benchmark-spec.json` is the only source — there is no central index to fall back to.
 - Do NOT modify `harbor/benchmark-generator/benchmark-spec.json` — this command is read-only.
-- Do NOT mix the two sources in a single output. For one specific benchmark, prefer the registry path so it works without `cd`-ing.

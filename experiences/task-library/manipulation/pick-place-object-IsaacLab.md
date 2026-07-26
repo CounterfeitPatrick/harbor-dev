@@ -1,9 +1,10 @@
 # PickPlaceObject — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: symdex
-- source_path: /home/steven/code/symdex/symdex/env/tasks/PickObject
-- embodiment: bimanual UF850 + dual Allegro hands
+- robot: Bimanual UF850 arms + dual Allegro hands (44 DoF)
+- simulator: IsaacLab (Isaac Sim, manager-based)
+
+> Source package name anonymized as `bimanual_suite`. This task comes from an internal
+> bimanual manipulation suite rather than a public repo; the design below is otherwise verbatim.
 
 ## Task summary
 
@@ -20,7 +21,7 @@ Key facts:
 
 ## §1 Registration + Scene
 
-**Description.** `PickObjectEnv` subclasses `BaseEnv` (`manager_based_env.py`, itself a `ManagerBasedRLEnv`). Registration is in `symdex/env/__init__.py`. The env is built from `PickObjectEnvCfg`, which composes `PickObjectSceneCfg(num_envs=4096, env_spacing=3.0)` on top of `BaseSceneCfg` (ground/light/table). The scene holds two articulations (right `Robot`, left `Robot_left`), three rigid objects (`Object_0` tote kinematic, `Object_1`/`Object_2` DexCubes dynamic), a table (kinematic), and a large bank of fingertip + link contact sensors filtered against the two cubes. Asset paths resolve through `symdex.LIB_PATH` (= repo root, `str(Path(__file__).resolve().parent.parent)`) and `ISAAC_NUCLEUS_DIR`.
+**Description.** `PickObjectEnv` subclasses `BaseEnv` (`manager_based_env.py`, itself a `ManagerBasedRLEnv`). Registration is in `bimanual_suite/env/__init__.py`. The env is built from `PickObjectEnvCfg`, which composes `PickObjectSceneCfg(num_envs=4096, env_spacing=3.0)` on top of `BaseSceneCfg` (ground/light/table). The scene holds two articulations (right `Robot`, left `Robot_left`), three rigid objects (`Object_0` tote kinematic, `Object_1`/`Object_2` DexCubes dynamic), a table (kinematic), and a large bank of fingertip + link contact sensors filtered against the two cubes. Asset paths resolve through `bimanual_suite.LIB_PATH` (= repo root, `str(Path(__file__).resolve().parent.parent)`) and `ISAAC_NUCLEUS_DIR`.
 
 **Decisions resolved**
 
@@ -196,7 +197,7 @@ class BaseSceneCfg(InteractiveSceneCfg):
     table: RigidObjectCfg = RigidObjectCfg(
         prim_path="/World/envs/env_.*/Table",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/object/table.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/object/table.usd",
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 kinematic_enabled=True,
@@ -245,7 +246,7 @@ class BaseEnvCfg(ManagerBasedRLEnvCfg):
     robot = ArticulationCfg(
         prim_path="/World/envs/env_.*/Robot",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/ufactory850/uf850_allegro_right_colored.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/ufactory850/uf850_allegro_right_colored.usd",
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=True,
@@ -295,7 +296,7 @@ class BaseEnvCfg(ManagerBasedRLEnvCfg):
     object_0 = RigidObjectCfg(
         prim_path=f"/World/envs/env_.*/Object_0",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/object/tote_collision.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/object/tote_collision.usd",
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 kinematic_enabled=True,
                 disable_gravity=False,

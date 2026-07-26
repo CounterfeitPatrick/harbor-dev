@@ -1,10 +1,7 @@
-# Triton-Insert-Drawer — Implementation Spec
+# IsaacLab-Insert-Drawer — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: IsaacLab
-- probed_from_commit: 15b9942d2ccaaff092c70f4bdb71e1efd136852a
-- probed_at: 2026-05-22T14:14:45Z
-- canonical_build: not captured (gym.make requires Isaac Sim AppLauncher; task is known-good via `harbor/scripts/rl/custom_torch/train.py task=Triton-Insert-Drawer`)
+- robot: Franka FR3 arm + Franka hand (single arm)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
 Task summary: Franka FR3 (single arm) starts with a drawer ALREADY OPEN (joint pos = 0.30 m). The policy must (1) pick up a small DexCube from the table, (2) lift it above the drawer rim, (3) place it inside the open drawer, (4) retract the gripper out of the drawer interior, and (5) push the drawer closed. Episode ends on either time-out (9 s @ 20 Hz = 180 steps) or task success (cube inside + drawer joint pos < 0.10 m). Composer = sum, 8 active reward terms with monotonically-increasing per-step magnitudes (`reach < lift < align < retract < close < cube_inside_latch < success_bonus`).
 
@@ -14,13 +11,13 @@ Task summary: Franka FR3 (single arm) starts with a drawer ALREADY OPEN (joint p
 
 ### Description
 
-`gym.register` exposes `Triton-Insert-Drawer` (training) and `Triton-Insert-Drawer-Play` (eval-friendly, fewer envs, no noise). Both use `isaaclab.envs:ManagerBasedRLEnv` with the abstract `InsertDrawerEnvCfg` base + `FrankaInsertDrawerEnvCfg` subclass that fills in the robot, IK action, cube, drawer, EE-frame transformer, drawer drop-frame transformer, and drawer front-face transformer. Two finger contact sensors are declared in the base scene and filtered against `Cube_0` for the lift-distance grasp gate.
+`gym.register` exposes `IsaacLab-Insert-Drawer` (training) and `IsaacLab-Insert-Drawer-Play` (eval-friendly, fewer envs, no noise). Both use `isaaclab.envs:ManagerBasedRLEnv` with the abstract `InsertDrawerEnvCfg` base + `FrankaInsertDrawerEnvCfg` subclass that fills in the robot, IK action, cube, drawer, EE-frame transformer, drawer drop-frame transformer, and drawer front-face transformer. Two finger contact sensors are declared in the base scene and filtered against `Cube_0` for the lift-distance grasp gate.
 
 ### Decisions resolved
 
 | Knob | Value |
 |---|---|
-| Task ID | `Triton-Insert-Drawer` |
+| Task ID | `IsaacLab-Insert-Drawer` |
 | Robot | FR3 + Franka hand (custom USD `harbor/assets/fr3/fr3_franka_hand.usd`) |
 | Robot init pos (env-local) | `(-0.274, 0.49, 0.01)` |
 | Cube | DexCube (Nucleus USD, scaled 0.86 → 4.3 cm edge), 55 g mass |
@@ -45,7 +42,7 @@ Task summary: Franka FR3 (single arm) starts with a drawer ALREADY OPEN (joint p
 import gymnasium as gym
 
 gym.register(
-    id="Triton-Insert-Drawer",
+    id="IsaacLab-Insert-Drawer",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
@@ -54,7 +51,7 @@ gym.register(
 )
 
 gym.register(
-    id="Triton-Insert-Drawer-Play",
+    id="IsaacLab-Insert-Drawer-Play",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
@@ -244,11 +241,11 @@ import argparse
 parser = argparse.ArgumentParser(); AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args(['--headless']); app = AppLauncher(args); sim_app = app.app
 import isaaclab_tasks, gymnasium as gym
-spec = gym.spec('Triton-Insert-Drawer'); print('OK:', spec.id, spec.entry_point)
+spec = gym.spec('IsaacLab-Insert-Drawer'); print('OK:', spec.id, spec.entry_point)
 "
 ```
 
-Expected: `OK: Triton-Insert-Drawer isaaclab.envs:ManagerBasedRLEnv`.
+Expected: `OK: IsaacLab-Insert-Drawer isaaclab.envs:ManagerBasedRLEnv`.
 
 ---
 
@@ -397,7 +394,7 @@ self.actions.gripper_action = mdp.BinaryJointPositionActionCfg(
 .venv/bin/python -c "
 # inside AppLauncher: build env, take 10 zero actions, assert no NaN
 import torch
-env = make_env('Triton-Insert-Drawer')
+env = make_env('IsaacLab-Insert-Drawer')
 obs, _ = env.reset()
 for _ in range(10):
     a = torch.zeros((env.num_envs, 4), device=env.device)
@@ -471,7 +468,7 @@ Reset 10 times, assert robot joints, cube xyz, drawer joint pos all match the co
 
 ```bash
 .venv/bin/python -c "
-env = make_env('Triton-Insert-Drawer')
+env = make_env('IsaacLab-Insert-Drawer')
 for _ in range(10):
     obs, _ = env.reset()
     cube_z = env.scene['cube_0'].data.root_pos_w[:, 2]
@@ -530,7 +527,7 @@ Roll out a no-op policy for 200 steps, assert exactly one episode ends per env (
 
 ```bash
 .venv/bin/python -c "
-env = make_env('Triton-Insert-Drawer', num_envs=4)
+env = make_env('IsaacLab-Insert-Drawer', num_envs=4)
 obs, _ = env.reset()
 dones_count = 0
 for t in range(190):
@@ -636,7 +633,7 @@ def drawer_body_position_in_robot_root_frame(
 
 ```bash
 .venv/bin/python -c "
-env = make_env('Triton-Insert-Drawer')
+env = make_env('IsaacLab-Insert-Drawer')
 obs, _ = env.reset()
 flat = obs['policy']                 # (num_envs, 19)
 assert flat.shape[-1] == 19
@@ -848,7 +845,7 @@ def success_bonus(env, drawer_closed_threshold=0.05,
 
 ```bash
 .venv/bin/python -c "
-env = make_env('Triton-Insert-Drawer')
+env = make_env('IsaacLab-Insert-Drawer')
 obs, _ = env.reset()
 for _ in range(5):
     obs, rew, *_ = env.step(torch.zeros((env.num_envs, 4), device=env.device))
@@ -905,5 +902,5 @@ print('reward smoke OK')
 ## Reproduce
 
 ```bash
-/harbor:task-creation name=<NewTaskID> from=harbor/task-creation/triton-insert-drawer-implementation.md
+/harbor:task-creation name=<NewTaskID> from=harbor/task-creation/isaaclab-insert-drawer-implementation.md
 ```

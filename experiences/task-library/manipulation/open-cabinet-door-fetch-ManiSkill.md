@@ -1,13 +1,7 @@
 # OpenCabinetDoor-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T19:47:55Z
-- canonical_build: **WARN — not captured at runtime.** `gym.make('OpenCabinetDoor-v1')` raised `RuntimeError: Partnet Mobility dataset not found` (cabinet asset not downloaded). Verified via source read. Analytic spaces:
-  - `observation_space = Box(-inf, inf, (44,), float32)` (state obs_mode; see §5 for derivation)
-  - `action_space = Box(low/high per-controller, (13,), float32)` (control_mode `pd_joint_delta_pos`; see §2)
-  - To capture the real build line: `python -m mani_skill.utils.download_asset partnet_mobility_cabinet` then re-run the §1 smoke.
+- robot: Fetch mobile manipulator
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 > **Class hierarchy note.** `OpenCabinetDoor-v1` is a *thin subclass* of `OpenCabinetDrawerEnv`. It overrides only `TRAIN_JSON` (door cabinets instead of drawer cabinets) and `handle_types = ["revolute", "revolute_unwrapped"]` (door = revolute joint vs. drawer = prismatic). Every other method (`_load_agent`, `_load_scene`, `_load_cabinets`, `_initialize_episode`, `evaluate`, `_get_obs_extra`, `compute_dense_reward`, `compute_normalized_dense_reward`) is inherited verbatim from `OpenCabinetDrawerEnv`. All code below is the inherited implementation unless noted.
 

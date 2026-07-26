@@ -1,12 +1,7 @@
 # TriFingerRotateCubeLevel1-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T19:56:57Z
-- canonical_build: `OBS Box(-inf, inf, (1, 62), float32)`  `ACT Box(-1.0, 1.0, (9,), float32)`  `CTRL pd_joint_delta_pos`
-- task_type: DEXTEROUS in-hand manipulation. A fixed 3-finger TriFingerPro robot (9 DoF) reorients/repositions a colorful cube to a green goal cube pose on/above a circular arena table.
-- difficulty levels: `Level0..Level4` all share ONE env class `RotateCubeEnv`; each level subclass only sets `difficulty_level` (0..4) which selects the goal-pose sampling branch in `_sample_object_goal_poses`. **Level1 sets `difficulty_level=1`**: random goal position ON the table (z = cube_size/2) WITH yaw orientation (`random_quaternions(lock_x=True, lock_y=True)`). Reward, scene, action, obs, termination are IDENTICAL across all levels.
+- robot: TriFingerPro three-finger hand (9 DoF, fixed base)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 ---
 

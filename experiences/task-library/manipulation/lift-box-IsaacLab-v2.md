@@ -3,17 +3,8 @@
 > Portable per-task design-choice spec emitted by `/harbor:probe-task`. Feed back via
 > `/harbor:task-create name=<new_task_id> from=<this file>` to clone the task identically.
 
-- **task_id**: `Isaac-Lift-Box-Dual-Franka-v0` (+ `Isaac-Lift-Box-Dual-Franka-Play-v0`)
-- **family**: `isaaclab-manager-based` (ManagerBasedRLEnv)
-- **embodiment**: multi-arm manipulation (two FR3 + Franka-hand robots, dual-arm cooperative lift)
-- **repo**: `<IsaacLab-repo>`
-- **task source dir**: `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/`
-- **probed_from_commit**: `090aed18163b2194d5551c7919f7539283677743` (task files are untracked — HEAD sha recorded for repo provenance only)
-- **canonical_build**: smoke_s1.py exit 0 →
-  `action_space = Box(-inf, inf, (2, 8), float32)`,
-  `observation_space = Dict('policy': Box(-inf, inf, (2, 33), float32))`,
-  `action_terms = ['arm_action_0', 'gripper_action_0', 'arm_action_1', 'gripper_action_1']`,
-  `obs_terms (policy) = ['ee_pose_0', 'ee_pose_1', 'box_position_in_world', 'box_quat_in_world', 'gripper_joint_pos_0', 'gripper_joint_pos_1', 'last_action']`
+- robot: Two Franka FR3 arms + Franka hands (dual-arm cooperative)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
 > **AppLauncher caveat**: bare-shell `gym.make` does NOT work in this repo — `pxr` is only
 > importable through `isaaclab.app.AppLauncher`. Every build/smoke must first construct
@@ -904,7 +895,7 @@ TUNED reward — 3 tune iterations on top of the original spec; the success pred
 `box_xy_align` are now gated on dual finger contact, `grasp_contact` weights 0.05, `lift_height`
 0.25.
 
-**Tune provenance** (factual, short): derived from the Triton-Lift-Box spec. Iter-1 added the
+**Tune provenance** (factual, short): derived from the IsaacLab-Lift-Box spec. Iter-1 added the
 dual-finger-grasp gate to `success_bonus` + `lift_box_success` after training exposed a
 wedge-lift exploit (box pinned between wrists, no finger grasp). Iter-2 added the same
 dual-contact gate to `box_xy_align` and raised `lift_height` 0.1875→0.25 after training exposed

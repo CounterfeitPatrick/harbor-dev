@@ -1,12 +1,7 @@
 # PushT-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T19:37:51Z
-- robot: panda_stick
-- canonical_build: `OBS Box(-inf, inf, (1, 31), float32)  ACT Box(-1.0, 1.0, (7,), float32)  CTRL pd_joint_delta_pos`
-- source_file: `mani_skill/envs/tasks/tabletop/push_t.py` (full, lines 1–539)
+- robot: Franka Panda with stick end-effector (`panda_stick`)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 A simulated version of the real-world push-T task from Diffusion Policy. The robot uses a stick end-effector (`panda_stick`) to precisely push a T-shaped block so that it covers ≥90% of a fixed target-T region on the table. Success is coverage-only (the "PushT-easy" variant — the ee end-zone return is not enforced by `evaluate()`).
 

@@ -1,11 +1,9 @@
 # InsertDrawer — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: symdex
-- source_path: /home/steven/code/symdex/symdex/env/tasks/InsertDrawer
-- embodiment: bimanual UF850 + dual Allegro hands
+- robot: Bimanual UF850 arms + dual Allegro hands (44 DoF)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
-This spec captures the design of symdex `InsertDrawerEnv-v0`. This InsertDrawer is the original from which IsaacLab's `dex_grasp` / `dex_pickplace` tasks were vendored (the right-robot half: USD, init pose, actuator gain groups, EMA cumulative-relative action).
+This spec captures the design of bimanual_suite `InsertDrawerEnv-v0`. This InsertDrawer is the original from which IsaacLab's `dex_grasp` / `dex_pickplace` tasks were vendored (the right-robot half: USD, init pose, actuator gain groups, EMA cumulative-relative action).
 
 ## Task summary
 
@@ -15,7 +13,7 @@ Two UF850 arms, each tipped with an Allegro hand (`Robot` = right, `Robot_left` 
 
 ## §1 Registration + Scene
 
-**Description.** Registered as gym id `InsertDrawerEnv-v0`, entry point `symdex.env.tasks.InsertDrawer.env:InsertDrawerEnv`, cfg `InsertDrawerEnvCfg`. The custom `InsertDrawerEnv` subclasses `BaseEnv` (itself a subclass of IsaacLab's `ManagerBasedRLEnv`). The scene (`InsertDrawerSceneCfg`) holds **both robots**, one rigid object, a drawer articulation, a table (from `BaseSceneCfg`), ground + dome light (from `BaseSceneCfg`), and **32 contact sensors** (8 base pairs × right/left × object/drawer-handle, plus a full symmetric mirror set). Sim: `dt = 1/120`, `decimation = 6`, `episode_length_s = 8.3333`, `num_envs = 4096`, `env_spacing = 3.0`, PhysX rigid-contact/patch counts `2**24`, scene friction static 1.5 / dynamic 1.0 / restitution 0. `replicate_physics = False`. All robot/drawer bodies spawn with `disable_gravity=True`; the object has gravity enabled; the table is kinematic.
+**Description.** Registered as gym id `InsertDrawerEnv-v0`, entry point `bimanual_suite.env.tasks.InsertDrawer.env:InsertDrawerEnv`, cfg `InsertDrawerEnvCfg`. The custom `InsertDrawerEnv` subclasses `BaseEnv` (itself a subclass of IsaacLab's `ManagerBasedRLEnv`). The scene (`InsertDrawerSceneCfg`) holds **both robots**, one rigid object, a drawer articulation, a table (from `BaseSceneCfg`), ground + dome light (from `BaseSceneCfg`), and **32 contact sensors** (8 base pairs × right/left × object/drawer-handle, plus a full symmetric mirror set). Sim: `dt = 1/120`, `decimation = 6`, `episode_length_s = 8.3333`, `num_envs = 4096`, `env_spacing = 3.0`, PhysX rigid-contact/patch counts `2**24`, scene friction static 1.5 / dynamic 1.0 / restitution 0. `replicate_physics = False`. All robot/drawer bodies spawn with `disable_gravity=True`; the object has gravity enabled; the table is kinematic.
 
 ### Decisions resolved
 
@@ -54,7 +52,7 @@ Registration (`env/__init__.py:35-43`):
 from .tasks.InsertDrawer.env_cfg import InsertDrawerEnvCfg
 gym.register(
     id="InsertDrawerEnv-v0",
-    entry_point="symdex.env.tasks.InsertDrawer.env:InsertDrawerEnv",
+    entry_point="bimanual_suite.env.tasks.InsertDrawer.env:InsertDrawerEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": InsertDrawerEnvCfg,
@@ -68,8 +66,8 @@ Custom env class + step/success logic (`InsertDrawer/env.py`):
 import torch
 from typing import Any, ClassVar
 
-from symdex.env.tasks.manager_based_env import *
-from symdex.env.tasks.InsertDrawer.env_cfg import InsertDrawerEnvCfg
+from bimanual_suite.env.tasks.manager_based_env import *
+from bimanual_suite.env.tasks.InsertDrawer.env_cfg import InsertDrawerEnvCfg
 
 
 class InsertDrawerEnv(BaseEnv):
@@ -139,7 +137,7 @@ class InsertDrawerSceneCfg(BaseSceneCfg):
     robot = ArticulationCfg(
         prim_path="/World/envs/env_.*/Robot",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/ufactory850/uf850_allegro_right_colored.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/ufactory850/uf850_allegro_right_colored.usd",
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=True,
@@ -231,7 +229,7 @@ class InsertDrawerSceneCfg(BaseSceneCfg):
     robot_left = ArticulationCfg(
         prim_path="/World/envs/env_.*/Robot_left",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/ufactory850/uf850_allegro_left_colored.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/ufactory850/uf850_allegro_left_colored.usd",
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=True,
@@ -323,7 +321,7 @@ class InsertDrawerSceneCfg(BaseSceneCfg):
     object_0 = RigidObjectCfg(
         prim_path=f"/World/envs/env_.*/Object_0",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/object/dog.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/object/dog.usd",
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 kinematic_enabled=False,
                 disable_gravity=False,
@@ -347,7 +345,7 @@ class InsertDrawerSceneCfg(BaseSceneCfg):
     drawer = ArticulationCfg(
         prim_path=f"/World/envs/env_.*/Drawer",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/object/drawer.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/object/drawer.usd",
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=True,
@@ -507,7 +505,7 @@ class BaseSceneCfg(InteractiveSceneCfg):
     table: RigidObjectCfg = RigidObjectCfg(
         prim_path="/World/envs/env_.*/Table",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/object/table.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/object/table.usd",
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 kinematic_enabled=True,
@@ -1093,7 +1091,7 @@ Command term (`command_mdps/grasp_command.py` — key `_update_metrics` / `_resa
     def _update_metrics(self):
         # logs data
         # -- compute the orientation error
-        from symdex.utils.isaac_utils import get_angle_from_quat
+        from bimanual_suite.utils.isaac_utils import get_angle_from_quat
         target_axis = get_angle_from_quat(self.quat_command_w, axis="z", normalize=True)
         cur_axis = get_angle_from_quat(self.object.data.root_quat_w, axis="z", normalize=True)
         self.metrics["orientation_error"] = torch.sum(target_axis * cur_axis, dim=-1)

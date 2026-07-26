@@ -173,15 +173,11 @@ def main():
 
     project_name = repo.name
     slug = re.sub(r"[^a-z0-9-]+", "-", project_name.lower()).strip("-") or "app"
-    image_name = f"yufengjin/{slug}"
-    container_name = slug
 
     common_map: dict[str, str] = {
         "PROJECT_NAME": slug,
         "BENCHMARK_NAME": slug,
         "REPO_PATH": str(repo),
-        "IMAGE_NAME": image_name,
-        "CONTAINER_NAME": container_name,
         "DEFAULT_TASK": tasks[0]["id"],
     }
     if source == "local_implementation":

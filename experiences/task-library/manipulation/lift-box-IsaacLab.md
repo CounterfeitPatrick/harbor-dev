@@ -1,4 +1,4 @@
-# Triton-Lift-Box — Implementation Spec
+# IsaacLab-Lift-Box — Implementation Spec
 
 > **SUPERSEDED by [[lift-box-IsaacLab-v2]]** (`lift-box-IsaacLab-v2.md`). This spec's §6 success
 > predicate (`lift_box_success`) has NO grasp condition — training-validated reproduction
@@ -8,11 +8,8 @@
 > box_xy_align on dual finger contact (gate_0 & gate_1) and is training-validated to
 > success_rate 0.89. Prefer v2 as the reproduction/adaptation base.
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: IsaacLab
-- probed_from_commit: 15b9942d2ccaaff092c70f4bdb71e1efd136852a
-- probed_at: 2026-05-22T22:29:11Z
-- canonical_build: `gym.make("Triton-Lift-Box")` succeeds inside `isaaclab.app.AppLauncher`; smoke_s1.py asserts `action_space.shape[-1] == 8`, observation `Box(33,)`, `num_envs==128`, `max_episode_length==200`. The repo's `pxr` module is only importable through AppLauncher, so the bare-shell `gym.make(...)` pre-flight does NOT work; instead the canonical build proof is `.venv/bin/python harbor/create-task/triton-lift-box/smokes/smoke_s1.py` (exit 0).
+- robot: Two Franka FR3 arms + Franka hands (dual-arm cooperative)
+- simulator: IsaacLab (Isaac Sim, manager-based)
 
 Task summary: two FR3 + Franka-hand robots stand at world `y = ±0.49` facing each other. A 0.40 × 0.30 × 0.22 m eurobox (0.5 kg) sits centered on the lab table, **rotated 90° about +Z** so its long axis runs along world Y (between the robots) and its short y-end faces (0.30 m × 0.22 m) face each robot. Two `FrameTransformerCfg` markers (`grasp_frame_0`, `grasp_frame_1`) visualize the top-center of each short face. Each robot grasps its assigned short y-end face top-down with a parallel-jaw gripper (3-D EMA xyz EE-delta + binary gripper; RPY locked at reset). Goal: lift the box COM to world env-local `(0, 0, BOX_INIT_Z + 0.25) = (0, 0, 0.36025)` with `|box.lin_vel_w| < 0.10 m/s`. Episode horizon = 10 s @ 20 Hz = 200 steps.
 
@@ -22,20 +19,20 @@ Task summary: two FR3 + Franka-hand robots stand at world `y = ±0.49` facing ea
 
 ### Description
 
-`gym.register` exposes `Triton-Lift-Box` (training) and `Triton-Lift-Box-Play` (eval-friendly, fewer envs, no noise). Both use `isaaclab.envs:ManagerBasedRLEnv` with the abstract `LiftBoxEnvCfg` base + `FrankaLiftBoxEnvCfg` subclass that fills in the two robot articulations, the box (RigidObjectCfg from a converted STL→USD), per-robot ee_frame transformers, two box-local grasp_frame transformer markers, and four contact sensors (left/right finger per robot). Sim timing and physx knobs mirror `manipulation/insert_drawer/` verbatim (`sim.dt=1/120`, `decimation=6 → 20 Hz`, `episode_length_s=10.0`). Both `FR3_FRANKA_HAND_CFG` and `EMACumulativeDeltaPositionActionCfg` are imported from the `insert_drawer` task (not vendored).
+`gym.register` exposes `IsaacLab-Lift-Box` (training) and `IsaacLab-Lift-Box-Play` (eval-friendly, fewer envs, no noise). Both use `isaaclab.envs:ManagerBasedRLEnv` with the abstract `LiftBoxEnvCfg` base + `FrankaLiftBoxEnvCfg` subclass that fills in the two robot articulations, the box (RigidObjectCfg from a converted STL→USD), per-robot ee_frame transformers, two box-local grasp_frame transformer markers, and four contact sensors (left/right finger per robot). Sim timing and physx knobs mirror `manipulation/insert_drawer/` verbatim (`sim.dt=1/120`, `decimation=6 → 20 Hz`, `episode_length_s=10.0`). Both `FR3_FRANKA_HAND_CFG` and `EMACumulativeDeltaPositionActionCfg` are imported from the `insert_drawer` task (not vendored).
 
 ### Decisions resolved
 
 | Knob | Value |
 |---|---|
-| Task ID (train / play) | `Triton-Lift-Box` / `Triton-Lift-Box-Play` |
+| Task ID (train / play) | `IsaacLab-Lift-Box` / `IsaacLab-Lift-Box-Play` |
 | Robot | FR3 + Franka hand (`harbor/assets/fr3/fr3_franka_hand.usd`), 2 instances at `{ENV_REGEX_NS}/Robot_0` and `Robot_1` |
 | robot_0 init pos (env-local) | `(-0.274, 0.49, 0.01)` |
 | robot_1 init pos (env-local) | `(-0.274, -0.49, 0.01)` (symmetric across world y=0) |
 | robot_0 init joint pose | `fr3_joint1=-0.785, joint2=-0.785, joint3=0.0, joint4=-2.655, joint5=0.0, joint6=1.87, joint7=0.0, fr3_finger_joint.*=0.04` |
 | robot_1 init joint pose | `fr3_joint1=+0.785, joint2=-0.785, joint3=0.0, joint4=-2.655, joint5=0.0, joint6=1.87, joint7=-1.57, fr3_finger_joint.*=0.04` |
 | Joint-pose flip rule | flip sign of joint1 (base yaw) + joint3 (forearm yaw) + joint5 (wrist yaw) + joint7 (final wrist roll). robot_0's joint7 user-overridden to 0 so gripper jaws align along world Y (closes ACROSS box's short y-face). |
-| Box asset | `<downloads>/eurobox.stl` → converted via `isaaclab.sim.converters.MeshConverter` to `harbor/assets/eurobox/eurobox.usd`. Conversion script: `harbor/create-task/triton-lift-box/make_eurobox_usd.py`. Recentered: `translation=-centroid` so asset origin = box geometric center. Local extents: x=±0.20, y=±0.15, z=±0.11025. |
+| Box asset | `<downloads>/eurobox.stl` → converted via `isaaclab.sim.converters.MeshConverter` to `harbor/assets/eurobox/eurobox.usd`. Conversion script: `harbor/create-task/isaaclab-lift-box/make_eurobox_usd.py`. Recentered: `translation=-centroid` so asset origin = box geometric center. Local extents: x=±0.20, y=±0.15, z=±0.11025. |
 | `BOX_INIT_Z` | `0.11025` (half z-extent — box bottom on table at world z=0) |
 | Box mass | `0.5 kg` (`MassPropertiesCfg(mass=0.5)`) |
 | Box init pose (env-local) | `pos=(0.0, 0.0, 0.11025)`, `rot=(0.7071068, 0.0, 0.0, 0.7071068)` (90° about +Z — long axis aligned to world Y) |
@@ -57,7 +54,7 @@ Task summary: two FR3 + Franka-hand robots stand at world `y = ±0.49` facing ea
 `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/__init__.py`:
 
 ```python
-"""Dual-arm cooperative box-lift task (Triton-Lift-Box).
+"""Dual-arm cooperative box-lift task (IsaacLab-Lift-Box).
 
 Two FR3 + Franka-hand robots cooperate to lift a eurobox (40 x 30 x 22 cm,
 0.5 kg) off a lab table. Scene + sim timing + actuation pattern mirror
@@ -73,7 +70,7 @@ from . import mdp  # noqa: F401 — re-exports task-local helpers
 import gymnasium as gym
 
 gym.register(
-    id="Triton-Lift-Box",
+    id="IsaacLab-Lift-Box",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
@@ -82,7 +79,7 @@ gym.register(
 )
 
 gym.register(
-    id="Triton-Lift-Box-Play",
+    id="IsaacLab-Lift-Box-Play",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
@@ -263,7 +260,7 @@ class FrankaLiftBoxEnvCfg_PLAY(FrankaLiftBoxEnvCfg):
 ### Smoke
 
 ```bash
-.venv/bin/python harbor/create-task/triton-lift-box/smokes/smoke_s1.py
+.venv/bin/python harbor/create-task/isaaclab-lift-box/smokes/smoke_s1.py
 # exit 0 (asserts action_space + observation_space non-None, max_episode_length>0, num_envs==128)
 # Stdout swallowed by Omniverse log mux (expected); use exit code as truth.
 ```
@@ -354,7 +351,7 @@ self.actions.gripper_action_1 = insert_drawer_mdp.BinaryJointPositionActionCfg(
 ### Smoke
 
 ```bash
-.venv/bin/python harbor/create-task/triton-lift-box/smokes/smoke_s2.py
+.venv/bin/python harbor/create-task/isaaclab-lift-box/smokes/smoke_s2.py
 # exit 0 (asserts action_space.shape[-1] == 8, env.step(action) returns finite obs/reward)
 ```
 
@@ -415,7 +412,7 @@ class EventCfg:
 ### Smoke
 
 ```bash
-.venv/bin/python harbor/create-task/triton-lift-box/smokes/smoke_s3.py
+.venv/bin/python harbor/create-task/isaaclab-lift-box/smokes/smoke_s3.py
 # exit 0 (asserts env.reset() places both robots at URDF home, box xy within ±3 cm of (0,0))
 ```
 
@@ -526,8 +523,8 @@ def lift_box_success(
 ### Smoke
 
 ```bash
-.venv/bin/python harbor/create-task/triton-lift-box/smokes/smoke_s4.py
-.venv/bin/python harbor/create-task/triton-lift-box/smokes/smoke_success.py
+.venv/bin/python harbor/create-task/isaaclab-lift-box/smokes/smoke_s4.py
+.venv/bin/python harbor/create-task/isaaclab-lift-box/smokes/smoke_success.py
 # Both exit 0. smoke_success writes box pose + zero velocity directly, runs one sub-step,
 # then asserts termination_manager.compute() fires the success term in 128/128 envs.
 # (env.step(zero_action) at decimation=6 lets free-fall velocity exceed vel_tol=0.10
@@ -647,7 +644,7 @@ def box_quat_in_world(
 ### Smoke
 
 ```bash
-.venv/bin/python harbor/create-task/triton-lift-box/smokes/smoke_s5.py
+.venv/bin/python harbor/create-task/isaaclab-lift-box/smokes/smoke_s5.py
 # exit 0 (asserts observation_space == Box(33,), per-term dims match the expected_obs.json layout)
 ```
 
@@ -889,7 +886,7 @@ def success_bonus(
 ### Smoke
 
 ```bash
-.venv/bin/python harbor/create-task/triton-lift-box/smokes/smoke_s6.py
+.venv/bin/python harbor/create-task/isaaclab-lift-box/smokes/smoke_s6.py
 # exit 0 (asserts: 7 active terms registered, per-step reward finite + non-constant,
 #         composer = sum (passthrough), reward mean within sensible bounds).
 ```
@@ -898,7 +895,7 @@ def success_bonus(
 
 ## §7 DR
 
-`<no DR>` — `EventCfg` contains only the three reset terms above (no `mode="startup"` or `mode="interval"` randomization terms). The `dr-generator` was not run; `permit_env_edits=true` was authorized for reward-tune but the iter-0 reward fit entirely in §6, so no §7 wiring was added. To add later: `/harbor:create-task name=Triton-Lift-Box description="add startup mass + friction + box pose DR" sections=7`.
+`<no DR>` — `EventCfg` contains only the three reset terms above (no `mode="startup"` or `mode="interval"` randomization terms). The `dr-generator` was not run; `permit_env_edits=true` was authorized for reward-tune but the iter-0 reward fit entirely in §6, so no §7 wiring was added. To add later: `/harbor:create-task name=IsaacLab-Lift-Box description="add startup mass + friction + box pose DR" sections=7`.
 
 ---
 
@@ -907,14 +904,14 @@ def success_bonus(
 | File | Lines | What's there |
 |---|---|---|
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/__init__.py` | 13 | Family-level module docstring + `from . import mdp`. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/config/franka/__init__.py` | 30 | `gym.register` for Triton-Lift-Box and -Play. |
+| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/config/franka/__init__.py` | 30 | `gym.register` for IsaacLab-Lift-Box and -Play. |
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/config/franka/joint_pos_env_cfg.py` | 1–296 | FR3 robot wiring + box spawn + per-robot action stack + ee_frame + grasp_frame; PLAY subclass. |
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/lift_box_env_cfg.py` | 1–387 | Abstract SceneCfg + ActionsCfg + ObservationsCfg + EventCfg + RewardsCfg + TerminationsCfg + EnvCfg + sim/physx knobs. |
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/mdp/__init__.py` | 18 | Re-exports `isaaclab.envs.mdp` + task-local observations/rewards/terminations. |
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/mdp/observations.py` | 1–81 | `ee_pose_in_robot_root_frame` (parameterized), `box_position_in_world`, `box_quat_in_world`. |
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/mdp/rewards.py` | 1–256 | 5 reward funcs + 2 helpers + latch registry + `placeholder_zero` legacy shim. |
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/mdp/terminations.py` | 1–60 | `lift_box_success`. |
-| `harbor/assets/eurobox/eurobox.usd` | (binary) | Converted from `<downloads>/eurobox.stl` via `harbor/create-task/triton-lift-box/make_eurobox_usd.py`. Recentered: extents x=±0.20, y=±0.15, z=±0.11025. |
+| `harbor/assets/eurobox/eurobox.usd` | (binary) | Converted from `<downloads>/eurobox.stl` via `harbor/create-task/isaaclab-lift-box/make_eurobox_usd.py`. Recentered: extents x=±0.20, y=±0.15, z=±0.11025. |
 | `harbor/assets/fr3/fr3_franka_hand.usd` | (binary) | FR3 + Franka hand articulation USD (imported via insert_drawer's `FR3_FRANKA_HAND_CFG`). |
 | `harbor/assets/table/lab_table_instanceable_colored_rotated.usd` | (binary) | Lab table (the source repo rotated variant, kinematic), surface at z≈0. |
 
@@ -928,12 +925,12 @@ External imports the task relies on:
 
 ```bash
 # Same source repo:
-/harbor:create-task name=Triton-Lift-Box-v2 from=harbor/create-task/triton-lift-box-implementation.md
+/harbor:create-task name=IsaacLab-Lift-Box-v2 from=harbor/create-task/isaaclab-lift-box-implementation.md
 
 # Different repo: pass asset overrides if needed
-/harbor:create-task name=BiArmLift from=triton-lift-box-implementation.md \
+/harbor:create-task name=BiArmLift from=isaaclab-lift-box-implementation.md \
   assets=path/to/dest/eurobox.usd,path/to/dest/fr3.usd,path/to/dest/table.usd
 ```
 
-> probe-task: wrote `harbor/create-task/triton-lift-box-implementation.md` (sections §1..§7, 5 reward funcs, 7 obs terms).
+> probe-task: wrote `harbor/create-task/isaaclab-lift-box-implementation.md` (sections §1..§7, 5 reward funcs, 7 obs terms).
 > Reproduce via: `/harbor:create-task name=<new_task_id> from=<output>`.

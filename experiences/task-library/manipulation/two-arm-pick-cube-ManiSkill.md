@@ -1,13 +1,7 @@
 # TwoRobotPickCube-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` + `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T20:00:17Z
-- canonical_build:
-  - `observation_space = Box(-inf, inf, (1, 66), float32)`  (obs_mode="state")
-  - `action_space = Dict('panda_wristcam-0': Box(-1.0, 1.0, (8,), float32), 'panda_wristcam-1': Box(-1.0, 1.0, (8,), float32))`
-- robots: TWO arms — `panda_wristcam` ×2 (`MultiAgent[Tuple[Panda, Panda]]`). `left_agent = agent.agents[0]` placed at `Pose(p=[0,-1,0])`; `right_agent = agent.agents[1]` placed at `Pose(p=[0,+1,0])`. The cube spawns on the **left/−y** side (reachable only by left arm); the goal sphere spawns on the **right/+y** side (reachable only by right arm) — so the two arms must hand the cube off across the table.
+- robot: Two Franka Panda arms with wrist cameras (`panda_wristcam` x2, multi-agent)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 ---
 

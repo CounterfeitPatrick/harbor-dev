@@ -67,7 +67,6 @@ All training artifacts (checkpoint, TB events, metrics.jsonl, render.mp4, curve 
 - **Do NOT** vendor any external reference repo. The `custom_torch` tree is self-contained plugin code, not a runtime dependency.
 - **Do NOT** edit the base env (`<repo>/.venv/` or `<repo>/harbor/dependency-generator/setup_uv.sh`) directly. If a missing pip dep is the root cause of a smoke failure, append the install line to `setup_uv.sh` AND run the equivalent `uv pip install` against the existing venv (no full rebuild needed).
 - **Do NOT** rewrite `<repo>/harbor/utils/data_logger.py` if it already exists. Only call `scripts/rl-integration-generator/render_data_logger.py` when the file is missing.
-- **Do NOT** write into `mcp/harbor/data/*.yaml`. Registry mutation is out of scope here (use `scripts/registry/registry_submit.py` directly).
 - **Do NOT** overwrite `<repo>/harbor/configs/rl/<algo>.local.yaml` (those are user overrides — only render the canonical templates).
 - **Seed contract**: configs ship `seed: null` = each `train.py` run draws a fresh random seed (printed as `[train] seed=N`, written back into `cfg` so `resolved_config.yaml` / W&B record it). `seed=N` via Hydra override pins it. `eval.py` / `render.py` fall back to a fixed seed when `seed` is null (deterministic eval).
 - **Do NOT** dispatch other subagents. This subagent runs `render_rl_suite.py` + smoke; orchestration is the skill's job.

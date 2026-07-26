@@ -1,9 +1,10 @@
 # Threading — Implementation Spec
 
-- benchmark_family: isaaclab-manager-based
-- source_repo: symdex
-- source_path: /home/steven/code/symdex/symdex/env/tasks/Threading
-- embodiment: bimanual UF850 + dual Allegro hands
+- robot: Bimanual UF850 arms + dual Allegro hands (44 DoF)
+- simulator: IsaacLab (Isaac Sim, manager-based)
+
+> Source package name anonymized as `bimanual_suite`. This task comes from an internal
+> bimanual manipulation suite rather than a public repo; the design below is otherwise verbatim.
 
 > **Important design note (weights):** The reward is a fully authored 24-term shaping pipeline (all functions below), and the task registers to gym id `ThreadingEnv-v0`. Each term's weight is given in §6.
 
@@ -27,7 +28,7 @@ Key derived quantities:
 
 | Decision | Value |
 |---|---|
-| gym id / entry point | `ThreadingEnv-v0` → `symdex.env.tasks.Threading.env:ThreadingEnv`, `disable_env_checker=True`, kwarg `env_cfg_entry_point=ThreadingEnvCfg` |
+| gym id / entry point | `ThreadingEnv-v0` → `bimanual_suite.env.tasks.Threading.env:ThreadingEnv`, `disable_env_checker=True`, kwarg `env_cfg_entry_point=ThreadingEnvCfg` |
 | num_envs / env_spacing | 4096 / 3.0 |
 | right robot USD / init pos | `assets/ufactory850/uf850_allegro_right_colored.usd` / pos=(-0.274, -0.475, 0.01) |
 | left robot USD / init pos | `assets/ufactory850/uf850_allegro_left_colored.usd` / pos=(-0.274, 0.475, 0.01) |
@@ -47,11 +48,11 @@ Key derived quantities:
 
 **Code (registration).**
 ```python
-# symdex/env/__init__.py
+# bimanual_suite/env/__init__.py
 from .tasks.Threading.env_cfg import ThreadingEnvCfg
 gym.register(
     id="ThreadingEnv-v0",
-    entry_point="symdex.env.tasks.Threading.env:ThreadingEnv",
+    entry_point="bimanual_suite.env.tasks.Threading.env:ThreadingEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": ThreadingEnvCfg,
@@ -61,7 +62,7 @@ gym.register(
 
 **Code (env class — custom step / trackers).**
 ```python
-# symdex/env/tasks/Threading/env.py
+# bimanual_suite/env/tasks/Threading/env.py
 class ThreadingEnv(BaseEnv):
     is_vector_env: ClassVar[bool] = True
     metadata: ClassVar[dict[str, Any]] = {
@@ -92,7 +93,7 @@ class ThreadingEnv(BaseEnv):
 
 **Code (ThreadingEnvCfg + scene).** (verbatim)
 ```python
-# symdex/env/tasks/Threading/env_cfg.py
+# bimanual_suite/env/tasks/Threading/env_cfg.py
 FRAME_MARKER_SMALL_CFG = FRAME_MARKER_CFG.copy()
 FRAME_MARKER_SMALL_CFG.markers["frame"].scale = (0.10, 0.10, 0.10)
 
@@ -102,7 +103,7 @@ class ThreadingSceneCfg(BaseSceneCfg):
     robot = ArticulationCfg(
         prim_path="/World/envs/env_.*/Robot",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/ufactory850/uf850_allegro_right_colored.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/ufactory850/uf850_allegro_right_colored.usd",
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=True,
@@ -141,7 +142,7 @@ class ThreadingSceneCfg(BaseSceneCfg):
     robot_left = ArticulationCfg(
         prim_path="/World/envs/env_.*/Robot_left",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/ufactory850/uf850_allegro_left_colored.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/ufactory850/uf850_allegro_left_colored.usd",
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=True, max_depenetration_velocity=1000.0, max_linear_velocity=1000, max_angular_velocity=1000,
@@ -167,7 +168,7 @@ class ThreadingSceneCfg(BaseSceneCfg):
     object_0 = RigidObjectCfg(
         prim_path=f"/World/envs/env_.*/Object_0",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/object/cube_with_hole.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/object/cube_with_hole.usd",
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 kinematic_enabled=False, disable_gravity=False, max_linear_velocity=1000, max_angular_velocity=1000,
                 solver_position_iteration_count=16, solver_velocity_iteration_count=1, max_depenetration_velocity=1000.0,
@@ -182,7 +183,7 @@ class ThreadingSceneCfg(BaseSceneCfg):
     object_1 = RigidObjectCfg(
         prim_path=f"/World/envs/env_.*/Object_1",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/object/drill.usd",
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/object/drill.usd",
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 kinematic_enabled=False, disable_gravity=False, max_linear_velocity=1000, max_angular_velocity=1000,
                 solver_position_iteration_count=16, solver_velocity_iteration_count=1, max_depenetration_velocity=1000.0,
@@ -228,7 +229,7 @@ class ThreadingSceneCfg(BaseSceneCfg):
 
 **Code (shared base scene — table/ground/light + top-level cfg timing).**
 ```python
-# symdex/env/tasks/manager_based_env_cfg.py
+# bimanual_suite/env/tasks/manager_based_env_cfg.py
 @configclass
 class BaseSceneCfg(InteractiveSceneCfg):
     ground = AssetBaseCfg(prim_path="/World/ground", spawn=sim_utils.GroundPlaneCfg(),
@@ -238,7 +239,7 @@ class BaseSceneCfg(InteractiveSceneCfg):
     table: RigidObjectCfg = RigidObjectCfg(
         prim_path="/World/envs/env_.*/Table",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{symdex.LIB_PATH}/assets/object/table.usd", activate_contact_sensors=True,
+            usd_path=f"{bimanual_suite.LIB_PATH}/assets/object/table.usd", activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True, disable_gravity=False,
                 solver_position_iteration_count=16, solver_velocity_iteration_count=1, max_depenetration_velocity=10.0),
             scale=(1.0, 1.0, 1.0)),
@@ -321,7 +322,7 @@ action_scale = [0.05,0.05,0.05,0.05,0.05,0.05,
 
 **Code (action term — verbatim).**
 ```python
-# symdex/env/action_managers/actions.py
+# bimanual_suite/env/action_managers/actions.py
 class EMACumulativeRelativeJointPositionAction(JointPositionAction):
     def __init__(self, cfg, env):
         super().__init__(cfg, env)
@@ -643,7 +644,7 @@ def object_goal_distance_orient(env, command_name, object_id=0, axis="z", pos_su
     command = env.command_manager.get_command(command_name)
     des_orient_w = command[:, 3:]
     if axis is not None:
-        from symdex.utils.isaac_utils import get_angle_from_quat
+        from bimanual_suite.utils.isaac_utils import get_angle_from_quat
         target_axis = get_angle_from_quat(des_orient_w, axis=axis, normalize=True)
         cur_axis = get_angle_from_quat(object.data.root_quat_w, axis=axis, normalize=True)
         distance = torch.clamp(torch.sum(target_axis*cur_axis, dim=-1) * (2**0.5), min=0.0)
@@ -729,4 +730,4 @@ def cmd_success_bonus(env, command_names, num_success=0):
 
 **`<no DR>` in the task's own EventCfg.** `ThreadingEventCfg` wires only `mode="reset"` terms (robot-joint + object placement, §3) — there are no randomization/`interval`/`startup` DR EventTerms and no observation-noise applied at runtime (`enable_corruption=False`).
 
-Domain-randomization **infrastructure does exist** at the `BaseEnv` level but is entirely driven by an external hydra config (`env.cfg.hydra_cfg.task.randomize`) via `symdex.utils.domain_random.DomainRandomizer`, not by this task's config. `BaseEnv.update_randomization(success_rate)` can, when the hydra `randomize` block enables them, curriculum-randomize: `object_mass`, `static/dynamic_friction`+`restitution` (material), `action_scale[:6]` (arm), per-term `energy_penalty`/`collision_penalty` reward weights, `external_force_torque`, and `reset_pose` ranges (via `randomize_mass` / `randomize_material` / `randomize_rew_weight` / `randomize_external_force_torque` / `randomize_reset_pose` in `randomization_mdps.py`). Since none of this is instantiated in `ThreadingEnvCfg`/`ThreadingEventCfg`, the task ships with **DR: no**.
+Domain-randomization **infrastructure does exist** at the `BaseEnv` level but is entirely driven by an external hydra config (`env.cfg.hydra_cfg.task.randomize`) via `bimanual_suite.utils.domain_random.DomainRandomizer`, not by this task's config. `BaseEnv.update_randomization(success_rate)` can, when the hydra `randomize` block enables them, curriculum-randomize: `object_mass`, `static/dynamic_friction`+`restitution` (material), `action_scale[:6]` (arm), per-term `energy_penalty`/`collision_penalty` reward weights, `external_force_torque`, and `reset_pose` ranges (via `randomize_mass` / `randomize_material` / `randomize_rew_weight` / `randomize_external_force_torque` / `randomize_reset_pose` in `randomization_mdps.py`). Since none of this is instantiated in `ThreadingEnvCfg`/`ThreadingEventCfg`, the task ships with **DR: no**.

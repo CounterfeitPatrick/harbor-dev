@@ -1,9 +1,9 @@
-"""Unit: every scripts/*.py + mcp/*.py is syntactically valid Python."""
+"""Unit: every scripts/*.py is syntactically valid Python."""
 import pytest
 
 from _pluginmeta import ROOT
 
-PY_FILES = sorted(ROOT.glob("scripts/**/*.py")) + sorted(ROOT.glob("mcp/**/*.py"))
+PY_FILES = sorted(ROOT.glob("scripts/**/*.py"))
 
 
 @pytest.mark.parametrize("path", PY_FILES, ids=lambda p: p.relative_to(ROOT).as_posix())

@@ -1,13 +1,7 @@
 # PickSingleYCB-v1 — Implementation Spec
 
-- benchmark_family: maniskill (SAPIEN `BaseEnv` subclass, `@register_env`)
-- source_repo: ManiSkill
-- probed_from_commit: 027f328c62530259056ab1f13eddca3a6bc47bfe
-- probed_at: 2026-06-02T19:11:01Z
-- canonical_build: not captured (verified via source read) — `gym.make('PickSingleYCB-v1')` aborts on a fresh host because the `ycb` asset set is not yet downloaded and ManiSkill prompts interactively (`EOFError` under `-c`). Analytic shapes (state obs_mode):
-  - `observation_space = Box(-inf, inf, (45,), float32)`
-  - `action_space = Box(-1.0, 1.0, (8,), float32)`
-- source_file: `mani_skill/envs/tasks/tabletop/pick_single_ycb.py` (full env, lines 1–260)
+- robot: Franka Panda with wrist camera (`panda_wristcam`; Panda / Fetch also supported)
+- simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 
 ---
 
