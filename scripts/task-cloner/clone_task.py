@@ -151,6 +151,71 @@ def resolve_cfg(repo: Path, register_file: Path, entry_point: str):
 
 
 # ---------------------------------------------------------------------------
+# layout discovery
+#
+# A task's editable surface is NOT always beside its registered cfg. Real IsaacLab
+# manipulation tasks split across two levels:
+#
+#     stack_cube/
+#     ├── stack_cube_env_cfg.py        <- RewardsCfg / ActionsCfg / … live HERE
+#     ├── mdp/rewards.py               <- reward functions live HERE
+#     └── config/franka/
+#         └── joint_pos_env_cfg.py     <- the REGISTERED cfg: a thin robot subclass
+#
+# Copying only the registered file leaves both clones sharing the family's mdp and
+# RewardsCfg — the exact collision cloning exists to prevent, with no error raised.
+# ---------------------------------------------------------------------------
+
+# The cfg class each surface name edits, used to find which file defines it.
+_SURFACE_CLASS = {
+    "reward": "RewardsCfg",
+    "actions": "ActionsCfg",
+    "observations": "ObservationsCfg",
+    "events": "EventCfg",
+    "terminations": "TerminationsCfg",
+}
+
+
+def find_mdp_package(cfg_file: Path, repo: Path) -> Path | None:
+    """Nearest ancestor directory holding an `mdp/` package, walking up from the cfg."""
+    d = cfg_file.parent
+    while True:
+        cand = d / "mdp"
+        if (cand / "__init__.py").is_file():
+            return cand
+        if d == repo or d.parent == d:
+            return None
+        d = d.parent
+
+
+def find_surface_files(cfg_file: Path, task_root: Path, surface: list[str]) -> list[Path]:
+    """Files under *task_root* (besides the registered cfg) that define a surface class."""
+    wanted = {_SURFACE_CLASS[s] for s in surface if s in _SURFACE_CLASS}
+    if not wanted:
+        return []
+    hits = []
+    for p in sorted(task_root.glob("*.py")):
+        if p == cfg_file:
+            continue
+        text = p.read_text(encoding="utf-8", errors="ignore")
+        if any(re.search(rf"^class {n}\b", text, re.M) for n in wanted):
+            hits.append(p)
+    return hits
+
+
+def rewire_mdp(body: str, mdp_name: str) -> str:
+    """Point relative mdp imports at the copy, at ANY dot depth (`.`, `...`, …)."""
+    body = re.sub(r"\bfrom (\.+) import mdp\b", rf"from \1 import {mdp_name} as mdp", body)
+    body = re.sub(r"\bfrom (\.+)mdp\b", rf"from \1{mdp_name}", body)
+    return body
+
+
+def rewire_module(body: str, stem: str, new_stem: str) -> str:
+    """Point a relative import of a sibling/ancestor module at its copy."""
+    return re.sub(rf"\bfrom (\.+){re.escape(stem)}\b", rf"from \1{new_stem}", body)
+
+
+# ---------------------------------------------------------------------------
 # create
 # ---------------------------------------------------------------------------
 
@@ -163,33 +228,47 @@ def op_create(repo: Path, source_id: str, dest_id: str, surface: list[str],
     created: list[Path] = []
     created_dirs: list[Path] = []
     try:
-        # 1. Copy the task-local mdp package (holds the surface's reward/action/
-        #    obs modules) so edits to the clone never reach the source. Rewire is
-        #    `.mdp` -> `.mdp_<suffix>` in the cloned cfg.
-        cfg_dir = cfg["file"].parent
-        mdp_src = cfg_dir / "mdp"
+        # 1. Copy the task-local mdp package, found by walking UP from the registered
+        #    cfg — it sits at the task-package root, which for `config/<robot>/` layouts
+        #    is two levels above the cfg, not beside it.
+        mdp_src = find_mdp_package(cfg["file"], repo)
         mdp_dst_name = f"mdp_{suffix}"
         copied_mdp = False
-        if (mdp_src / "__init__.py").exists():
-            mdp_dst = cfg_dir / mdp_dst_name
+        task_root = None
+        if mdp_src is not None:
+            task_root = mdp_src.parent
+            mdp_dst = task_root / mdp_dst_name
             shutil.copytree(mdp_src, mdp_dst,
                             ignore=shutil.ignore_patterns("__pycache__"))
             created.extend(sorted(mdp_dst.rglob("*.py")))
             created_dirs.append(mdp_dst)
             copied_mdp = True
 
-        # 2. Copy the cfg file -> dest-named sibling; rename the cfg class; rewire.
-        new_cfg_name = f"{cfg['file'].stem}_{suffix}.py"
-        new_cfg = cfg_dir / new_cfg_name
+        # 2. Copy every OTHER file defining a surface class (the family base cfg that
+        #    holds RewardsCfg & friends). Without this the clone inherits the source's
+        #    reward by subclassing it, and two slots edit one file.
+        surface_files = find_surface_files(cfg["file"], task_root, surface) if task_root else []
+        copied_surface = {}
+        for src in surface_files:
+            dst = src.with_name(f"{src.stem}_{suffix}.py")
+            body = src.read_text(encoding="utf-8")
+            if copied_mdp:
+                body = rewire_mdp(body, mdp_dst_name)
+            dst.write_text(body, encoding="utf-8")
+            created.append(dst)
+            copied_surface[src.stem] = dst.stem
+
+        # 3. Copy the registered cfg -> dest-named sibling; rename its class; rewire its
+        #    imports to the copies made above.
+        cfg_dir = cfg["file"].parent
+        new_cfg = cfg_dir / f"{cfg['file'].stem}_{suffix}.py"
         new_cls = f"{cfg['class']}_{suffix}"
         body = cfg["file"].read_text(encoding="utf-8")
         body = re.sub(rf"\b{re.escape(cfg['class'])}\b", new_cls, body)
         if copied_mdp:
-            # `from . import mdp` -> `from . import mdp_<suffix> as mdp` (keeps the
-            # `mdp.` call sites), and `from .mdp[...] import ...` -> the copy.
-            body = re.sub(r"\bfrom \. import mdp\b",
-                          f"from . import {mdp_dst_name} as mdp", body)
-            body = re.sub(r"\bfrom \.mdp\b", f"from .{mdp_dst_name}", body)
+            body = rewire_mdp(body, mdp_dst_name)
+        for stem, new_stem in copied_surface.items():
+            body = rewire_module(body, stem, new_stem)
         new_cfg.write_text(body, encoding="utf-8")
         created.append(new_cfg)
 
@@ -200,16 +279,30 @@ def op_create(repo: Path, source_id: str, dest_id: str, surface: list[str],
             f.write(anchor)
 
         # --- deterministic clone-contract asserts (build/rollout stay for smokes) ---
+        #
+        # SC2 independence FAILS CLOSED. These checks used to sit behind `if copied_mdp:`,
+        # so a layout where the mdp package was not found produced zero checks and still
+        # reported "independence": "pass" — a clone that silently shared its reward with
+        # every sibling. An unverifiable clone is a failed clone.
         assert new_cfg.exists(), "cloned cfg not written"
-        cloned_text = new_cfg.read_text(encoding="utf-8")
-        if copied_mdp:
-            # SC2 independence: the cloned cfg imports the COPIED surface, and no
-            # residual reference to the source's shared .mdp remains.
-            assert mdp_dst_name in cloned_text, "cloned cfg not rewired to copied mdp"
-            assert re.search(r"\bfrom \.mdp\b", cloned_text) is None, \
-                "cloned cfg still imports the source's .mdp"
-            assert re.search(r"\bfrom \. import mdp\b", cloned_text) is None, \
-                "cloned cfg still imports the source's mdp package"
+        assert mdp_src is not None, (
+            f"no mdp package found above {cfg['file']} — cannot give this clone its own "
+            f"editable surface, so it would share the source's. Refusing to report success."
+        )
+        for name in (_SURFACE_CLASS[s] for s in surface if s in _SURFACE_CLASS):
+            defined = any(re.search(rf"^class {name}\b", p.read_text(encoding="utf-8"), re.M)
+                          for p in created if p.suffix == ".py")
+            assert defined, (
+                f"surface '{name}' is not defined in any cloned file — the clone would "
+                f"inherit it from the source and edits would leak across slots"
+            )
+        # No cloned file OUTSIDE the copied mdp package may still reach the source's mdp.
+        for p in [c for c in created if c.suffix == ".py" and mdp_dst_name not in c.parts]:
+            text = p.read_text(encoding="utf-8")
+            assert re.search(r"\bfrom \.+mdp\b", text) is None, \
+                f"{p.name} still imports the source's .mdp"
+            assert re.search(r"\bfrom \.+ import mdp\b", text) is None, \
+                f"{p.name} still imports the source's mdp package"
         assert dest_id in reg["file"].read_text(encoding="utf-8"), "dest not registered"
     except BaseException:
         _rollback(created_dirs, created, reg, dest_id)
@@ -223,7 +316,11 @@ def op_create(repo: Path, source_id: str, dest_id: str, surface: list[str],
         "cloned_files": [str(p.relative_to(repo)) for p in created],
         "cloned_dirs": [str(p.relative_to(repo)) for p in created_dirs],
         "registration": {"file": str(reg["file"].relative_to(repo)), "anchor": anchor},
-        "reward_path": str(new_cfg.relative_to(repo)),
+        # Where the candidate actually edits the reward: the cloned file defining
+        # RewardsCfg (the family base for config/<robot>/ layouts), not the registered
+        # subclass — plus the cloned reward functions.
+        "reward_path": str(_reward_path(created, repo, new_cfg)),
+        "mdp_path": str((task_root / mdp_dst_name).relative_to(repo)) if copied_mdp else None,
     }
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
@@ -234,6 +331,16 @@ def op_create(repo: Path, source_id: str, dest_id: str, surface: list[str],
         "manifest": str(manifest_path),
         "checks": {"id_rule": "pass", "independence": "pass", "registered": "pass"},
     }
+
+
+def _reward_path(created: list[Path], repo: Path, fallback: Path) -> Path:
+    """The cloned file defining RewardsCfg — where a candidate writes its reward."""
+    for p in created:
+        if p.suffix != ".py":
+            continue
+        if re.search(r"^class RewardsCfg\b", p.read_text(encoding="utf-8"), re.M):
+            return p.relative_to(repo)
+    return fallback.relative_to(repo)
 
 
 def _build_register_entry(reg, source_id, dest_id, cfg, new_cfg, new_cls) -> str:

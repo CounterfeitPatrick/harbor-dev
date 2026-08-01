@@ -31,9 +31,16 @@ def _mod():
 
 M = _mod()
 
+# A FLAT-layout task: the registered cfg defines its own surface classes beside mdp/.
+# (It must actually define RewardsCfg — an earlier version of this fixture only referenced
+# it, which let a clone that copied no reward at all look correct.)
 CFG_PY = '''\
 from . import mdp
 from .mdp import rewards
+
+@configclass
+class RewardsCfg:
+    reach = RewTerm(func=mdp.reach, weight=1.0)
 
 @configclass
 class LiftEnvCfg(ManagerBasedRLEnvCfg):
@@ -62,6 +69,158 @@ def repo(tmp_path):
     (pkg / "mdp" / "__init__.py").write_text("from .rewards import *\n")
     (pkg / "mdp" / "rewards.py").write_text("def reach(env):\n    return 0.0\n")
     return tmp_path
+
+
+# --- the layout that actually ships ------------------------------------------
+#
+# Real IsaacLab manipulation tasks split across two levels: the family base holds
+# RewardsCfg and sits beside mdp/, while the REGISTERED cfg is a thin robot subclass two
+# directories down. The flat fixture above is the layout the cloner originally assumed —
+# it passed while producing clones that shared the source's reward, because the SC2
+# asserts were skipped when no mdp package was found. Found by running against a real
+# repo, not by this suite.
+
+BASE_CFG_PY = '''\
+from . import mdp
+
+@configclass
+class ActionsCfg:
+    pass
+
+@configclass
+class RewardsCfg:
+    reach = RewTerm(func=mdp.reach, weight=1.0)
+
+@configclass
+class StackCubeEnvCfg(ManagerBasedRLEnvCfg):
+    rewards: RewardsCfg = RewardsCfg()
+'''
+
+ROBOT_CFG_PY = '''\
+from ... import mdp
+from ...stack_cube_env_cfg import StackCubeEnvCfg
+
+@configclass
+class FrankaStackCubeEnvCfg(StackCubeEnvCfg):
+    pass
+'''
+
+ROBOT_REGISTER_PY = '''\
+import gymnasium as gym
+from . import joint_pos_env_cfg
+
+gym.register(
+    id="IsaacLab-Franka-StackCube",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    kwargs={"env_cfg_entry_point": f"{__name__}.joint_pos_env_cfg:FrankaStackCubeEnvCfg"},
+    disable_env_checker=True,
+)
+'''
+
+
+@pytest.fixture
+def nested_repo(tmp_path):
+    """stack_cube/{stack_cube_env_cfg.py, mdp/} + config/franka/joint_pos_env_cfg.py"""
+    root = tmp_path / "source" / "tasks" / "stack_cube"
+    (root / "mdp").mkdir(parents=True)
+    (root / "config" / "franka").mkdir(parents=True)
+    (root / "__init__.py").write_text("")
+    (root / "stack_cube_env_cfg.py").write_text(BASE_CFG_PY)
+    (root / "mdp" / "__init__.py").write_text("from .rewards import *\n")
+    (root / "mdp" / "rewards.py").write_text("def reach(env):\n    return 0.0\n")
+    (root / "config" / "__init__.py").write_text("")
+    (root / "config" / "franka" / "__init__.py").write_text(ROBOT_REGISTER_PY)
+    (root / "config" / "franka" / "joint_pos_env_cfg.py").write_text(ROBOT_CFG_PY)
+    return tmp_path
+
+
+def _create_nested(repo, dest="IsaacLab-Franka-StackCube-rslot0"):
+    manifest = repo / "manifest.json"
+    r = subprocess.run(
+        [sys.executable, str(SRC), "--op", "create", "--repo", str(repo),
+         "--source", "IsaacLab-Franka-StackCube", "--dest", dest,
+         "--surface", "reward,actions", "--manifest", str(manifest)],
+        capture_output=True, text=True)
+    return r, manifest
+
+
+def test_nested_layout_copies_the_file_that_defines_the_reward(nested_repo):
+    """The registered cfg is a subclass; RewardsCfg lives in the family base. Copying
+    only the registered file leaves the clone inheriting the source's reward."""
+    r, _ = _create_nested(nested_repo)
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout)
+    root = nested_repo / "source" / "tasks" / "stack_cube"
+
+    assert (root / "stack_cube_env_cfg_rslot0.py").is_file(), "family base not cloned"
+    assert "RewardsCfg" in (root / "stack_cube_env_cfg_rslot0.py").read_text()
+    assert out["reward_path"].endswith("stack_cube_env_cfg_rslot0.py"), \
+        "reward_path must point at the file defining RewardsCfg, not the robot subclass"
+
+
+def test_nested_layout_finds_mdp_two_levels_up(nested_repo):
+    r, _ = _create_nested(nested_repo)
+    assert r.returncode == 0, r.stderr
+    root = nested_repo / "source" / "tasks" / "stack_cube"
+    assert (root / "mdp_rslot0" / "rewards.py").is_file(), \
+        "mdp/ sits at the task root, not beside the registered cfg"
+
+
+def test_nested_layout_rewires_imports_at_every_dot_depth(nested_repo):
+    r, _ = _create_nested(nested_repo)
+    assert r.returncode == 0, r.stderr
+    root = nested_repo / "source" / "tasks" / "stack_cube"
+
+    base = (root / "stack_cube_env_cfg_rslot0.py").read_text()
+    assert "from . import mdp_rslot0 as mdp" in base
+
+    robot = (root / "config" / "franka" / "joint_pos_env_cfg_rslot0.py").read_text()
+    assert "from ... import mdp_rslot0 as mdp" in robot, "3-dot mdp import not rewired"
+    assert "from ...stack_cube_env_cfg_rslot0 import" in robot, \
+        "the clone still subclasses the SOURCE's base cfg"
+
+
+def test_nested_clone_is_genuinely_independent(nested_repo):
+    """The property the whole mechanism exists for: editing the clone cannot reach the
+    source. Two parallel candidates must not share a reward file."""
+    r, _ = _create_nested(nested_repo)
+    assert r.returncode == 0, r.stderr
+    root = nested_repo / "source" / "tasks" / "stack_cube"
+
+    (root / "mdp_rslot0" / "rewards.py").write_text("def reach(env):\n    return 999.0\n")
+    (root / "stack_cube_env_cfg_rslot0.py").write_text(
+        (root / "stack_cube_env_cfg_rslot0.py").read_text().replace("weight=1.0", "weight=42.0"))
+
+    assert "999.0" not in (root / "mdp" / "rewards.py").read_text()
+    assert "weight=42.0" not in (root / "stack_cube_env_cfg.py").read_text()
+
+
+def test_independence_fails_closed_when_no_mdp_exists(nested_repo):
+    """The defect that shipped: with no mdp package found, every SC2 assert was skipped
+    and the verdict still said pass. An unverifiable clone must be a FAILED clone."""
+    root = nested_repo / "source" / "tasks" / "stack_cube"
+    __import__("shutil").rmtree(root / "mdp")
+
+    r, manifest = _create_nested(nested_repo)
+    assert r.returncode != 0, "a clone that cannot be made independent must not report pass"
+    assert "mdp" in (r.stderr + r.stdout).lower()
+    assert not manifest.exists(), "wrote a manifest for a clone it could not verify"
+
+
+def test_nested_delete_restores_the_tree(nested_repo):
+    root = nested_repo / "source" / "tasks" / "stack_cube"
+    before = {p: p.read_bytes() for p in sorted(root.rglob("*.py"))}
+
+    r, manifest = _create_nested(nested_repo)
+    assert r.returncode == 0, r.stderr
+    d = subprocess.run(
+        [sys.executable, str(SRC), "--op", "delete", "--repo", str(nested_repo),
+         "--source", "IsaacLab-Franka-StackCube", "--manifest", str(manifest)],
+        capture_output=True, text=True)
+    assert d.returncode == 0, d.stderr
+
+    assert {p: p.read_bytes() for p in sorted(root.rglob("*.py"))} == before
+    assert not (root / "mdp_rslot0").exists()
 
 
 def _create(repo, dest="Isaac-Lift-Cube-Franka-rslot0-v0"):
