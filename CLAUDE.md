@@ -27,11 +27,11 @@ L2   ENTRY POINTS                 — User-facing surfaces. commands/<name>.md a
                                     /harbor:<name> and support the same frontmatter. Skills
                                     add only a per-entry-point directory for supporting files.
                                     harbor uses commands/ throughout: its supporting files
-                                    (references/, templates/, experiences/) are shared across
+                                    (knowledge/references/, knowledge/templates/, knowledge/experiences/) are shared across
                                     entry points, not owned by one.
 L3   SUBAGENTS (roles)            — agents/<name>.md   (fresh context, isolated agent loop)
 L4   TOOLS (deterministic)        — scripts/<owner>/*.py + Bash + Read/Write/Edit
-L5   SHARED KNOWLEDGE (read-only) — templates/, references/, experiences/
+L5   SHARED KNOWLEDGE (read-only) — knowledge/templates/, knowledge/references/, knowledge/experiences/
 L6a  WORKSPACE PROCESS LOGS       — <repo>/harbor/<agent>/history.md   (per-run, append-only, inside each agent's subdir)
 L6b  WORKSPACE RECEIPTS           — <repo>/harbor/<agent>/{install,history,benchmark,rl-integration}.md  (end-of-run user summary, in each agent's subdir)
 ```
@@ -77,7 +77,7 @@ Commands are grouped by area via filename prefix (Claude Code commands have no t
 
 **reward — reward engineering**
 - `commands/reward-tune.md` — `/harbor:reward-tune task=<id> [algorithm=<algo>] [pool_size=N] [gpus=N] [mode=local|cluster] [on_success=cancel|drain] [success_threshold=0.5] [timesteps_per_iter=N]` — ASYNC fixed-pool reward tuning. A **thin orchestrator**: the main agent does pre-flight (incl. the ≥ 2.1.219 nesting assert) + (standalone) base selection + every user-facing question, then dispatches **`reward-tuning-agent`** (DESIGN + DECIDE), which dispatches one **`reward-candidate-agent`** per candidate (IMPLEMENT + train/render + SCORE). Each candidate is a bounded §1–§5 task delta PLUS a complete reward, so the search covers both. Keeps `pool_size` candidates in flight — capped by `gpus` in local mode — loops until `success_rate ≥ success_threshold`, cancels in-flight, then PROMOTES the winning design onto the source task and re-verifies it with that winner's own smoke set. Isolation follows the effective pool: sequential over a `base/` snapshot at 1, one slot clone per candidate above 1. Findings shared via `<task_dir>/memories.jsonl`.
-- `commands/reward-add-log.md` — `/harbor:reward-add-log` adds a per-term reward-visibility wrapper to `scripts/_<family>_env.py` (does NOT modify env reward); the sanity-check smoke asserts `composer(info["detailed_reward"].values()) == env_reward` per step, where composer ∈ {"sum","product"} is per-task. Assets at `scripts/reward-add-log/` + `templates/reward-add-log/`.
+- `commands/reward-add-log.md` — `/harbor:reward-add-log` adds a per-term reward-visibility wrapper to `scripts/_<family>_env.py` (does NOT modify env reward); the sanity-check smoke asserts `composer(info["detailed_reward"].values()) == env_reward` per step, where composer ∈ {"sum","product"} is per-task. Assets at `scripts/reward-add-log/` + `knowledge/templates/reward-add-log/`.
 
 **rl — train / eval / policy**
 - `commands/rl-run.md` — `/harbor:rl-run task=<id> algorithm=<algo> [k=v ...]` — single-trial training; wraps `harbor/scripts/rl/<impl>/train.py` against `<repo>/.venv/bin/python`
@@ -86,7 +86,7 @@ Commands are grouped by area via filename prefix (Claude Code commands have no t
 - `commands/rl-visualize.md` — `/harbor:rl-visualize checkpoint=<path> [k=v ...]` — open headed GLFW viewer; requires `$DISPLAY`
 - `commands/rl-sweep.md` — `/harbor:rl-sweep task=<list> algorithm=<list> [k=v1,v2,...]` — Cartesian-product sweep; one sub-agent per trial; results under `harbor/rl_experiments/sweeps/<sweep_id>/`
 - `commands/rl-tune.md` — `/harbor:rl-tune task=<list> algorithm=<list> [mode=local|cluster]` — Cartesian-product grid TUNING (open-ended hyperparameter loop); one rl-tuning-agent subagent per cell; tune-level history.md + final cross-cell summary under `harbor/rl_experiments/tunes/<tune_id>/`. One-time scaffolding lives in the `rl-integration-generator` subagent (dispatched directly).
-- `commands/rl-add-trick.md` — `/harbor:rl-add-trick <trick> [algorithm=<algo>]` — apply an RL training trick (e.g. `obs_rms_jax`, `reward_norm_jax`) to a chosen algorithm config in-place (reads the `templates/rl-tricks/` library)
+- `commands/rl-add-trick.md` — `/harbor:rl-add-trick <trick> [algorithm=<algo>]` — apply an RL training trick (e.g. `obs_rms_jax`, `reward_norm_jax`) to a chosen algorithm config in-place (reads the `knowledge/templates/rl-tricks/` library)
 - `commands/rl-list-tricks.md` — `/harbor:rl-list-tricks` — list available RL training tricks with descriptions + applicability (read-only)
 - `commands/rl-add-log.md` — `/harbor:rl-add-log` — canonical metric-key contract (PPO/SAC/TD3 + per-reward-term + SB3 remap) for ALL `harbor/scripts/rl/<impl>/` algorithms; the binding reference `rl-integration-generator` follows when authoring/patching algorithm training code
 
@@ -95,7 +95,7 @@ Commands are grouped by area via filename prefix (Claude Code commands have no t
 - `commands/wandb-setup.md` — `/harbor:wandb-setup` — inspect / re-login / switch the host's W&B account
 - `commands/reset-workspace.md` — `/harbor:reset-workspace repo=<path> [clean_inbenchmark_tasks=true|false]` — **destructive**: remove ALL plugin output from a benchmark repo (`harbor/`, `.venv/`, `scripts/` carve-outs, caches) and (default) `git reset --hard` + `git clean -fdx` it back to its original cloned HEAD. Runs in a subagent with a dry-run + confirm gate and a git-based smoke (incl. hidden / ignored files) that must fully pass before reporting success
 - `commands/test.md` — `/harbor:test [layers=1,2,3] [repo=<path>] [task=<id>] [from_spec=<path>]` — plugin test runner. L1 (contract) + L2 (unit) are deterministic `pytest tests/{contract,unit}` (main thread). L3 is an e2e pipeline (subagent) driving the task-create→train→reset chain module-by-module on an isolated clean benchmark **worktree**, using a benchmark-agnostic stack-two-cube fixture (create mode) with §6 bounded to one iteration (`success_threshold=0`). Resumable Docker-layer style via `scripts/test/pipeline.py` (per-module fingerprints → re-run only changed/failed stages onward); append-only `history.md`; fail-fast with suggested fix; skips dr-generator + headless modules
-- `commands/update-experience.md` — `/harbor:update-experience target=<name> (experience="..." | file=<path>)` — append a numbered bullet to an agent ledger (`reward-tuning-agent`/`task-generator`/`dr-generator`/`rl-tuning-agent`; hand-written bullets capped at 5 lines), OR file a `/harbor:probe-task` spec into the right `experiences/task-library/` embodiment folder (classify manipulation vs humanoid/quadrupedal locomotion; short `<task>-<repo>.md` name, `-vN` on collision)
+- `commands/update-experience.md` — `/harbor:update-experience target=<name> (experience="..." | file=<path>)` — append a numbered bullet to an agent ledger (`reward-tuning-agent`/`task-generator`/`dr-generator`/`rl-tuning-agent`; hand-written bullets capped at 5 lines), OR file a `/harbor:probe-task` spec into the right `knowledge/experiences/task-library/` embodiment folder (classify manipulation vs humanoid/quadrupedal locomotion; short `<task>-<repo>.md` name, `-vN` on collision)
 
 ### L3 — Subagents (heavy, multi-step; main thread dispatches; depth ≤ 2)
 
@@ -111,13 +111,47 @@ Commands are grouped by area via filename prefix (Claude Code commands have no t
 
 ### L4 — Tools (deterministic CLIs)
 
+harbor's tools are plain CLI scripts invoked with Bash — deliberately, not MCP. The heavy
+operations are backgrounded GPU jobs whose state must survive a killed agent or a resumed
+session, which is what files + exit codes give you and an in-process server does not. Nothing
+validates a script's shape for you, so four rules hold, enforced by
+`tests/contract/test_script_conventions.py`:
+
+1. **`argparse`**, so `--help` works and an agent can discover the interface.
+2. **JSON to stdout** whenever an agent parses the output.
+3. **exit 0 = the tool ran; non-zero = bad input, it could not run at all.**
+4. **Emit a verdict object even when the answer is "it failed."**
+
+Rules 3–4 are the subtle pair. `score_iter.py` is the worked example: no `metrics.jsonl` →
+exit 0 with `{"success_rate": null, "gate": "no_metrics"}` (the tool worked; the answer is
+"ungradable"), while a missing `design.json` exits non-zero (the caller passed something
+broken). Backwards, and an ungradable candidate reads as a broken script.
+
+**The tool layer is host-independent.** A script finds its own tree from `__file__`, never
+from `CLAUDE_PLUGIN_ROOT` — that env var is ambient state a stale or foreign value would
+silently win, pointing a script at another plugin's tree, and nothing outside Claude Code
+sets it. Callers needing a different root pass an explicit `--plugin-root`. This is what lets
+`scripts/` run under Codex, from a bare shell, or in CI unchanged. (The `${CLAUDE_PLUGIN_ROOT}`
+string still appears in markdown and docstrings — that is the L2/L3 layer's path syntax, which
+Claude Code expands; it is the runtime lookup that is banned.)
+
+**Coverage is a ratchet.** Every script needs a unit test; `UNTESTED_DEBT` in that contract
+test may only shrink, and scripts that genuinely cannot run in CI (need a sim, a venv, or the
+network) sit in `UNTESTABLE` with a stated reason.
+
 ```
 scripts/
-  common/                    resolve_suite.py  (canonical rl-suite-spec.json reader: slug / scripts_dir / parallel / config_name — single source so the key path can't drift across callers)
+  common/                    run_with_sentinel.sh  (completion is the ARTIFACT, not the
+                             exit code: poll for a sentinel, grace, then tear down the
+                             process group — a GPU-sim trainer killed AFTER its checkpoint
+                             is a success)
+                             resolve_suite.py  (canonical rl-suite-spec.json reader: slug / scripts_dir / parallel / config_name — single source so the key path can't drift across callers)
   test/                      pipeline.py  (/harbor:test L3 stage engine: Docker-layer fingerprint cache → plan/mark/stages for resumable module-by-module e2e)
   dependency-generator/      render_uv.py, smoke_uv.py
   benchmark-generator/ capture_spec.py, list_tasks.py, render_task_overview.py
   rl-integration-generator/ render_rl_suite.py, render_data_logger.py, discover_rl_tasks.py,
+                      check_trial_artifacts.py (the deterministic half of the rl-suite
+                      smoke: T4 curves + T5 TB/jsonl, and trial-dir resolution from a log),
                       discover_algorithms.py, validate_rl_suite.py
   reward-tuning-agent/ curve_health.py  (compact health snapshot of a LIVE reward-tune
                       metrics.jsonl → evidence + advisory concern flags for the candidate's
@@ -140,8 +174,10 @@ scripts/
 
 ### L5 — Shared knowledge (read-only)
 
+All three L5 kinds live under one root — `knowledge/{templates,references,experiences}/` — because they are one thing in this model: read-only material an agent loads on demand. Component dirs (`commands/`, `agents/`, `hooks/`, `scripts/`) stay at the plugin root, where Claude Code scans for them by default.
+
 ```
-templates/
+knowledge/templates/
   dependency-generator/         install.md.template
   benchmark-generator/   benchmark.md, history.md, task_overview.md,
                          task-implementation.md (read by /harbor:task-create),
@@ -196,7 +232,7 @@ templates/
   rl-sweep/              launch.sh{,.isaaclab}.template (SLURM trial launchers for /harbor:rl-sweep)
   plot/                  spec.example.yaml (example /harbor:plot spec)
 
-references/
+knowledge/references/
   task-library-search.md  cross-cutting: search the task-library and return the single most-relevant prior task BEFORE designing (read by /harbor:task-create Step 1.5, /harbor:reward-tune main agent)
   adapt-first.md          cross-cutting: how the authoring agents build from the selected base — read the ledger, port everything / change only overrides, document the delta (read by task-generator, reward-tune main agent, dr-generator)
   common/agent-conventions.md  cross-cutting: shared conventions (smoke pass-criterion, diagnose-and-retry, process-log discipline, English-only / no-nested-dispatch) for the authoring subagents — each agent's body overrides the generic shape with its own specifics
@@ -228,7 +264,7 @@ references/
                            once-per-episode reset rule),
                          smoke-contract (what S7 verifies + substitutions)
 
-experiences/             cross-run heuristic ledgers (numbered, append-only)
+knowledge/experiences/             cross-run heuristic ledgers (numbered, append-only)
   rl-tuning-agent/       tuning-experience.md
   task-generator/        task-experience.md
   reward-tuning-agent/   reward-experience.md

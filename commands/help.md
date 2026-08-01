@@ -79,6 +79,6 @@ Invoke via `Task('<agent-name>')`. Dispatch depth is capped at 2: the main threa
 - `README.md` — architecture, layout, prerequisites, contribution flow.
 - `CLAUDE.md` — 6-layer mental model + "where things live".
 - `agents/<name>.md` — each subagent's contract, phase breakdown, exit-code semantics.
-- `references/{env,benchmark,rl-integration}-generator/` — decision matrices, smoke contracts, install-plan schema, RL suite spec, decision protocol.
+- `knowledge/references/{env,benchmark,rl-integration}-generator/` — decision matrices, smoke contracts, install-plan schema, RL suite spec, decision protocol.
 
 <!-- END STATIC -->

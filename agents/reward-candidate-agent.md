@@ -20,7 +20,7 @@ distinguishable all the way into the verdict.
 
 ## Inputs / output
 
-`${CLAUDE_PLUGIN_ROOT}/references/reward-tuning-agent/candidate-contract.md` — the request
+`${CLAUDE_PLUGIN_ROOT}/knowledge/references/reward-tuning-agent/candidate-contract.md` — the request
 you receive, the `design.json` shape, the verdict you return, the boundary rule, and the
 write scopes. Read it first; this body does not restate it.
 
@@ -34,25 +34,25 @@ flight and the designer has already restored them from `base/`. Shared loop file
 
 Always:
 
-- `${CLAUDE_PLUGIN_ROOT}/references/reward-tuning-agent/isaaclab-reward-reference.md` — composer-by-family, RewTerm idiom, common `mdp.*` blocks, `info["detailed_reward"]` shape.
-- `${CLAUDE_PLUGIN_ROOT}/references/reward-tuning-agent/smoke-contract.md` — what S6 verifies + its substitutions.
-- `${CLAUDE_PLUGIN_ROOT}/references/common/agent-conventions.md` — smoke pass-criterion, `{{NUM_ENVS}}` + indexing, diagnose-and-retry, English-only.
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/reward-tuning-agent/isaaclab-reward-reference.md` — composer-by-family, RewTerm idiom, common `mdp.*` blocks, `info["detailed_reward"]` shape.
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/reward-tuning-agent/smoke-contract.md` — what S6 verifies + its substitutions.
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/common/agent-conventions.md` — smoke pass-criterion, `{{NUM_ENVS}}` + indexing, diagnose-and-retry, English-only.
 
 **Only when `design.task_changes.sections` is non-empty** — one file per section you touch,
 read as you enter it, and nothing for the sections you don't:
 
 | Section in `sections` | Read |
 |---|---|
-| 1 | `${CLAUDE_PLUGIN_ROOT}/references/task-sections/s1-scene.md` |
-| 2 | `${CLAUDE_PLUGIN_ROOT}/references/task-sections/s2-actions.md` |
-| 3 | `${CLAUDE_PLUGIN_ROOT}/references/task-sections/s3-reset.md` |
-| 4 | `${CLAUDE_PLUGIN_ROOT}/references/task-sections/s4-termination.md` |
-| 5 | `${CLAUDE_PLUGIN_ROOT}/references/task-sections/s5-observation.md` |
-| any of 1/2/3 | also `${CLAUDE_PLUGIN_ROOT}/references/task-sections/s6-render.md` (the render gate fires) |
+| 1 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s1-scene.md` |
+| 2 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s2-actions.md` |
+| 3 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s3-reset.md` |
+| 4 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s4-termination.md` |
+| 5 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s5-observation.md` |
+| any of 1/2/3 | also `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s6-render.md` (the render gate fires) |
 
 Each carries that section's decisions, the smoke that verifies it, its failure→fix table, and
 its traps, and points into
-`${CLAUDE_PLUGIN_ROOT}/references/task-generator/isaaclab-code-reference.md` for the API. These
+`${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/isaaclab-code-reference.md` for the API. These
 are the same files `task-generator` authors from, so a candidate's delta is held to the same
 contract as the original section.
 
@@ -91,8 +91,8 @@ Write the reward into your task's `RewardsCfg` + `mdp/rewards.py`.
 
 ## STEP 2 — SMOKE
 
-Render from `${CLAUDE_PLUGIN_ROOT}/templates/task-generator/smokes/` and
-`${CLAUDE_PLUGIN_ROOT}/templates/reward-tuning-agent/smokes/` into `<iter_dir>/smokes/`,
+Render from `${CLAUDE_PLUGIN_ROOT}/knowledge/templates/task-generator/smokes/` and
+`${CLAUDE_PLUGIN_ROOT}/knowledge/templates/reward-tuning-agent/smokes/` into `<iter_dir>/smokes/`,
 substituting per each template's own docstring, with `{{TASK_ID}}` = **your** task id (slot
 clone or source) and `{{REPO}}` = `repo_path`. Run inside `.venv`. Which ones you run is
 driven by `design.task_changes.sections` — the same table that told you which section files
@@ -150,15 +150,20 @@ never `null` — candidates must be comparable in W&B.
 
 **[MUST] Completion is the SENTINEL, not the exit code.** GPU-sim trainers routinely finish
 training — checkpoint written, output flushed — and then hang forever in simulator teardown.
-`run.sh` must:
+Do not hand-roll the wait; wrap both commands:
 
-1. launch `train.py` in the background and poll (~15 s) for the sentinel (final
-   `checkpoint.pth` / the "saved checkpoint" log line); if the process dies with no
-   sentinel, exit 1;
-2. on sentinel: grace ≤60 s, then `kill -TERM` (escalate `-KILL` after 30 s) and proceed —
-   a trainer killed after its sentinel is a **success**, gated on the artifact;
-3. wrap `render.py` the same way (sentinel = `render.mp4` / `[render] wrote`);
-4. `pkill -P` orphaned children before exiting.
+```bash
+SENTINEL="${CLAUDE_PLUGIN_ROOT}/scripts/common/run_with_sentinel.sh"
+bash "$SENTINEL" --cmd "<train command>"  --sentinel-log "saved checkpoint to" \
+     --log "<iter_dir>/train.log"  || exit 1
+bash "$SENTINEL" --cmd "<render command>" --sentinel-file "$trial/render.mp4" \
+     --log "<iter_dir>/render.log" || exit 1
+```
+
+It polls for the sentinel, gives the process a short grace period once it appears, then tears
+down the whole process group — a trainer killed **after** its sentinel is a success, gated on
+the artifact. Exit 1 from it means the process died without ever producing one, which is a
+real failure. Resolve `$trial` between the two calls.
 
 Launch per `mode`:
 

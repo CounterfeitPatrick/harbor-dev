@@ -63,7 +63,7 @@ for algo in "${ALGOS[@]}"; do
 done
 ```
 
-Render `<tune_dir>/history.md` from `${CLAUDE_PLUGIN_ROOT}/templates/rl-tune/history.md.template` (header + initial per-cell progress table — every row starts with `status: pending`).
+Render `<tune_dir>/history.md` from `${CLAUDE_PLUGIN_ROOT}/knowledge/templates/rl-tune/history.md.template` (header + initial per-cell progress table — every row starts with `status: pending`).
 
 Write `<tune_dir>/manifest.json`:
 ```json

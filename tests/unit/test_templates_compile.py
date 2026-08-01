@@ -11,7 +11,7 @@ import pytest
 
 from _pluginmeta import ROOT
 
-TEMPLATES = sorted(ROOT.glob("templates/**/*.py.template"))
+TEMPLATES = sorted(ROOT.glob("knowledge/templates/**/*.py.template"))
 _SECTION = re.compile(r"\{\{[#/^][^}]*\}\}")   # {{#X}} {{/X}} {{^X}} section markers
 _PLACEHOLDER = re.compile(r"\{\{[^}]*\}\}")     # {{VAR}} value placeholders
 

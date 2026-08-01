@@ -41,16 +41,16 @@ Produce a standalone copy of `<source_id>` registered as `<dest_id>` that builds
 
 ## References (load on demand)
 
-- `${CLAUDE_PLUGIN_ROOT}/references/common/agent-conventions.md` — shared conventions (smoke pass-criterion · diagnose-and-retry · process-log discipline · English-only / no-nested-dispatch); this body's specifics override the generic shape.
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/common/agent-conventions.md` — shared conventions (smoke pass-criterion · diagnose-and-retry · process-log discipline · English-only / no-nested-dispatch); this body's specifics override the generic shape.
 
 - `${CLAUDE_PLUGIN_ROOT}/scripts/task-cloner/clone_task.py` — the deterministic clone tool you call for copy/rewire/register/manifest (and delete). It encodes the DETERMINISTIC clone-contract checks (id rule, SC2 independence, dest-registered); the sim-side checks are yours.
-- `${CLAUDE_PLUGIN_ROOT}/references/task-cloner/clone-contract.md` — what each clone check verifies + the registration rule + smoke substitution slots.
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-cloner/clone-contract.md` — what each clone check verifies + the registration rule + smoke substitution slots.
 - `<repo>/harbor/create-task/task-implementation.md` (in the benchmark repo, not the plugin) — per-family file pointers, useful only for diagnosing a script discovery miss.
 
 ## Smoke template
 
 ```
-${CLAUDE_PLUGIN_ROOT}/templates/task-cloner/smokes/smoke_clone.py.template
+${CLAUDE_PLUGIN_ROOT}/knowledge/templates/task-cloner/smokes/smoke_clone.py.template
 ```
 
 Render to `<repo>/harbor/clones/_smoke/smoke_<dest_slug>.py` substituting `{{DEST_ID}}` + `{{NUM_ENVS}}` (2 for gpu-sim per `benchmark-spec.json:gpu_sim`, else 1), then run inside `.venv`. Pass = exit 0 + final line `CLONE OK: ...`.

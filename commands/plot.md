@@ -42,7 +42,7 @@ Two paths to populate the spec:
    - **Output format** (`.pdf` / `.png` / `.svg` / `.html`) — the file always lives at `$RUN_DIR/harbor-plot.<ext>`.
    Write the spec to `$RUN_DIR/harbor-plot-spec.yaml` with `output: $RUN_DIR/harbor-plot.<ext>` and continue.
 
-A reference spec lives at `${CLAUDE_PLUGIN_ROOT}/templates/plot/spec.example.yaml` — copy + edit if the user prefers to hand-write.
+A reference spec lives at `${CLAUDE_PLUGIN_ROOT}/knowledge/templates/plot/spec.example.yaml` — copy + edit if the user prefers to hand-write.
 
 ### Step 1 — Pre-flight
 
@@ -68,7 +68,7 @@ uv run --no-project \
 
 Print BOTH the spec path (`$RUN_DIR/harbor-plot-spec.yaml`) and the rendered output path (verbatim from the script's `[ok] wrote <path>` line). Surface any `[warn]` from a run fetch so the user knows which run was skipped (transient API errors, missing keys, all-NaN history).
 
-## Spec schema (summary — see `templates/plot/spec.example.yaml` for the full version)
+## Spec schema (summary — see `knowledge/templates/plot/spec.example.yaml` for the full version)
 
 | Key | Required | Notes |
 |---|---|---|

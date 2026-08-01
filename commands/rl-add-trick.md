@@ -6,7 +6,7 @@ argument-hint: "<trick_name> [algorithm=<ppo|sac|td3>] [--dry-run]"
 # /harbor:rl-add-trick — Apply an RL Trick
 
 Each trick is a self-contained code+config patch under
-`${CLAUDE_PLUGIN_ROOT}/templates/rl-tricks/<name>/`:
+`${CLAUDE_PLUGIN_ROOT}/knowledge/templates/rl-tricks/<name>/`:
 - `manifest.yaml` — name, description, supported algorithms.
 - `patches.yaml` — `file_patches[]` (literal find/replace edits referencing
   raw `.find` / `.replace` text files in `edits/`) plus `config_patches[]`
@@ -21,7 +21,7 @@ edits report `[noop]`).
 
 | Arg | Notes |
 |---|---|
-| `<trick_name>` | Name of an entry under `${CLAUDE_PLUGIN_ROOT}/templates/rl-tricks/`. List via `/harbor:rl-list-tricks`. |
+| `<trick_name>` | Name of an entry under `${CLAUDE_PLUGIN_ROOT}/knowledge/templates/rl-tricks/`. List via `/harbor:rl-list-tricks`. |
 
 ## Optional arguments
 
@@ -50,11 +50,11 @@ edits report `[noop]`).
    ```
 
 4. **Run the trick's smoke** (skip on `--dry-run` or `--skip-smoke`). If
-   `${CLAUDE_PLUGIN_ROOT}/templates/rl-tricks/<trick>/smoke.py` exists,
+   `${CLAUDE_PLUGIN_ROOT}/knowledge/templates/rl-tricks/<trick>/smoke.py` exists,
    invoke it with the repo's venv so `torch` / `PyYAML` resolve against
    the same versions the trick patched:
    ```bash
-   smoke="${CLAUDE_PLUGIN_ROOT}/templates/rl-tricks/<trick>/smoke.py"
+   smoke="${CLAUDE_PLUGIN_ROOT}/knowledge/templates/rl-tricks/<trick>/smoke.py"
    if [ -f "$smoke" ]; then
        "$(pwd)/.venv/bin/python" "$smoke" --repo "$(pwd)" || exit $?
    fi
@@ -74,7 +74,7 @@ edits report `[noop]`).
 
 ## Constraints
 
-- **Never patch the plugin templates** (`templates/rl-integration-generator/...`)
+- **Never patch the plugin templates** (`knowledge/templates/rl-integration-generator/...`)
   — only the user's `<repo>/harbor/scripts/rl/<slug>/...` and
   `<repo>/harbor/configs/rl/*.parallel.yaml`.
 - **Never patch yaml files outside `harbor/configs/rl/`** for a trick.

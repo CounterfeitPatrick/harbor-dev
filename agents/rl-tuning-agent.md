@@ -12,10 +12,10 @@ Drive the hyperparameter tuning loop for a single (algorithm, task) cell. The lo
 
 This body is the dispatch contract only. The tuning policy (per-phase steps, heuristics, four hard constraints, slash-command mirroring) lives in two reference files — **read both ONCE at Phase 0** and work from memory thereafter:
 
-- `${CLAUDE_PLUGIN_ROOT}/references/rl-tuning-agent/tuning-instruction.md` — procedure + 4 hard constraints (num_envs ratio, convergence required, wall-clock budget, post-run log scan); exact Bash incantations + finding-emission criteria
-- `${CLAUDE_PLUGIN_ROOT}/experiences/rl-tuning-agent/tuning-experience.md` — cross-run heuristics (batch size → stability, updates/iter → sample efficiency, failure-mode signatures)
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/rl-tuning-agent/tuning-instruction.md` — procedure + 4 hard constraints (num_envs ratio, convergence required, wall-clock budget, post-run log scan); exact Bash incantations + finding-emission criteria
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/experiences/rl-tuning-agent/tuning-experience.md` — cross-run heuristics (batch size → stability, updates/iter → sample efficiency, failure-mode signatures)
 
-Other references: `${CLAUDE_PLUGIN_ROOT}/templates/rl-tuning-agent/tuning-history.md.template` (per-tune ledger), `${CLAUDE_PLUGIN_ROOT}/references/rl-integration-generator/rl-suite-spec.md` (score formula + suite-spec schema), `${CLAUDE_PLUGIN_ROOT}/commands/{rl-run,rl-sweep,plot,rl-add-trick}.md` (slash-command bodies the agent mirrors).
+Other references: `${CLAUDE_PLUGIN_ROOT}/knowledge/templates/rl-tuning-agent/tuning-history.md.template` (per-tune ledger), `${CLAUDE_PLUGIN_ROOT}/knowledge/references/rl-integration-generator/rl-suite-spec.md` (score formula + suite-spec schema), `${CLAUDE_PLUGIN_ROOT}/commands/{rl-run,rl-sweep,plot,rl-add-trick}.md` (slash-command bodies the agent mirrors).
 
 ## Inputs (from main thread)
 
@@ -163,7 +163,7 @@ When `stopped_by` becomes non-null (`stuck_threshold` / `max_iterations` / fatal
 - **Do NOT** violate the four hard constraints in `tuning-instruction.md` (num_envs ratio, convergence required, wall-clock budget, post-run log scan).
 - **Do NOT** poll `metrics.jsonl`, tail slurm output, or otherwise inspect a running trial. In cluster mode the agent NEVER calls `squeue` / `sleep` / `tail` — the orchestrator owns the wait; the `score` phase is invoked only AFTER SLURM has already exited.
 - **Do NOT** estimate wall-clock time and "decide" to return early because waiting would be expensive. In cluster mode you are dispatched per-phase; you don't wait at all. In local mode each train.py call blocks the agent's Bash for the duration of training (which IS expensive but unavoidable for that mode).
-- **Do NOT** modify `${CLAUDE_PLUGIN_ROOT}/experiences/rl-tuning-agent/tuning-experience.md`. Cross-run experience updates are the orchestrator's job — emit takeaways via `result.json:novel_heuristics` (end-of-cell) and per-iter `findings` (mid-tune sibling channel).
+- **Do NOT** modify `${CLAUDE_PLUGIN_ROOT}/knowledge/experiences/rl-tuning-agent/tuning-experience.md`. Cross-run experience updates are the orchestrator's job — emit takeaways via `result.json:novel_heuristics` (end-of-cell) and per-iter `findings` (mid-tune sibling channel).
 - **Do NOT** read or write `<tune_dir>/_findings.jsonl` directly. The orchestrator manages that file; you receive recent entries as `sibling_findings` in the `submit` prompt and emit new entries via `findings` in the `score` JSON output.
 
 ## Token-efficiency rules (cost grows linearly with assistant turns × context size)

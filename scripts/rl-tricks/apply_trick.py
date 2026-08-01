@@ -3,7 +3,7 @@
 Apply an RL trick to a target benchmark repo.
 
 The default custom_jax / custom_torch / sb3 templates are TRICK-FREE — every
-trick lives entirely under ${CLAUDE_PLUGIN_ROOT}/templates/rl-tricks/<name>/
+trick lives entirely under ${CLAUDE_PLUGIN_ROOT}/knowledge/templates/rl-tricks/<name>/
 as:
     manifest.yaml  → name, description, supported algorithms, refs/caveats
     patches.yaml   → file_patches[] (literal find/replace edits) +
@@ -27,7 +27,6 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
@@ -35,10 +34,8 @@ from pathlib import Path
 def _plugin_root(override: str | None) -> Path:
     if override:
         return Path(override).resolve()
-    env = os.environ.get("CLAUDE_PLUGIN_ROOT")
-    if env:
-        return Path(env).resolve()
-    return Path(__file__).resolve().parents[2]
+    # See list_tricks.py: the env var is deliberately not consulted.
+    return Path(__file__).resolve().parents[2]   # <plugin>/scripts/rl-tricks/<this>.py
 
 
 def _algorithm_slug(repo: Path) -> str:
@@ -183,12 +180,12 @@ def main() -> int:
         print(f"[error] repo not a directory: {repo}", file=sys.stderr); return 2
 
     root = _plugin_root(args.plugin_root)
-    trick_dir = root / "templates" / "rl-tricks" / args.trick
+    trick_dir = root / "knowledge" / "templates" / "rl-tricks" / args.trick
     manifest_path = trick_dir / "manifest.yaml"
     patches_path = trick_dir / "patches.yaml"
     if not manifest_path.is_file():
-        avail = sorted([d.name for d in (root / "templates" / "rl-tricks").iterdir()
-                        if d.is_dir()]) if (root / "templates" / "rl-tricks").is_dir() else []
+        avail = sorted([d.name for d in (root / "knowledge" / "templates" / "rl-tricks").iterdir()
+                        if d.is_dir()]) if (root / "knowledge" / "templates" / "rl-tricks").is_dir() else []
         print(f"[error] no trick named {args.trick!r}. Available: {avail}",
               file=sys.stderr); return 2
 

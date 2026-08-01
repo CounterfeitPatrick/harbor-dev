@@ -12,7 +12,7 @@ import yaml  # noqa: E402
 
 SCRIPT = ROOT / "scripts" / "rl-tricks" / "apply_trick.py"
 TRICK = "value_norm_torch"  # backend custom_torch, algorithms [ppo]
-TRICK_DIR = ROOT / "templates" / "rl-tricks" / TRICK
+TRICK_DIR = ROOT / "knowledge" / "templates" / "rl-tricks" / TRICK
 
 
 def _run(repo, *args):

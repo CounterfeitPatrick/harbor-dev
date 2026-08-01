@@ -229,28 +229,13 @@ timeout 120 ${PY} ${SCRIPTS}/render.py --config-name=${CONFIG_NAME} task=${TASK}
 # T3 severity: if HAS_GPU=1 the render command + BOTH sanity checks must pass
 # (Diagnose+Retry until pass). If HAS_GPU=0, record `skipped: no GPU on host` and continue.
 
-# ---- T4: plot smoke — verify training-curve PNGs exist ----
-# train.py auto-plots at end of training; T4 just checks the artifacts.
-N_CURVES=$(ls -1 ${TRIAL_DIR}/curves/*.png 2>/dev/null | wc -l)
-if [ "${N_CURVES}" -gt 0 ]; then
-    echo "T4 plot OK: ${N_CURVES} PNG curves in ${TRIAL_DIR}/curves/"
-else
-    echo "T4 plot FAIL: no PNG files under ${TRIAL_DIR}/curves/"
-fi
-
-# ---- T5: logging sanity — TB events + metrics.jsonl ----
-TB_COUNT=$(find ${TRIAL_DIR}/tb -name 'events.out.tfevents.*' 2>/dev/null | wc -l)
-JSONL_LINES=$(wc -l < ${TRIAL_DIR}/metrics.jsonl 2>/dev/null || echo 0)
-if [ "${TB_COUNT}" -gt 0 ] && [ "${JSONL_LINES}" -gt 0 ]; then
-    echo "T5 log OK: TB events=${TB_COUNT} jsonl lines=${JSONL_LINES}"
-    if [ "${LOGGING_MODE}" = "wandb" ]; then
-        # Best-effort W&B upload check — look for a wandb run dir with offline-uploaded marker.
-        WB_DIRS=$(find ${TRIAL_DIR} -type d -name 'wandb' 2>/dev/null | wc -l)
-        echo "T5 wandb: run dirs found=${WB_DIRS} (offline runs sync via 'wandb sync ${TRIAL_DIR}/wandb/...')"
-    fi
-else
-    echo "T5 log FAIL: TB events=${TB_COUNT} jsonl lines=${JSONL_LINES}"
-fi
+# ---- T4 + T5: artifact checks (deterministic — one tool, not hand-rolled shell) ----
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/rl-integration-generator/check_trial_artifacts.py" \
+    --log /tmp/rl-T1-<a>.log --logging-mode "${LOGGING_MODE}"
+# Prints JSON: curves / tb events / metrics.jsonl lines / wandb dirs, plus tiers.T4 and
+# tiers.T5 = pass|fail and a `notes` list saying what is missing. It also resolves the trial
+# dir from the T1 log, so TRIAL_DIR above can come from the same place. Exit 0 always — a
+# trial that produced nothing is a RESULT, read the tiers.
 ```
 
 Pass criteria:
@@ -287,7 +272,7 @@ These tiers MUST pass. When a tier fails, do **not** record FAIL and move on —
 
 3. **Apply the fix** with `Edit` / `Bash`:
    - **Rendered file fix** (in `<repo>/harbor/scripts/rl/<slug>/...` or `<repo>/harbor/utils/data_logger.py`) — this run is unblocked. Append `{path, change_summary}` to `diagnostics_applied`.
-   - **Template-level fix** (per the auto-update plugin memory directive) — also patch `${CLAUDE_PLUGIN_ROOT}/templates/rl-integration-generator/<source>/scripts/<file>.py.template` so future runs don't hit the same bug. Note in `diagnostics_applied` with `template:` prefix.
+   - **Template-level fix** (per the auto-update plugin memory directive) — also patch `${CLAUDE_PLUGIN_ROOT}/knowledge/templates/rl-integration-generator/<source>/scripts/<file>.py.template` so future runs don't hit the same bug. Note in `diagnostics_applied` with `template:` prefix.
    - **Venv fix** — append the missing pip line to `<repo>/harbor/dependency-generator/setup_uv.sh` + `uv pip install --python <repo>/.venv/bin/python <pkg>`. Idempotent.
 
 4. **Retry the failed tier** with the same command (or with a Hydra override if step 2 suggested one). If the tier passes → mark `pass` and continue with the cascade (e.g. T2 retry pass → continue to T3). If still fails → go back to step 1 with the NEW stderr from this retry; form a *different* hypothesis (the obvious one is now ruled out) and iterate.
@@ -347,15 +332,15 @@ If `<repo>/harbor/benchmark-generator/history.md` already contains `<!-- BEGIN R
 
 ## IsaacLab traps to know about (when scaffolding for IsaacLab benchmarks)
 
-These are documented in full at `${CLAUDE_PLUGIN_ROOT}/references/task-generator/isaaclab-code-reference.md`. Two that bite render scripts in particular:
+These are documented in full at `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/isaaclab-code-reference.md`. Two that bite render scripts in particular:
 
 1. **`use_fabric=False` silently breaks `env.render()`.** The offscreen render buffer is fed by Fabric; with `parse_env_cfg(..., use_fabric=False)` (sometimes a cloner-error workaround in helpers like `<repo>/scripts/_isaaclab_env.py`), `env.render()` returns the SAME stale frame every call regardless of live articulation state. Always pass `use_fabric=True` for any path that calls `env.render()`. If the cloner errors with `"Failed to clone in Fabric"`, fix it at the asset / sim-cfg level (e.g. raise `physx.gpu_collision_stack_size`), don't disable Fabric. The shipped `render.py.template` already wires this via a direct `gym.make` build that bypasses any helper.
 2. **`sim_app.close()` hangs on USD stage detach.** The shipped `render.py.template` calls `os._exit(0)` immediately after writing the MP4 to skip the broken atexit hooks.
 
 ## References
 
-- `${CLAUDE_PLUGIN_ROOT}/references/common/agent-conventions.md` — shared conventions (smoke pass-criterion · diagnose-and-retry · process-log discipline · English-only / no-nested-dispatch); this body's specifics override the generic shape.
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/common/agent-conventions.md` — shared conventions (smoke pass-criterion · diagnose-and-retry · process-log discipline · English-only / no-nested-dispatch); this body's specifics override the generic shape.
 
-- `${CLAUDE_PLUGIN_ROOT}/references/rl-integration-generator/rl-suite-spec.md` — schema for `harbor/rl-integration-generator/rl-suite-spec.json` + benchmark-spec RL extension
-- `${CLAUDE_PLUGIN_ROOT}/references/task-generator/isaaclab-code-reference.md` — IsaacLab API + traps (Fabric, shutdown hang, action-term semantics)
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/rl-integration-generator/rl-suite-spec.md` — schema for `harbor/rl-integration-generator/rl-suite-spec.json` + benchmark-spec RL extension
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/isaaclab-code-reference.md` — IsaacLab API + traps (Fabric, shutdown hang, action-term semantics)
 - `${CLAUDE_PLUGIN_ROOT}/commands/{rl-run,rl-eval,rl-visualize,rl-sweep,rl-tune}.md` — calling-side surfaces that consume this scaffold

@@ -1,7 +1,7 @@
 ---
 name: task-generator
 description: |
-  Authors any subset of §1..§5 of a task in a benchmark repo (§1 register/scene · §2 actions · §3 reset · §4 goal+termination · §5 observation). Two modes — **create** (build a brand-new task with placeholder §6 reward + empty §7 DR) and **edit** (surgical re-author of one or more sections on a task that already builds). Reads task-implementation.md as a per-benchmark migration aid and one `references/task-sections/` file per section it works on. Phase A authors the requested sections; Phase B renders the smoke templates into the per-task workspace and runs them. Iterates up to 2× per smoke; on third failure surfaces an AskUserQuestion. Ambiguity batches into a single AskUserQuestion per section.
+  Authors any subset of §1..§5 of a task in a benchmark repo (§1 register/scene · §2 actions · §3 reset · §4 goal+termination · §5 observation). Two modes — **create** (build a brand-new task with placeholder §6 reward + empty §7 DR) and **edit** (surgical re-author of one or more sections on a task that already builds). Reads task-implementation.md as a per-benchmark migration aid and one `knowledge/references/task-sections/` file per section it works on. Phase A authors the requested sections; Phase B renders the smoke templates into the per-task workspace and runs them. Iterates up to 2× per smoke; on third failure surfaces an AskUserQuestion. Ambiguity batches into a single AskUserQuestion per section.
 tools: [Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion]
 model: opus
 ---
@@ -63,33 +63,33 @@ request read `skipped`.
 
 Read at entry:
 
-- `${CLAUDE_PLUGIN_ROOT}/references/common/agent-conventions.md` — smoke pass-criterion, `{{NUM_ENVS}}` + indexing, diagnose-and-retry, process-log discipline, English-only.
-- `${CLAUDE_PLUGIN_ROOT}/references/task-library-search.md` — Phase 0: the single most-relevant prior task (skip if `library_refs` was passed in).
-- `${CLAUDE_PLUGIN_ROOT}/references/adapt-first.md` — how to build from that base: port everything, change only overrides, document the delta.
-- `${CLAUDE_PLUGIN_ROOT}/experiences/task-generator/task-experience.md` — cross-run heuristics, subordinate to a matched library base.
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/common/agent-conventions.md` — smoke pass-criterion, `{{NUM_ENVS}}` + indexing, diagnose-and-retry, process-log discipline, English-only.
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-library-search.md` — Phase 0: the single most-relevant prior task (skip if `library_refs` was passed in).
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/adapt-first.md` — how to build from that base: port everything, change only overrides, document the delta.
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/experiences/task-generator/task-experience.md` — cross-run heuristics, subordinate to a matched library base.
 
 Read **on demand**, per section, at the moment you enter it — not up front:
 
 | Working on | Read |
 |---|---|
-| §1 register / scene | `${CLAUDE_PLUGIN_ROOT}/references/task-sections/s1-scene.md` |
-| §2 action terms | `${CLAUDE_PLUGIN_ROOT}/references/task-sections/s2-actions.md` |
-| §3 reset / events | `${CLAUDE_PLUGIN_ROOT}/references/task-sections/s3-reset.md` |
-| §4 goal + termination | `${CLAUDE_PLUGIN_ROOT}/references/task-sections/s4-termination.md` |
-| §5 observation | `${CLAUDE_PLUGIN_ROOT}/references/task-sections/s5-observation.md` |
-| the final render gate (S6) | `${CLAUDE_PLUGIN_ROOT}/references/task-sections/s6-render.md` |
+| §1 register / scene | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s1-scene.md` |
+| §2 action terms | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s2-actions.md` |
+| §3 reset / events | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s3-reset.md` |
+| §4 goal + termination | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s4-termination.md` |
+| §5 observation | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s5-observation.md` |
+| the final render gate (S6) | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s6-render.md` |
 
 Each section file carries that section's decisions, its smoke, its failure→fix table, and its
-traps, and points into `${CLAUDE_PLUGIN_ROOT}/references/task-generator/isaaclab-code-reference.md`
+traps, and points into `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/isaaclab-code-reference.md`
 for the API. A smoke's substitution slots are specified in that smoke's own template docstring.
 
 Per-family conventions baked into the implementation guide:
-`${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/task-implementation-contract.md`.
+`${CLAUDE_PLUGIN_ROOT}/knowledge/references/benchmark-generator/task-implementation-contract.md`.
 
 ## Smoke templates
 
 ```
-${CLAUDE_PLUGIN_ROOT}/templates/task-generator/smokes/
+${CLAUDE_PLUGIN_ROOT}/knowledge/templates/task-generator/smokes/
     smoke_s1.py.template          smoke_s4.py.template
     smoke_s2.py.template          smoke_s5.py.template
     smoke_s2_5.py.template        smoke_success.py.template
@@ -127,14 +127,14 @@ example. In edit mode, also locate the existing task's env_cfg + `mdp/` tree in 
 ### Phase 0 — Search the task-library FIRST
 
 Get the base: if `library_refs` was passed in (from `/harbor:task-create` Step 1.5), use it;
-otherwise run `references/task-library-search.md` to select the single most-relevant spec.
-Then **follow `references/adapt-first.md`** — read the ledger, port everything, change only
+otherwise run `knowledge/references/task-library-search.md` to select the single most-relevant spec.
+Then **follow `knowledge/references/adapt-first.md`** — read the ledger, port everything, change only
 what the prompt overrides, and record the **Adaptation delta** in `task-history.md`. Its §1–§5
 is your BASE; author by minimal modification.
 
 ### Phase A — authoring
 
-**Read the section's file from `references/task-sections/` as you enter that section.** It
+**Read the section's file from `knowledge/references/task-sections/` as you enter that section.** It
 carries what that section decides, how it fails, and what its smoke will check. Then:
 
 1. **Mirror the canonical example's directory layout.** Create mode → write new files. Edit

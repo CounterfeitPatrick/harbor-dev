@@ -72,11 +72,11 @@ When a step errors, diagnose from the actual error output + the relevant file. F
 
 ## References (load via Read on demand)
 
-- `${CLAUDE_PLUGIN_ROOT}/references/common/agent-conventions.md` — shared conventions (smoke pass-criterion · diagnose-and-retry · process-log discipline · English-only / no-nested-dispatch); this body's specifics override the generic shape.
-- `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/smoke-test-contract.md` — Step 4 two-tier protocol (L1/L2)
-- `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/case-studies.md` — annotated worked examples
-- `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/receipt-generation.md` — Step 5 placeholder registry + failure handling
-- `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/task-implementation-contract.md` — Step 3.7 authoring rules for the task-implementation guide consumed by `/harbor:task-create`
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/common/agent-conventions.md` — shared conventions (smoke pass-criterion · diagnose-and-retry · process-log discipline · English-only / no-nested-dispatch); this body's specifics override the generic shape.
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/benchmark-generator/smoke-test-contract.md` — Step 4 two-tier protocol (L1/L2)
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/benchmark-generator/case-studies.md` — annotated worked examples
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/benchmark-generator/receipt-generation.md` — Step 5 placeholder registry + failure handling
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/benchmark-generator/task-implementation-contract.md` — Step 3.7 authoring rules for the task-implementation guide consumed by `/harbor:task-create`
 
 ## Workflow
 
@@ -122,7 +122,7 @@ dependency-generator already indexed every markdown file in `<repo>/harbor/depen
 
 **You do not touch the env here** (dependency-generator owns it) and **render no train/eval scripts** (`rl-integration-generator` owns those).
 
-Templates under `${CLAUDE_PLUGIN_ROOT}/templates/benchmark-generator/scripts/`:
+Templates under `${CLAUDE_PLUGIN_ROOT}/knowledge/templates/benchmark-generator/scripts/`:
 
 | File | Purpose |
 |------|---------|
@@ -155,7 +155,7 @@ Both scripts MUST keep the shipped header convention: a module docstring with a 
 
 **L1 fatal, L2 fatal**. Both tiers prove the env+render pipeline and are required to ship. Headed-window verification (the legacy L3_viz tier) is not part of the uv flow — the user already runs on the host's display.
 
-Full contract, env-build expression rules, anti-patterns: `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/smoke-test-contract.md`.
+Full contract, env-build expression rules, anti-patterns: `${CLAUDE_PLUGIN_ROOT}/knowledge/references/benchmark-generator/smoke-test-contract.md`.
 
 ## Step 3.4 — [IsaacLab only] Strip the RewardManager dt scaling (+ hard smoke)
 
@@ -262,7 +262,7 @@ The script writes `<repo>/harbor/benchmark-generator/benchmark-spec.json` with `
        --output    <repo>/harbor/benchmark-generator/task_overview.md
    ```
 
-   The script fills the template (`templates/benchmark-generator/task_overview.md.template`) deterministically: per-task rows, category counts, summary fields. Per-family heuristics: IsaacLab is treated as a "dynamic-wrapper" family (any manager-based task auto-wraps via `reward_manager._step_reward` so every Isaac-* task reads `yes` once `_DetailedRewardWrapper` is in place); dm_control extracts explicit `_REWARD_TERM_SPECS` keys.
+   The script fills the template (`knowledge/templates/benchmark-generator/task_overview.md.template`) deterministically: per-task rows, category counts, summary fields. Per-family heuristics: IsaacLab is treated as a "dynamic-wrapper" family (any manager-based task auto-wraps via `reward_manager._step_reward` so every Isaac-* task reads `yes` once `_DetailedRewardWrapper` is in place); dm_control extracts explicit `_REWARD_TERM_SPECS` keys.
 
 5. **Hand-edit two paragraphs after rendering**:
    - `## Gaps & opportunities` — call out task families that exist upstream but aren't in this benchmark (e.g. "no quadruped locomotion; could add Spot or Anymal-D"), or task variants you'd want to add (RGB-camera observations, multi-task curricula, etc.). The deterministic render leaves an "_Auto-generated_" placeholder you replace.
@@ -299,10 +299,10 @@ Render TWO files at the **target repo root**:
 
 | File | Purpose | Template |
 |------|---------|----------|
-| `<repo>/harbor/benchmark-generator/history.md` | One-shot run log: probe evidence, generated files, smoke tier results + last-5 stdout captures, `diagnostics_applied`, final report | `${CLAUDE_PLUGIN_ROOT}/templates/benchmark-generator/history.md.template` |
-| `<repo>/harbor/benchmark-generator/benchmark.md` | Static benchmark guide: About paragraph, complete task inventory table, action/obs/reward summary, "How to use" walk-through (activate venv → pick task → random rollout → render). Training/evaluation walk-through goes into `<repo>/harbor/rl-integration-generator/rl-integration.md` (rendered later by `rl-integration-generator`) — link to it from here. | `${CLAUDE_PLUGIN_ROOT}/templates/benchmark-generator/benchmark.md.template` |
+| `<repo>/harbor/benchmark-generator/history.md` | One-shot run log: probe evidence, generated files, smoke tier results + last-5 stdout captures, `diagnostics_applied`, final report | `${CLAUDE_PLUGIN_ROOT}/knowledge/templates/benchmark-generator/history.md.template` |
+| `<repo>/harbor/benchmark-generator/benchmark.md` | Static benchmark guide: About paragraph, complete task inventory table, action/obs/reward summary, "How to use" walk-through (activate venv → pick task → random rollout → render). Training/evaluation walk-through goes into `<repo>/harbor/rl-integration-generator/rl-integration.md` (rendered later by `rl-integration-generator`) — link to it from here. | `${CLAUDE_PLUGIN_ROOT}/knowledge/templates/benchmark-generator/benchmark.md.template` |
 
-**Do NOT render `<repo>/harbor/dependency-generator/install.md`** — dependency-generator owns it. **Do NOT render `<repo>/harbor/rl-integration-generator/rl-integration.md`** — `rl-integration-generator` owns it. Both rendered files are **English-only by contract** (regardless of chat language) and **regenerated on every re-run** (overwrite, do not append). Full placeholder schema + rationalizations + failure handling: `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/receipt-generation.md`.
+**Do NOT render `<repo>/harbor/dependency-generator/install.md`** — dependency-generator owns it. **Do NOT render `<repo>/harbor/rl-integration-generator/rl-integration.md`** — `rl-integration-generator` owns it. Both rendered files are **English-only by contract** (regardless of chat language) and **regenerated on every re-run** (overwrite, do not append). Full placeholder schema + rationalizations + failure handling: `${CLAUDE_PLUGIN_ROOT}/knowledge/references/benchmark-generator/receipt-generation.md`.
 
 ## On smoke failure — diagnostic mode (the only path that touches env)
 
@@ -343,7 +343,7 @@ Never loop. Never modify the env silently. The contract: dependency-generator de
 
 ## Case Studies
 
-Worked references (annotated diffs + validated smoke snippets): `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/case-studies.md`.
+Worked references (annotated diffs + validated smoke snippets): `${CLAUDE_PLUGIN_ROOT}/knowledge/references/benchmark-generator/case-studies.md`.
 
 - **ManiSkill** — Vulkan + SAPIEN physx warmup; `env.render_cameras()[0]['rgb']` for L2
 - **loco-mujoco** — uv + MuJoCo + MJX; in-tree baselines move to rl-integration-generator

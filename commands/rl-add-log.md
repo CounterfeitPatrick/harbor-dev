@@ -53,7 +53,7 @@ When you author or patch an algorithm file under `harbor/scripts/rl/<impl>/algo/
 
 ## Reference implementations
 
-The custom_torch tree at `templates/rl-integration-generator/custom_torch/algo/{ac_base,ppo,sac,td3}.py.template` is the **canonical** implementation. New algorithm authors can either:
+The custom_torch tree at `knowledge/templates/rl-integration-generator/custom_torch/algo/{ac_base,ppo,sac,td3}.py.template` is the **canonical** implementation. New algorithm authors can either:
 
 1. **Subclass `ActorCriticBase`** and call `**self.reward_log_info()` in their log_info return — gets reward keys for free.
 2. **Implement from scratch** and emit the keys directly. Verify with the smoke check below.
@@ -259,7 +259,7 @@ If a new algorithm needs a key not in this schema, add it here FIRST (with ratio
 
 ## Cross-references
 
-- `templates/rl-integration-generator/custom_torch/algo/*.py.template` — reference implementations
-- `templates/rl-integration-generator/stable_baseline3/scripts/train.py.template` — SB3 callback with remap
+- `knowledge/templates/rl-integration-generator/custom_torch/algo/*.py.template` — reference implementations
+- `knowledge/templates/rl-integration-generator/stable_baseline3/scripts/train.py.template` — SB3 callback with remap
 - `agents/rl-integration-generator.md` Phase 4 — smoke that exercises the contract
-- `references/rl-integration-generator/rl-suite-spec.md` — broader spec for `harbor/rl-integration-generator/rl-suite-spec.json`
+- `knowledge/references/rl-integration-generator/rl-suite-spec.md` — broader spec for `harbor/rl-integration-generator/rl-suite-spec.json`

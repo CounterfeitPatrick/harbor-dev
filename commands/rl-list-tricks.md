@@ -7,7 +7,7 @@ argument-hint: "(no args)"
 
 Each trick is a small, well-scoped algorithmic enhancement that can be enabled
 or disabled per-algorithm via a config flag. Tricks live under
-`${CLAUDE_PLUGIN_ROOT}/templates/rl-tricks/<name>/manifest.yaml` and are applied
+`${CLAUDE_PLUGIN_ROOT}/knowledge/templates/rl-tricks/<name>/manifest.yaml` and are applied
 to a benchmark repo via `/harbor:rl-add-trick <name> [algorithm=<algo>]`.
 
 The default `custom_jax` implementation does NOT enable any tricks — apply them
@@ -30,7 +30,7 @@ If the user passed an argument that looks like an algorithm name (`ppo`, `sac`,
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/rl-tricks/list_tricks.py" --algo <name>
 ```
 
-The script reads every `manifest.yaml` under `templates/rl-tricks/`, prints
+The script reads every `manifest.yaml` under `knowledge/templates/rl-tricks/`, prints
 name + backend + algorithms + first-line summary for each. Print the script's
 output verbatim, then suggest the apply command:
 

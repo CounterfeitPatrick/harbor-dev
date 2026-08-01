@@ -1,6 +1,6 @@
 """Contract: the per-section reference files stay wired and uniform.
 
-`references/task-sections/` is the shared §1–§5 knowledge both `task-generator` (authoring)
+`knowledge/references/task-sections/` is the shared §1–§5 knowledge both `task-generator` (authoring)
 and `reward-candidate-agent` (applying a bounded delta) load one file at a time. Two ways it
 rots, neither of which `test_references.py` can see — that check only catches links pointing
 at files that don't exist, not files that nothing points at:
@@ -15,7 +15,7 @@ import pytest
 
 from _pluginmeta import AGENTS, COMMANDS, REFERENCES, ROOT
 
-SECTIONS_DIR = ROOT / "references" / "task-sections"
+SECTIONS_DIR = ROOT / "knowledge" / "references" / "task-sections"
 SECTION_FILES = sorted(p for p in SECTIONS_DIR.glob("*.md") if p.name != "README.md")
 
 # Both consumers must route to the sections; a third would be added here deliberately.
@@ -41,14 +41,14 @@ _ALL_DOCS = COMMANDS + AGENTS + REFERENCES
 
 
 def test_sections_dir_is_populated():
-    assert SECTION_FILES, "references/task-sections/ has no section files"
+    assert SECTION_FILES, "knowledge/references/task-sections/ has no section files"
     assert (SECTIONS_DIR / "README.md").exists(), "task-sections/ needs its README (filing rule)"
 
 
 @pytest.mark.parametrize("path", SECTION_FILES, ids=lambda p: p.name)
 def test_no_orphan_section_files(path):
     """Every section file is routed to by at least one agent or command."""
-    ref = f"references/task-sections/{path.name}"
+    ref = f"knowledge/references/task-sections/{path.name}"
     referrers = [d.relative_to(ROOT).as_posix() for d in _ALL_DOCS
                  if ref in d.read_text(encoding="utf-8")]
     assert referrers, (
@@ -73,7 +73,7 @@ def test_consumers_route_to_every_section(consumer):
     """A consumer that lists some sections but not others silently skips the rest."""
     text = (ROOT / consumer).read_text(encoding="utf-8")
     missing = [p.name for p in SECTION_FILES
-               if f"references/task-sections/{p.name}" not in text]
+               if f"knowledge/references/task-sections/{p.name}" not in text]
     assert not missing, f"{consumer} routes to no section file for: {missing}"
 
 
@@ -90,7 +90,7 @@ def test_sections_point_at_their_smoke_template(path):
     text = path.read_text(encoding="utf-8")
     if "## Smoke" not in text:
         pytest.skip("no smoke described in this file")
-    assert re.search(r"templates/task-generator/smokes/\S+\.template", text), (
+    assert re.search(r"knowledge/templates/task-generator/smokes/\S+\.template", text), (
         f"{path.name} describes a smoke but never points at its template, so a reader has "
         f"nowhere to get the substitution list; see task-sections/README.md filing rule."
     )

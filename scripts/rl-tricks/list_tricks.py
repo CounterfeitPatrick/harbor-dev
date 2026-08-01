@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-List every RL trick available under ${CLAUDE_PLUGIN_ROOT}/templates/rl-tricks/.
+List every RL trick available under ${CLAUDE_PLUGIN_ROOT}/knowledge/templates/rl-tricks/.
 
 Each trick has a `manifest.yaml` that declares name, description, applicable
 algorithms, backend, and config_patches. This script just enumerates them.
@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -24,11 +23,11 @@ from pathlib import Path
 def _plugin_root(override: str | None) -> Path:
     if override:
         return Path(override).resolve()
-    env = os.environ.get("CLAUDE_PLUGIN_ROOT")
-    if env:
-        return Path(env).resolve()
-    # Fallback: this script lives at <plugin>/scripts/rl-tricks/list_tricks.py
-    return Path(__file__).resolve().parents[2]
+    # A script's own location is the only reliable answer to "which plugin tree am I in".
+    # CLAUDE_PLUGIN_ROOT is deliberately NOT consulted: it is ambient state that a stale or
+    # foreign value would silently win, pointing this script at another tree. Callers that
+    # genuinely need a different root pass --plugin-root.
+    return Path(__file__).resolve().parents[2]   # <plugin>/scripts/rl-tricks/<this>.py
 
 
 def main() -> int:
@@ -41,7 +40,7 @@ def main() -> int:
     args = p.parse_args()
 
     root = _plugin_root(args.plugin_root)
-    tricks_dir = root / "templates" / "rl-tricks"
+    tricks_dir = root / "knowledge" / "templates" / "rl-tricks"
     if not tricks_dir.is_dir():
         print(f"[error] no tricks directory at {tricks_dir}", file=sys.stderr)
         return 2

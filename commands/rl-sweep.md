@@ -30,7 +30,7 @@ Any other `key=value` is forwarded to `/harbor:rl-run`. Comma-separated lists (N
 | `total_timesteps=1_000_000` | scalar — applies to every trial |
 | `++env_params={horizon:1000,reward_type:LocomotionReward}` | scalar Hydra dict literal — kept whole, never split |
 | `parallelism=4` | (local only) run up to 4 trials concurrently — default 1 |
-| `cluster=true` | render SLURM launch.sh from default template (`templates/rl-sweep/launch.sh.template`) |
+| `cluster=true` | render SLURM launch.sh from default template (`knowledge/templates/rl-sweep/launch.sh.template`) |
 | `cluster=/path/to/template.sh` | render launch.sh from a custom template path |
 | `wandb=my-sweep-project` | every trial logs to the same W&B project |
 | `smoke=true` (default) | run a fast `/harbor:rl-run` smoke per unique `(algorithm, task)` cell BEFORE dispatch — abort on any failure |
@@ -178,8 +178,8 @@ Triggered when `cluster=` is in args. **No sub-agents are spawned.**
 1. **Resolve template path:**
    - `cluster=<path>` → that path (absolute, repo-relative, or `~`-expanded). Wins over auto-detection.
    - `cluster=true` (or `cluster=default`):
-     - **IsaacLab auto-detect**: read `harbor/benchmark-generator/benchmark-spec.json:benchmark.name`. If it equals `"IsaacLab"` (case-insensitive), OR if `harbor/apptainer/isaaclab.def` exists, pick `${CLAUDE_PLUGIN_ROOT}/templates/rl-sweep/launch.sh.isaaclab.template`. The IsaacLab variant runs the trial inside an apptainer image (handles glibc 2.34+ requirement, NVIDIA Vulkan ICD injection, Kit cache writes via `--writable-tmpfs`, optional site proxy).
-     - Otherwise → `${CLAUDE_PLUGIN_ROOT}/templates/rl-sweep/launch.sh.template` (bare-metal venv flavor).
+     - **IsaacLab auto-detect**: read `harbor/benchmark-generator/benchmark-spec.json:benchmark.name`. If it equals `"IsaacLab"` (case-insensitive), OR if `harbor/apptainer/isaaclab.def` exists, pick `${CLAUDE_PLUGIN_ROOT}/knowledge/templates/rl-sweep/launch.sh.isaaclab.template`. The IsaacLab variant runs the trial inside an apptainer image (handles glibc 2.34+ requirement, NVIDIA Vulkan ICD injection, Kit cache writes via `--writable-tmpfs`, optional site proxy).
+     - Otherwise → `${CLAUDE_PLUGIN_ROOT}/knowledge/templates/rl-sweep/launch.sh.template` (bare-metal venv flavor).
    - If the resolved template does not exist → error out with the path.
 
 2. **Discover the trainer command** the same way `/harbor:rl-run` does:

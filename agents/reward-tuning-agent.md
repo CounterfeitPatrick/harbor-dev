@@ -51,13 +51,13 @@ Return: `{status: "converged"|"aborted"|"needs_decision", best_iter, best_succes
 
 ## References (read ONCE at entry, work from memory after)
 
-- `${CLAUDE_PLUGIN_ROOT}/references/reward-tuning-agent/candidate-contract.md` — the request you send, the `design.json` shape, the verdict you get back, the boundary rule, the write scopes.
-- `${CLAUDE_PLUGIN_ROOT}/references/adapt-first.md` — how to build from `library_refs` (port everything, change only overrides, document the delta).
-- `${CLAUDE_PLUGIN_ROOT}/references/reward-tuning-agent/isaaclab-reward-reference.md` — composer-by-family, RewTerm idiom, common `mdp.*` blocks, weight conventions.
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/reward-tuning-agent/candidate-contract.md` — the request you send, the `design.json` shape, the verdict you get back, the boundary rule, the write scopes.
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/adapt-first.md` — how to build from `library_refs` (port everything, change only overrides, document the delta).
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/reward-tuning-agent/isaaclab-reward-reference.md` — composer-by-family, RewTerm idiom, common `mdp.*` blocks, weight conventions.
 - `<repo_path>/harbor/create-task/task-implementation.md` — this benchmark's implementation scheme; what a §1–§5 change costs and how it is expressed here. Read before designing any `task_changes`.
-- `${CLAUDE_PLUGIN_ROOT}/references/task-sections/README.md` — which smoke covers which section, and what each section costs to change, so `task_changes.sections` maps to real verification. Read a specific `s<N>-*.md` only when weighing a change to that section.
-- `${CLAUDE_PLUGIN_ROOT}/experiences/reward-tuning-agent/reward-experience.md` — staging / gating / scale-ratio heuristics (subordinate to a matched library base).
-- `${CLAUDE_PLUGIN_ROOT}/references/task-library-search.md` — only if the caller passed no `library_refs` and you must pick a base.
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/README.md` — which smoke covers which section, and what each section costs to change, so `task_changes.sections` maps to real verification. Read a specific `s<N>-*.md` only when weighing a change to that section.
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/experiences/reward-tuning-agent/reward-experience.md` — staging / gating / scale-ratio heuristics (subordinate to a matched library base).
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-library-search.md` — only if the caller passed no `library_refs` and you must pick a base.
 - `${CLAUDE_PLUGIN_ROOT}/commands/reward-add-log.md` — the per-term-logging flow you run in-line at STEP 0.
 
 ## File layout (`task_dir/`)
@@ -115,7 +115,7 @@ restores from, and — when sequential — the state each candidate starts from.
 
 `in_flight[]` entries: `{iter, agent_id, design_summary, cuda_device}` — `design_summary`
 is what makes DESIGN in-flight-aware; `agent_id` is what lets you cancel it. Render
-`reward-history.md` from `templates/reward-tune/history.md.template` if absent; `touch
+`reward-history.md` from `knowledge/templates/reward-tune/history.md.template` if absent; `touch
 memories.jsonl`. If `library_refs` is empty AND `spec_section` is unset, run
 `task-library-search.md` once to pick the base and stash it. **Write `tune-state.json`
 here and after every state change below** — it is the resume checkpoint.
@@ -218,7 +218,7 @@ Reward-design rules:
   keep the proven ladder / **term shape functions** / weights / composer / gating.
   Re-expressing a proven term's math (an unbounded `1/d` attractor as a bounded `tanh`, a
   contact gate as a proximity gate) is a gratuitous deviation, not a destination-idiom
-  change (see `references/adapt-first.md`) — if you must, it is a `changed:` bullet with a
+  change (see `knowledge/references/adapt-first.md`) — if you must, it is a `changed:` bullet with a
   goal-task justification. Pure de-novo only when `library_refs=[]`. Open iter 0's
   `reward-history.md` with the **Adaptation delta** (base, kept-as-is, per-change reason).
 - **Port the base's SIGNALS, not just its weights.** A reward term is only as good as the

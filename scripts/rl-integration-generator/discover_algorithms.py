@@ -16,6 +16,7 @@ choice and to know whether to inject extra pip lines into setup_uv.sh.
 """
 from __future__ import annotations
 
+import argparse
 import importlib
 import json
 
@@ -29,6 +30,9 @@ def probe(pkg: str) -> dict:
 
 
 def main():
+    # No inputs — it only probes the host. argparse is here so `--help` works and the
+    # script is discoverable like every other tool in scripts/ (CLAUDE.md L4 rule 1).
+    argparse.ArgumentParser(description=__doc__.strip().splitlines()[0]).parse_args()
     torch_p = probe("torch")
     jax_p = probe("jax")
     flax_p = probe("flax")

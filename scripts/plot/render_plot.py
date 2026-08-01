@@ -8,7 +8,7 @@ grouped under named baselines. For each (task, baseline) cell:
   3. interpolate every run to a common x grid
   4. plot mean as a line + std band as a shaded region
 
-Spec schema — see `templates/plot/spec.example.yaml`.
+Spec schema — see `knowledge/templates/plot/spec.example.yaml`.
 """
 from __future__ import annotations
 

@@ -40,7 +40,7 @@ import sys
 from pathlib import Path
 
 PLUGIN_ROOT = Path(__file__).resolve().parents[2]
-TEMPLATES = PLUGIN_ROOT / "templates" / "rl-integration-generator"
+TEMPLATES = PLUGIN_ROOT / "knowledge" / "templates" / "rl-integration-generator"
 
 
 # Canonical algorithm-source names. Older callers may pass dashed variants;

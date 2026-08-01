@@ -75,7 +75,7 @@ Grouped by filename prefix (the prefix is the group — Claude Code commands hav
 | **utilities** | |
 | `plot spec=<yaml>` | Plot mean ± std curves from W&B runs grouped by task × baseline (multi-panel learning curves from a YAML spec). |
 | `wandb-setup` | Show / re-login / switch the host's W&B account + masked API key. |
-| `update-experience target=<name> (experience="…" \| file=<path>)` | Append a numbered bullet to an agent experience ledger (≤5-line hand-written bullets), or file a `probe-task` implementation spec into the correct `experiences/task-library/` embodiment folder (short `<task>-<repo>.md` name, `-vN` on collision). |
+| `update-experience target=<name> (experience="…" \| file=<path>)` | Append a numbered bullet to an agent experience ledger (≤5-line hand-written bullets), or file a `probe-task` implementation spec into the correct `knowledge/experiences/task-library/` embodiment folder (short `<task>-<repo>.md` name, `-vN` on collision). |
 
 ### Sub-agents (`agents/<name>.md`)
 
@@ -93,14 +93,14 @@ Grouped by filename prefix (the prefix is the group — Claude Code commands hav
 
 ### Experiences (numbered, append-only cross-run ledgers)
 
-Each subagent has a `experiences/<role>/` ledger that survives across runs. Entries are numbered for stable cross-reference; **[MUST]** entries are binding requirements their reader follows (e.g. the reward-tune main agent applies `reward-experience` entry #2: magnitude-budget discipline when designing a reward).
+Each subagent has a `knowledge/experiences/<role>/` ledger that survives across runs. Entries are numbered for stable cross-reference; **[MUST]** entries are binding requirements their reader follows (e.g. the reward-tune main agent applies `reward-experience` entry #2: magnitude-budget discipline when designing a reward).
 
 ```
-experiences/rl-tuning-agent/tuning-experience.md      (25 entries: hp heuristics, tricks, failure signatures, …)
-experiences/reward-tuning-agent/reward-experience.md     (8 entries incl. #2 magnitude-budget [MUST], #7 obstacle-clearance gate)
-experiences/task-generator/task-experience.md        (placeholder — promote from per-task lessons)
-experiences/dr-generator/dr-experience.md            (placeholder)
-experiences/task-library/<area>/<family>/library.md  (task-design knowledge by embodiment+family:
+knowledge/experiences/rl-tuning-agent/tuning-experience.md      (25 entries: hp heuristics, tricks, failure signatures, …)
+knowledge/experiences/reward-tuning-agent/reward-experience.md     (8 entries incl. #2 magnitude-budget [MUST], #7 obstacle-clearance gate)
+knowledge/experiences/task-generator/task-experience.md        (placeholder — promote from per-task lessons)
+knowledge/experiences/dr-generator/dr-experience.md            (placeholder)
+knowledge/experiences/task-library/<area>/<family>/library.md  (task-design knowledge by embodiment+family:
                                                        manipulation/{multi-arm,single-arm}-manipulation,
                                                        locomotion/{humanoid,quadrupedal})
 ```
@@ -205,25 +205,24 @@ harbor/                                        ← plugin root
 │   ├── reward-add-log/                          sanity_check.py, sanity_check_isaaclab.py
 │   ├── rl-run/  rl-tricks/  plot/  install/
 │
-├── templates/                                   ← L5 read-only: rendered into target repos
-│   ├── dependency-generator/  benchmark-generator/       includes task-implementation.md.template
-│   ├── rl-integration-generator/                  custom_torch / stable_baseline3 / local_implementation subtrees + data_logger.py.template
-│   ├── task-generator/                            per-section smokes + custom action terms
-│   ├── reward-tuning-agent/  dr-generator/           per-section smokes
-│   ├── reward-add-log/                          reward_terms_block + isaaclab_env_helper templates
-│   ├── rl-tuning-agent/  rl-tune/  reward-tune/  rl-sweep/  rl-tricks/  plot/
-│
-├── references/                                  ← L5 read-only: agent decision aids
-│   ├── dependency-generator/  benchmark-generator/  rl-integration-generator/
-│   ├── task-sections/                             one file per §1–§5 section + the S6 render gate
-│   ├── task-generator/  reward-tuning-agent/  dr-generator/  rl-tuning-agent/
-│
-├── experiences/                                 ← L5 cross-run ledgers (numbered, append-only)
-│   ├── rl-tuning-agent/tuning-experience.md       (25 entries)
-│   ├── reward-tuning-agent/reward-experience.md      (8 entries incl. [MUST] magnitude-budget)
-│   ├── task-generator/task-experience.md
-│   ├── dr-generator/dr-experience.md
-│   └── task-library/{manipulation,locomotion}/<family>/library.md  (task design by embodiment+family)
+├── knowledge/                                   ← L5 read-only: everything agents load on demand
+│   ├── templates/                                 rendered into target repos
+│   │   ├── dependency-generator/  benchmark-generator/    includes task-implementation.md.template
+│   │   ├── rl-integration-generator/              custom_torch / stable_baseline3 / local_implementation + data_logger
+│   │   ├── task-generator/                        per-section smokes + custom action terms
+│   │   ├── reward-tuning-agent/  dr-generator/    per-section smokes
+│   │   ├── reward-add-log/                        reward_terms_block + isaaclab_env_helper
+│   │   └── rl-tuning-agent/  rl-tune/  reward-tune/  rl-sweep/  rl-tricks/  plot/
+│   ├── references/                                agent decision aids
+│   │   ├── task-sections/                         one file per §1–§5 section + the S6 render gate
+│   │   ├── common/                                conventions shared by every authoring agent
+│   │   └── dependency-generator/  benchmark-generator/  rl-integration-generator/
+│   │       task-generator/  reward-tuning-agent/  dr-generator/  rl-tuning-agent/  task-cloner/
+│   └── experiences/                               cross-run ledgers (numbered, append-only)
+│       ├── rl-tuning-agent/tuning-experience.md   (25 entries)
+│       ├── reward-tuning-agent/reward-experience.md  (8 entries incl. [MUST] magnitude-budget)
+│       ├── task-generator/task-experience.md      dr-generator/dr-experience.md
+│       └── task-library/{manipulation,locomotion}/<family>/  task design by embodiment + family
 │
 └── hooks/
     ├── hooks.json

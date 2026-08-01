@@ -95,7 +95,7 @@ def _<task>_term_specs(sparse: bool) -> tuple[list[tuple[str, callable]], str]:
 
 Register under the dispatch table `_REWARD_TERM_SPECS = {"<prefix>/": _<task>_term_specs, ...}`. The wrapper does NOT weight or override the env's reward. Weights, if any, must already be embedded inside the term `fn`s for the composer equation to hold.
 
-**Path B:** no per-task spec needed. `RewardManager` already computes per-term values and stores the real per-step reward at `manager._step_reward[:, i]` (shape `(num_envs, num_terms)`) — read it directly. Composer is always `"sum"` (`env_reward = Σ_i func_i × weight_i`). The template at `${CLAUDE_PLUGIN_ROOT}/templates/reward-add-log/isaaclab_env_helper.py.template` reads this dynamically — drop it in unmodified.
+**Path B:** no per-task spec needed. `RewardManager` already computes per-term values and stores the real per-step reward at `manager._step_reward[:, i]` (shape `(num_envs, num_terms)`) — read it directly. Composer is always `"sum"` (`env_reward = Σ_i func_i × weight_i`). The template at `${CLAUDE_PLUGIN_ROOT}/knowledge/templates/reward-add-log/isaaclab_env_helper.py.template` reads this dynamically — drop it in unmodified.
 
 For Direct envs (no `reward_manager`), the template falls through to passthrough mode: `info["detailed_reward"] = {"total": env_reward}`, no decomposition. Confirm with the user before patching that they understand Direct tasks won't get per-term curves.
 
@@ -106,7 +106,7 @@ If you can't make `composer(terms) == env_reward` hold (Path A custom decomposit
 **Path A:** insert (or extend) the term-spec table and the `_DetailedRewardWrapper` class into the existing `scripts/_<family>_env.py`. Reference implementation:
 
 ```
-${CLAUDE_PLUGIN_ROOT}/templates/reward-add-log/reward_terms_block.py.template
+${CLAUDE_PLUGIN_ROOT}/knowledge/templates/reward-add-log/reward_terms_block.py.template
 ```
 
 Copy verbatim into the helper file just below the `_NEUTRAL_CWD` block (or equivalent imports section), add the per-task `_<family>_term_specs(sparse: bool)` function with the user-confirmed term list, and wrap `make_<family>_env(...)` to return `_DetailedRewardWrapper(base, task_id)`.
@@ -115,7 +115,7 @@ Do NOT touch `harbor/scripts/rl/<impl>/env_wrapper.py` or `harbor/scripts/rl/<im
 
 **Path B:** two surgical edits.
 
-1. Render `<repo>/scripts/_isaaclab_env.py` verbatim from `${CLAUDE_PLUGIN_ROOT}/templates/reward-add-log/isaaclab_env_helper.py.template`. The file is fully usable as-is; no substitutions required.
+1. Render `<repo>/scripts/_isaaclab_env.py` verbatim from `${CLAUDE_PLUGIN_ROOT}/knowledge/templates/reward-add-log/isaaclab_env_helper.py.template`. The file is fully usable as-is; no substitutions required.
 2. Patch `<repo>/harbor/scripts/rl/custom_torch/env_wrapper.py::_build_isaaclab_env` (and the `stable_baseline3` equivalent if present) to delegate to the new factory when `<repo>/scripts/_isaaclab_env.py` exists. This is the **only** allowed touch of `env_wrapper.py` — IsaacLab has no `scripts/_<family>_env.py` convention to splice into, so the env factory is the entry point. Insert at the top of `_build_isaaclab_env`:
 
    ```python

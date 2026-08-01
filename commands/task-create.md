@@ -131,7 +131,7 @@ These logs are **append-only within one agent's run**, written as work progresse
 
 ### Step 1.5 — Select the design base (create / edit mode)
 
-Run the protocol in `${CLAUDE_PLUGIN_ROOT}/references/task-library-search.md` **once** to pick the single most-relevant task-library spec as the `design_base`; set `library_refs` and record it in `spec.json` + the final summary. Pass them into the task-generator / reward dispatches so they don't re-search. `task-implementation.md` is used only for how-to-express-it-in-this-repo, never as the design base.
+Run the protocol in `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-library-search.md` **once** to pick the single most-relevant task-library spec as the `design_base`; set `library_refs` and record it in `spec.json` + the final summary. Pass them into the task-generator / reward dispatches so they don't re-search. `task-implementation.md` is used only for how-to-express-it-in-this-repo, never as the design base.
 
 Skip in **reproduce** mode (`from=<spec>` already IS the design). Empty library → pure creation mode (`library_refs = []`).
 

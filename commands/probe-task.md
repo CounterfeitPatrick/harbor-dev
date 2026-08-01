@@ -46,7 +46,7 @@ test -x "<repo>/.venv/bin/python"                         || { echo ".venv/ miss
 
 1. **Resolve family** from `<repo>/harbor/create-task/task-implementation.md` (`BENCHMARK_FAMILY` header) if present, else fall back to family detection per the `task-implementation-contract.md` cues.
 
-2. **Locate per-task source files.** The per-family table in `${CLAUDE_PLUGIN_ROOT}/references/benchmark-generator/task-implementation-contract.md` maps `<task_id>` → source files. For `isaaclab-manager-based` (the most common): walk `source/isaaclab_tasks/isaaclab_tasks/manager_based/<category>/<task_root>/` for:
+2. **Locate per-task source files.** The per-family table in `${CLAUDE_PLUGIN_ROOT}/knowledge/references/benchmark-generator/task-implementation-contract.md` maps `<task_id>` → source files. For `isaaclab-manager-based` (the most common): walk `source/isaaclab_tasks/isaaclab_tasks/manager_based/<category>/<task_root>/` for:
    - `config/<robot>/__init__.py` — `gym.register(id=…, entry_point=…, kwargs=…)`
    - `config/<robot>/joint_pos_env_cfg.py` (or family equivalent) — per-robot scene + action + reset wiring
    - `<task_root>_env_cfg.py` — abstract base: SceneCfg, ActionsCfg, ObservationsCfg, EventCfg (reset + DR), RewardsCfg, TerminationsCfg, EnvCfg
@@ -72,7 +72,7 @@ test -x "<repo>/.venv/bin/python"                         || { echo ".venv/ miss
      - `RewardsCfg`: every `RewTerm` with `func`, `params`, `weight`.
      - Composer (sum / product).
      - **Embed the full source of every reward function from `mdp/rewards.py` (verbatim, in a code block).** Include latch buffers, helpers, gate logic — everything the function needs to run.
-     - The planning-budget docstring per `experiences/reward-tuning-agent/reward-experience.md` entry #2 (per-stage saturated per-step magnitudes) — extract from the `RewardsCfg` docstring if present; else compute from the weights and note "(retro-computed)".
+     - The planning-budget docstring per `knowledge/experiences/reward-tuning-agent/reward-experience.md` entry #2 (per-stage saturated per-step magnitudes) — extract from the `RewardsCfg` docstring if present; else compute from the weights and note "(retro-computed)".
    - **§7 DR**
      - `EventCfg`: every term with `mode != "reset"` (i.e. `startup` / `interval`). Function, params, ranges. If none, write `<no DR>`.
 

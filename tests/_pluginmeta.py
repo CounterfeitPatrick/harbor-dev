@@ -11,12 +11,12 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]  # plugin root (parent of tes
 
 COMMANDS = sorted((ROOT / "commands").glob("*.md"))
 AGENTS = sorted((ROOT / "agents").glob("*.md"))
-REFERENCES = sorted((ROOT / "references").rglob("*.md"))
+REFERENCES = sorted((ROOT / "knowledge" / "references").rglob("*.md"))
 
 # files scanned by the reference + hygiene checks
 _TEXT_GLOBS = [
-    "commands/*.md", "agents/*.md", "references/**/*.md",
-    "templates/**/*.template", "templates/**/*.yaml", "templates/**/*.py",
+    "commands/*.md", "agents/*.md", "knowledge/references/**/*.md",
+    "knowledge/templates/**/*.template", "knowledge/templates/**/*.yaml", "knowledge/templates/**/*.py",
     "scripts/**/*.py", "scripts/**/*.sh", "*.md",
 ]
 

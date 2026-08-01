@@ -6,7 +6,7 @@ same code path, so two iterations of the same tune can be compared; when the age
 re-derived the formula per iteration, they could not.
 
 Reads `metrics.jsonl` + the candidate's `design.json`, writes the complete verdict
-object defined in references/reward-tuning-agent/candidate-contract.md. The numeric
+object defined in knowledge/references/reward-tuning-agent/candidate-contract.md. The numeric
 fields are computed here; the prose fields (`behavior`, `failure_mode`, `findings`)
 are supplied by the candidate agent, which is the thing that watched the rollout.
 

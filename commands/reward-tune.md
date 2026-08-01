@@ -84,7 +84,7 @@ Do NOT hand-author `tune-state.json` — the agent owns it (creates on first run
 present). The orchestrator's only Step-1 job is the **design base**:
 
 - **Standalone** (`/harbor:reward-tune` typed directly, no `spec_section`): run
-  `${CLAUDE_PLUGIN_ROOT}/references/task-library-search.md` once and pass the result as
+  `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-library-search.md` once and pass the result as
   `library_refs`. (Empty library → `library_refs=[]`, pure creation.)
 - **Reproduce** (`spec_section` given): skip the search — the spec IS the base; pass
   `library_refs=[]`.

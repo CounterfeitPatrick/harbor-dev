@@ -250,6 +250,23 @@ def _import_name(repo: Path, project_name: str) -> str:
     return underscore
 
 
+def overall_verdict(t1: str, t2: str) -> str:
+    """Combine the two tier verdicts into the smoke's overall verdict.
+
+    Precedence, and why: a tier1 failure means the env itself is broken (no CUDA, no torch),
+    which makes tier2 meaningless — so it dominates. `partial` tier2 (some project imports
+    resolve, some don't) is a real but non-blocking result. A `skipped` tier2 alongside a
+    passing tier1 is still a pass: not every repo exposes an importable package.
+    """
+    if t1 == "fail" or t2 == "fail":
+        return "fail"
+    if t2 == "partial":
+        return "partial"
+    if t1 == "pass" and t2 in ("pass", "skipped"):
+        return "pass"
+    return "partial"
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -296,18 +313,8 @@ def main() -> int:
     project_name = _project_name(repo)
     smoke["tier2_project_imports"] = tier2_project_imports(repo, project_name)
 
-    t1 = smoke["tier1_basic_env"]["verdict"]
-    t2 = smoke["tier2_project_imports"]["verdict"]
-    if t1 == "fail":
-        smoke["overall"] = "fail"
-    elif t2 == "fail":
-        smoke["overall"] = "fail"
-    elif t2 == "partial":
-        smoke["overall"] = "partial"
-    elif t1 == "pass" and t2 in ("pass", "skipped"):
-        smoke["overall"] = "pass"
-    else:
-        smoke["overall"] = "partial"
+    smoke["overall"] = overall_verdict(smoke["tier1_basic_env"]["verdict"],
+                                       smoke["tier2_project_imports"]["verdict"])
 
     print(json.dumps({"smoke": smoke, "build_log_tail": build_log_tail}, indent=2))
     return 0 if smoke["overall"] in ("pass", "partial") else 1

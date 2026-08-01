@@ -73,9 +73,9 @@ When any of these quirks fire, **stop with a clear error**:
 
 ## References to load on demand
 
-- `${CLAUDE_PLUGIN_ROOT}/references/common/agent-conventions.md` — shared conventions (smoke pass-criterion · diagnose-and-retry · process-log discipline · English-only / no-nested-dispatch); this body's specifics override the generic shape.
-- `${CLAUDE_PLUGIN_ROOT}/references/dependency-generator/decision-protocol.md` — three-tier decision protocol (used in Step 4)
-- `${CLAUDE_PLUGIN_ROOT}/references/dependency-generator/install-plan-schema.md` — `InstallationPlan` JSON schema + worked examples (used in Step 2 / Step 3)
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/common/agent-conventions.md` — shared conventions (smoke pass-criterion · diagnose-and-retry · process-log discipline · English-only / no-nested-dispatch); this body's specifics override the generic shape.
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/dependency-generator/decision-protocol.md` — three-tier decision protocol (used in Step 4)
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/dependency-generator/install-plan-schema.md` — `InstallationPlan` JSON schema + worked examples (used in Step 2 / Step 3)
 
 ---
 
@@ -127,7 +127,7 @@ This is the **single, canonical read** of repo markdown. Step 6 reuses what you 
 
 ### Step 3 — Emit InstallationPlan
 
-Write `<repo>/harbor/dependency-generator/install_plan.json` per `references/dependency-generator/install-plan-schema.md`. The plan is a structured digest of the install instructions you found in Step 2.
+Write `<repo>/harbor/dependency-generator/install_plan.json` per `knowledge/references/dependency-generator/install-plan-schema.md`. The plan is a structured digest of the install instructions you found in Step 2.
 
 Hard requirements:
 - Every entry in `installation_steps` that came from prose (not from `pyproject.toml` / `requirements.txt`) must be backed by ≥1 README quote in `evidence.readme_quotes`.
@@ -138,7 +138,7 @@ If the README provides no install instructions worth digesting (rare; e.g. pure 
 
 ### Step 4 — Confirm InstallationPlan with user
 
-Call `AskUserQuestion` once with the plan summary. Bindings: see `references/dependency-generator/decision-protocol.md` Step 4. Default-on-no-response (or if `AskUserQuestion` is unsupported / returns null): confirm the plan as-is and proceed — do not block. Record the chosen path in `install_plan_confidence` for the final receipt.
+Call `AskUserQuestion` once with the plan summary. Bindings: see `knowledge/references/dependency-generator/decision-protocol.md` Step 4. Default-on-no-response (or if `AskUserQuestion` is unsupported / returns null): confirm the plan as-is and proceed — do not block. Record the chosen path in `install_plan_confidence` for the final receipt.
 
 ### Step 5 — Render setup_uv.sh
 
@@ -207,7 +207,7 @@ Prerequisites: Step 6 build + smoke must have passed. Skip silently if either fa
 
 | File | Render when | Template |
 |------|-------------|----------|
-| `install.md` | always | `${CLAUDE_PLUGIN_ROOT}/templates/dependency-generator/install.md.template` |
+| `install.md` | always | `${CLAUDE_PLUGIN_ROOT}/knowledge/templates/dependency-generator/install.md.template` |
 
 The file is **English-only by contract** and **regenerated on every re-run** (overwritten, not appended). Generated markdown content must not contain Chinese or any other non-English language, regardless of the user's chat-language preference.
 

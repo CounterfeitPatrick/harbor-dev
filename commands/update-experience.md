@@ -8,7 +8,7 @@ argument-hint: 'target=<name> (experience="<bullet>" | file=<path>)'
 Two jobs depending on `target`:
 
 1. **Agent ledger** (`target` ∈ `reward-tuning-agent` | `task-generator` | `dr-generator` | `rl-tuning-agent`) — append one new **numbered bullet** to that agent's append-only experience ledger.
-2. **Task library** (`target = task-library`) — file a `/harbor:probe-task` implementation spec into the correct embodiment folder under `experiences/task-library/`, with a short accurate filename.
+2. **Task library** (`target = task-library`) — file a `/harbor:probe-task` implementation spec into the correct embodiment folder under `knowledge/experiences/task-library/`, with a short accurate filename.
 
 ## Arguments
 
@@ -24,10 +24,10 @@ Provide **exactly one** of `experience=` / `file=`. For `target=task-library`, `
 
 | `target` | Ledger file |
 |---|---|
-| `reward-tuning-agent` | `experiences/reward-tuning-agent/reward-experience.md` |
-| `task-generator`   | `experiences/task-generator/task-experience.md` |
-| `dr-generator`     | `experiences/dr-generator/dr-experience.md` |
-| `rl-tuning-agent`  | `experiences/rl-tuning-agent/tuning-experience.md` |
+| `reward-tuning-agent` | `knowledge/experiences/reward-tuning-agent/reward-experience.md` |
+| `task-generator`   | `knowledge/experiences/task-generator/task-experience.md` |
+| `dr-generator`     | `knowledge/experiences/dr-generator/dr-experience.md` |
+| `rl-tuning-agent`  | `knowledge/experiences/rl-tuning-agent/tuning-experience.md` |
 
 (Paths are under `${CLAUDE_PLUGIN_ROOT}`.)
 
@@ -58,7 +58,7 @@ If the user's text already opens with a bold gist, keep it; otherwise synthesize
 
 ### A4 — Report
 
-> update-experience: appended entry #<N+1> to `experiences/<target>/<file>` (<L> lines).
+> update-experience: appended entry #<N+1> to `knowledge/experiences/<target>/<file>` (<L> lines).
 
 ---
 
@@ -87,7 +87,7 @@ Read the `Task summary:` paragraph + the `## §1` description (that's enough —
 
 Decision cues, in order: (1) robot morphology named in §1 (Franka/UR/Allegro arm, dual-arm, bimanual → manipulation; Anymal/Go2/Spot → quadrupedal; H1/G1/humanoid → humanoid). If genuinely ambiguous (e.g. a mobile manipulator, or a category not covered by the three folders), **ask the user once** with `AskUserQuestion` listing the three destinations.
 
-Base path: `${CLAUDE_PLUGIN_ROOT}/experiences/task-library/<destination>`.
+Base path: `${CLAUDE_PLUGIN_ROOT}/knowledge/experiences/task-library/<destination>`.
 
 ### B3 — Derive a short, accurate filename
 
@@ -103,7 +103,7 @@ The filename is what `task-generator` / `reward-tuning-agent` grep when searchin
 ### B4 — Collision-safe copy
 
 ```bash
-dest_dir="${CLAUDE_PLUGIN_ROOT}/experiences/task-library/<destination>"
+dest_dir="${CLAUDE_PLUGIN_ROOT}/knowledge/experiences/task-library/<destination>"
 base="<short-task-slug>-<source_repo>"
 name="${base}.md"
 n=2
@@ -115,7 +115,7 @@ So a second `dexterous-grasp-IsaacLab` becomes `dexterous-grasp-IsaacLab-v2.md`,
 
 ### B5 — Report
 
-> update-experience: filed `<file>` → `experiences/task-library/<destination>/<name>` (classified: <destination>).
+> update-experience: filed `<file>` → `knowledge/experiences/task-library/<destination>/<name>` (classified: <destination>).
 
 ---
 

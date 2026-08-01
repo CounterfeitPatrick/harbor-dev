@@ -27,7 +27,7 @@ from pathlib import Path
 
 
 PLUGIN_ROOT = Path(__file__).resolve().parents[2]
-TEMPLATE = PLUGIN_ROOT / "templates/rl-integration-generator/data_logger.py.template"
+TEMPLATE = PLUGIN_ROOT / "knowledge/templates/rl-integration-generator/data_logger.py.template"
 
 
 def render(template: str, flags: dict[str, bool], scalars: dict[str, str]) -> str:

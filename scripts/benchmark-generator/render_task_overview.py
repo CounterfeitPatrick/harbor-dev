@@ -5,7 +5,7 @@ Render <repo>/harbor/benchmark-generator/task_overview.md from:
   - <repo>/harbor/benchmark-generator/benchmark-spec.json (smoke-tested subset, with obs/action info)
 
 The template lives at:
-  ${CLAUDE_PLUGIN_ROOT}/templates/benchmark-generator/task_overview.md.template
+  ${CLAUDE_PLUGIN_ROOT}/knowledge/templates/benchmark-generator/task_overview.md.template
 
 Heuristic categorization is plugged in per-family. For families not recognized
 the script falls back to a single "other" category — the agent is expected to
@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 from collections import Counter
 from pathlib import Path
 
@@ -189,8 +188,8 @@ def _md_table_row(cells: list[str]) -> str:
 
 
 def _render(repo: Path, task_list: dict, spec: dict, project_name: str) -> str:
-    plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT") or str(Path(__file__).resolve().parents[2])
-    tpl_path = Path(plugin_root) / "templates" / "benchmark-generator" / "task_overview.md.template"
+    plugin_root = Path(__file__).resolve().parents[2]   # <plugin>/scripts/<owner>/<this>.py
+    tpl_path = plugin_root / "knowledge" / "templates" / "benchmark-generator" / "task_overview.md.template"
     tpl = tpl_path.read_text()
 
     family = task_list.get("family", "spec_only")
