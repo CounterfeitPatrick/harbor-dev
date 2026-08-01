@@ -1,9 +1,14 @@
 """S1 smoke — env instantiation. Rendered by task-generator.
 
 Substitutions:
-  {{TASK_ID}} — gym task id (e.g. Isaac-Push-Block-Franka-v0)
+  TASK_ID — gym task id (e.g. Isaac-Push-Block-Franka-v0)
 """
 import argparse
+import sys
+
+# Kit's shutdown can kill the process before stdout flushes, losing the
+# `S<N> OK:` verdict line that IS this smoke's pass criterion.
+sys.stdout.reconfigure(line_buffering=True)
 from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser()

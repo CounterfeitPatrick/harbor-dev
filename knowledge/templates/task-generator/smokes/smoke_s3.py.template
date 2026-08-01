@@ -3,13 +3,18 @@
 Pin reset terms to point intervals (no-op DR), reset the env, read state from sim,
 assert match. The agent fills:
 
-  {{TASK_ID}}                  — gym task id
-  {{INIT_OVERRIDES_BLOCK}}     — Python lines that pin cfg.events.<term>.params to point intervals
+  TASK_ID                  — gym task id
+  INIT_OVERRIDES_BLOCK     — Python lines that pin cfg.events.<term>.params to point intervals
                                   (e.g. cfg.events.reset_object_position.params["pose_range"] = ...)
-  {{EXPECTED_STATE_CHECKS}}    — assertions reading unw.scene[...].data.<field> against the
+  EXPECTED_STATE_CHECKS    — assertions reading unw.scene[...].data.<field> against the
                                   injected values via torch.allclose
 """
 import argparse
+import sys
+
+# Kit's shutdown can kill the process before stdout flushes, losing the
+# `S<N> OK:` verdict line that IS this smoke's pass criterion.
+sys.stdout.reconfigure(line_buffering=True)
 import torch
 from isaaclab.app import AppLauncher
 

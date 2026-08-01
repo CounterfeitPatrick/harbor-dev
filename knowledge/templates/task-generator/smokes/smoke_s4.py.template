@@ -2,24 +2,29 @@
 
 The agent fills:
 
-  {{TASK_ID}}                   — gym task id
-  {{GOAL_OVERRIDES_BLOCK}}      — Python lines that pin cfg.commands.<name>.ranges.* to point
+  TASK_ID                   — gym task id
+  GOAL_OVERRIDES_BLOCK      — Python lines that pin cfg.commands.<name>.ranges.* to point
                                    intervals so the sampled goal is deterministic
-  {{GOAL_NAME}}                 — string command-term name (e.g. "object_pose")
-  {{EXPECTED_GOAL_PY}}          — Python literal tensor / list, the expected goal
+  GOAL_CHECK_BLOCK          — the §4 goal assertion; two supported shapes (command-manager
+                              task, or implicit-goal task with commands = None). See below.
                                    (shape matches command_manager.get_command output)
-  {{GOAL_OBS_TERM_NAME}}        — name of the policy-group obs term carrying the goal
+  GOAL_OBS_TERM_NAME        — name of the policy-group obs term carrying the goal
                                    (e.g. "target_object_position"); empty string to skip the obs check
-  {{GOAL_OBS_DIMS}}              — int, number of leading dims of the goal that appear in the obs
+  GOAL_OBS_DIMS              — int, number of leading dims of the goal that appear in the obs
                                    (e.g. 3 for position-only)
-  {{TERMINATION_FORCE_BLOCK}}   — Python lines that drive the env into a failure scenario
+  TERMINATION_FORCE_BLOCK   — Python lines that drive the env into a failure scenario
                                    (e.g. write below-floor pose) followed by an env.step + assertion.
                                    When using `write_root_pose_to_sim`, broadcast to all envs:
                                        pose = torch.tensor([px, py, pz, qw, qx, qy, qz], device=unw.device)
                                        unw.scene[<obj>].write_root_pose_to_sim(pose.expand(unw.num_envs, -1).contiguous())
-                                   (smokes run at num_envs={{NUM_ENVS}}; broadcast any (1,7) pose to (num_envs,7))
+                                   (smokes run at num_envs=NUM_ENVS; broadcast any (1,7) pose to (num_envs,7))
 """
 import argparse
+import sys
+
+# Kit's shutdown can kill the process before stdout flushes, losing the
+# `S<N> OK:` verdict line that IS this smoke's pass criterion.
+sys.stdout.reconfigure(line_buffering=True)
 import torch
 from isaaclab.app import AppLauncher
 
@@ -44,12 +49,24 @@ env = gym.make(TASK_ID, cfg=cfg)
 unw = env.unwrapped
 obs, _ = env.reset(seed=0)
 
-# (a) goal-in-command check
-GOAL_NAME      = "{{GOAL_NAME}}"
-EXPECTED_GOAL  = torch.tensor({{EXPECTED_GOAL_PY}}, device=unw.device, dtype=torch.float32)
-sampled_goal   = unw.command_manager.get_command(GOAL_NAME)[0]
-assert torch.allclose(sampled_goal[: EXPECTED_GOAL.numel()], EXPECTED_GOAL, atol=1e-3), \
-    f"goal mismatch: sampled={sampled_goal} expected={EXPECTED_GOAL}"
+# (a) goal check — GOAL_CHECK_BLOCK.
+#
+# NOT every task has a CommandManager. `commands = None` (an implicit, fixed goal) is a
+# standard manipulation idiom — the task-library's insert-drawer base uses it — and for those
+# tasks `unw.command_manager.get_command(...)` does not exist. So the goal check is an
+# agent-filled block with two supported shapes:
+#
+#   * command-manager task:
+#       GOAL_NAME     = "object_pose"
+#       EXPECTED_GOAL = torch.tensor([...], device=unw.device, dtype=torch.float32)
+#       sampled_goal  = unw.command_manager.get_command(GOAL_NAME)[0]
+#       assert torch.allclose(sampled_goal[: EXPECTED_GOAL.numel()], EXPECTED_GOAL, atol=1e-3)
+#
+#   * implicit-goal task (commands = None): derive the goal independently from scene state
+#     and assert it matches the §4 design, e.g. the fixture pose the success predicate keys on:
+#       peg = unw.scene["rack"].data.root_pos_w[0] + torch.tensor([...], device=unw.device)
+#       assert torch.allclose(peg, EXPECTED_PEG, atol=1e-3)
+{{GOAL_CHECK_BLOCK}}
 
 # (b) goal-in-obs check (skipped if {{GOAL_OBS_TERM_NAME}} is empty)
 GOAL_OBS_TERM = "{{GOAL_OBS_TERM_NAME}}"

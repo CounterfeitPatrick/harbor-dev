@@ -5,7 +5,7 @@ factory train.py / render.py use, and the only path that wires per-term reward
 visibility (``info["detailed_reward"]``). A smoke that called ``gym.make`` directly would
 report ``passthrough`` and prove nothing about the decomposition the tune scores on.
 
-``{{TASK_ID}}`` is the candidate's own task: its slot clone when the pool runs more than
+``TASK_ID`` is the candidate's own task: its slot clone when the pool runs more than
 one candidate, the source task when it runs sequentially.
 
 Runs at num_envs=128. Reward is a (128,) tensor each step; the contract checks that
@@ -14,10 +14,15 @@ envs has non-zero std, and that the per-term decomposition composes back to the 
 reward element-wise at every step.
 
 Substitutions:
-  {{TASK_ID}} — gym task id
-  {{REPO}}    — absolute path to the benchmark repo (locates the env factory)
+  TASK_ID — gym task id
+  REPO    — absolute path to the benchmark repo (locates the env factory)
 """
 import argparse
+import sys
+
+# Kit's shutdown can kill the process before stdout flushes, losing the
+# `S<N> OK:` verdict line that IS this smoke's pass criterion.
+sys.stdout.reconfigure(line_buffering=True)
 import importlib.util
 import os
 

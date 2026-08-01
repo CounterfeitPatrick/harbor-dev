@@ -15,17 +15,23 @@ Two layers of checking:
 The MP4 + keyframes are written next to task-history.md (the per-task workspace), NOT /tmp.
 
 Substitutions:
-  {{TASK_ID}}            — gym task id
-  {{NUM_ENVS}}           — 2 for gpu-sim benchmarks, else 1 (env 0 is rendered)
-  {{N_STEPS}}            — rollout length to render (default 120)
-  {{N_KEYFRAMES}}        — evenly-spaced frames to dump as PNG (default 8)
-  {{OUTPUT_MP4}}         — abs path, e.g. <task_dir>/smoke_s6_render.mp4
-  {{FRAMES_DIR}}         — abs dir for keyframe PNGs, e.g. <task_dir>/smoke_s6_frames
-  {{STABILITY_CHECKS}}   — OPTIONAL extra per-step asserts for task-specific penetration bounds
+  VIEWER_BLOCK              — cfg.viewer camera framing; without it the keyframes are unusable
+  TASK_ID            — gym task id
+  NUM_ENVS           — 2 for gpu-sim benchmarks, else 1 (env 0 is rendered)
+  N_STEPS            — rollout length to render (default 120)
+  N_KEYFRAMES        — evenly-spaced frames to dump as PNG (default 8)
+  OUTPUT_MP4         — abs path, e.g. <task_dir>/smoke_s6_render.mp4
+  FRAMES_DIR         — abs dir for keyframe PNGs, e.g. <task_dir>/smoke_s6_frames
+  STABILITY_CHECKS   — OPTIONAL extra per-step asserts for task-specific penetration bounds
                             (e.g. object z stays above the table top). Leave empty for the
                             generic checks only. Has access to `unw`, `torch`, `step_idx`.
 """
 import argparse
+import sys
+
+# Kit's shutdown can kill the process before stdout flushes, losing the
+# `S<N> OK:` verdict line that IS this smoke's pass criterion.
+sys.stdout.reconfigure(line_buffering=True)
 from pathlib import Path
 
 import numpy as np
@@ -53,6 +59,16 @@ POS_BOUND    = 50.0     # |root pos| larger than this ⇒ exploded / launched
 FLOOR_MARGIN = -2.0     # root z below this ⇒ fell through the floor
 
 cfg = parse_env_cfg(TASK_ID, device="cuda:0", num_envs=NUM_ENVS, use_fabric=True)
+# Camera. IsaacLab's default viewer is ~10 m from the scene, which renders keyframes that
+# are a few pixels of table — unusable for the visual judgement that is half of S6's pass
+# criterion. Frame the workspace before building the env.
+{{VIEWER_BLOCK}}
+# Typical fill for a table-top manipulation task (tune eye/lookat to the scene):
+#   cfg.viewer.origin_type = "env"
+#   cfg.viewer.env_index   = 0
+#   cfg.viewer.eye         = (1.2, 1.2, 0.9)
+#   cfg.viewer.lookat      = (0.0, 0.0, 0.2)
+
 env = gym.make(TASK_ID, cfg=cfg, render_mode="rgb_array")
 unw = env.unwrapped
 obs, _ = env.reset(seed=0)

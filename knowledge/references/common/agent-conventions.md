@@ -12,6 +12,10 @@ those don't drift across agents. When an agent's body and this file disagree on 
 A smoke = render the template into the agent's workspace, run it inside the repo's
 `<repo>/.venv/bin/python`, and judge the result by a single line of stdout:
 
+Smoke templates set `sys.stdout.reconfigure(line_buffering=True)`: a GPU-sim teardown can
+kill the process before stdout flushes, and the verdict line IS the pass criterion — a
+passing smoke that loses its line reads as a failure. Run them with `python -u` as well.
+
 > **PASS = process exits 0 AND the final stdout line reads `<NAME> OK: ...`** (e.g. `S1 OK: ...`,
 > `L2 OK: ...`, `CLONE OK: ...`). Anything else is FAIL.
 

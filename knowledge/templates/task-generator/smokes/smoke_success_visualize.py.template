@@ -6,8 +6,8 @@ in the right pose, etc.).
 Defaults: HEADED (`HEADLESS=0`), NUM_ENVS=1. Override either via env var.
 
 Substitutions:
-  {{TASK_ID}}              — gym task id
-  {{SUCCESS_HOLD_BLOCK}}   — Python lines that pin the scene entities to their
+  TASK_ID              — gym task id
+  SUCCESS_HOLD_BLOCK   — Python lines that pin the scene entities to their
                               success poses EVERY frame. Distinct from the
                               `SUCCESS_FORCE_BLOCK` used by `smoke_success.py`:
                                 (1) MUST also pin the "anchor" / "goal" entity
@@ -19,6 +19,11 @@ Substitutions:
                               all entities + zero velocities each frame).
 """
 import argparse
+import sys
+
+# Kit's shutdown can kill the process before stdout flushes, losing the
+# `S<N> OK:` verdict line that IS this smoke's pass criterion.
+sys.stdout.reconfigure(line_buffering=True)
 import os
 import torch
 from isaaclab.app import AppLauncher

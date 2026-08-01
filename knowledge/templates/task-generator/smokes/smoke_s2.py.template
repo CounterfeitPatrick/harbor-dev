@@ -1,9 +1,9 @@
 """S2 smoke — action controller maps a known random action to the expected target.
 
 Substitutions:
-  {{TASK_ID}}            — gym task id
-  {{ACTION_TERM_NAME}}   — the primary action-term name (from active_terms)
-  {{ACTION_MODE}}        — one of:
+  TASK_ID            — gym task id
+  ACTION_TERM_NAME   — the primary action-term name (from active_terms)
+  ACTION_MODE        — one of:
         abs_joint_default_offset | abs_joint_no_offset | delta_joint
         abs_ee_pose | delta_ee_pose
         binary_gripper | joint_effort | non_holonomic
@@ -11,6 +11,11 @@ Substitutions:
         ema_delta_ee_pose       # EMACumulativeDeltaPoseAction (custom; position-only check)
 """
 import argparse
+import sys
+
+# Kit's shutdown can kill the process before stdout flushes, losing the
+# `S<N> OK:` verdict line that IS this smoke's pass criterion.
+sys.stdout.reconfigure(line_buffering=True)
 import torch
 from isaaclab.app import AppLauncher
 
@@ -35,7 +40,9 @@ unw = env.unwrapped
 obs, _ = env.reset(seed=0)
 
 term  = unw.action_manager._terms[TERM_NAME]
-scale = float(term.cfg.scale) if hasattr(term.cfg, "scale") else 1.0
+_raw_scale = getattr(term.cfg, "scale", 1.0)
+# The ema_* action terms carry a per-axis TUPLE scale; float() on it raises TypeError.
+scale = float(_raw_scale) if isinstance(_raw_scale, (int, float)) else _raw_scale
 
 # Capture pre-step state needed by some modes
 joint_ids = getattr(term, "_joint_ids", slice(None))

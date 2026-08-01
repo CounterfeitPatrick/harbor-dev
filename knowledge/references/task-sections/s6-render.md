@@ -27,6 +27,10 @@ satisfy and says nothing about whether the robot is standing inside the table.
 Renders a random-action rollout to MP4 plus keyframe PNGs, into the per-task workspace next
 to `task-history.md` — **not** `/tmp`; the MP4 is a user-facing artifact.
 
+- `{{VIEWER_BLOCK}}` — **required**: IsaacLab's default viewer sits ~10 m out, so without
+  framing the workspace the keyframes come back as a few pixels of table and the visual
+  judgement — half of S6's pass criterion — cannot be made. Set `cfg.viewer.origin_type` /
+  `env_index` / `eye` / `lookat`.
 - `{{OUTPUT_MP4}}` = `<task_dir>/smoke_s6_render.mp4`, `{{FRAMES_DIR}}` = `<task_dir>/smoke_s6_frames`
 - `{{N_STEPS}}` default `120`, `{{N_KEYFRAMES}}` default `8`
 - `{{STABILITY_CHECKS}}` — OPTIONAL extra per-step asserts for task-specific penetration, e.g.

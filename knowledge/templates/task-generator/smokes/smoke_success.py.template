@@ -11,10 +11,10 @@ catches a class of bugs S4's termination-force block doesn't:
     termination check.
 
 Substitutions:
-  {{TASK_ID}}              — gym task id
-  {{SUCCESS_TERM_NAME}}    — the name of the success termination term in
+  TASK_ID              — gym task id
+  SUCCESS_TERM_NAME    — the name of the success termination term in
                               `TerminationsCfg` (e.g. "success", "all_cups_stacked")
-  {{SUCCESS_FORCE_BLOCK}}  — Python lines that put the relevant scene entities
+  SUCCESS_FORCE_BLOCK  — Python lines that put the relevant scene entities
                               into the success configuration. Common pattern for
                               a multi-object success: read the goal entity's
                               root pose, compute the target pose for each other
@@ -23,6 +23,11 @@ Substitutions:
                               num_envs=N the pose tensors must be (N, 7).
 """
 import argparse
+import sys
+
+# Kit's shutdown can kill the process before stdout flushes, losing the
+# `S<N> OK:` verdict line that IS this smoke's pass criterion.
+sys.stdout.reconfigure(line_buffering=True)
 import os
 import torch
 from isaaclab.app import AppLauncher

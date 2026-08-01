@@ -2,15 +2,20 @@
 
 The agent fills:
 
-  {{TASK_ID}}              — gym task id
-  {{EXPECTED_TERMS_PY}}    — Python literal: list of (name, shape) tuples for the policy group,
+  TASK_ID              — gym task id
+  EXPECTED_TERMS_PY    — Python literal: list of (name, shape) tuples for the policy group,
                               in the exact slice order the obs is concatenated
                               e.g. [("joint_pos_rel", (9,)), ("joint_vel_rel", (9,)), ...]
-  {{VALUE_CHECK_BLOCK}}    — Python lines that compute an expected value for ONE term from
+  VALUE_CHECK_BLOCK    — Python lines that compute an expected value for ONE term from
                               raw scene state and assert it matches the obs slice
                               (e.g. joint_pos_rel == joint_pos - default_joint_pos)
 """
 import argparse
+import sys
+
+# Kit's shutdown can kill the process before stdout flushes, losing the
+# `S<N> OK:` verdict line that IS this smoke's pass criterion.
+sys.stdout.reconfigure(line_buffering=True)
 import torch
 from isaaclab.app import AppLauncher
 

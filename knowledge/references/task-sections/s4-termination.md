@@ -30,6 +30,10 @@ Proves the goal value appears in the observation at the correct slice, and that 
 failure state triggers termination.
 
 - `{{GOAL_OVERRIDES_BLOCK}}` — pin `cfg.commands.<name>.ranges.*` to point intervals.
+- `{{GOAL_CHECK_BLOCK}}` — the goal assertion. **Not every task has a CommandManager**:
+  `commands = None` (implicit, fixed goal) is a standard manipulation idiom, and the
+  task-library's insert-drawer base uses it. For those tasks derive the goal independently
+  from scene state instead of calling `command_manager.get_command(...)`, which does not exist.
 - `{{TERMINATION_FORCE_BLOCK}}` — drive the env into a terminating state. Two common shapes:
   - **Pose-driven failure** (e.g. `object_dropping`): write a below-floor pose with
     `unw.scene[<obj>].write_root_pose_to_sim(...)`, step once with a zero action, assert

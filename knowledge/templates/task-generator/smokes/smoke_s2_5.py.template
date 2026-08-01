@@ -13,19 +13,24 @@ Only meaningful for POSITION-controlled modes (abs/delta joint, ee-pose IK, ema_
 joint_effort / non_holonomic / binary_gripper (no position target to track).
 
 Substitutions:
-  {{TASK_ID}}            — gym task id
-  {{ROBOT_ASSET}}        — scene key of the robot articulation (e.g. "robot" / "robot_0")
-  {{ACTION_TERM_NAME}}   — the primary action-term name (from active_terms)
-  {{NUM_ENVS}}           — 2 for gpu-sim benchmarks, else 1
-  {{SETTLE_STEPS}}       — control steps to hold the action so the PD settles (default 150)
-  {{TRACKING_TOL}}       — max per-joint |achieved - target| allowed at steady state
+  TASK_ID            — gym task id
+  ROBOT_ASSET        — scene key of the robot articulation (e.g. "robot" / "robot_0")
+  ACTION_TERM_NAME   — the primary action-term name (from active_terms)
+  NUM_ENVS           — 2 for gpu-sim benchmarks, else 1
+  SETTLE_STEPS       — control steps to hold the action so the PD settles (default 150)
+  TRACKING_TOL       — max per-joint |achieved - target| allowed at steady state
                             (joint-space: ~0.05 rad; tighten/loosen per the robot)
-  {{HOLD_ACTION_EXPR}}   — a torch tensor (NUM_ENVS, action_dim) giving a REACHABLE static
+  HOLD_ACTION_EXPR   — a torch tensor (NUM_ENVS, action_dim) giving a REACHABLE static
                             target. Default `torch.zeros(...)` holds the home/default pose
                             (hardest gravity hold). For abs_ee_pose / abs_joint_no_offset set a
                             reachable target instead of zeros.
 """
 import argparse
+import sys
+
+# Kit's shutdown can kill the process before stdout flushes, losing the
+# `S<N> OK:` verdict line that IS this smoke's pass criterion.
+sys.stdout.reconfigure(line_buffering=True)
 import torch
 from isaaclab.app import AppLauncher
 
