@@ -11,11 +11,12 @@ This is a general-purpose primitive. Known callers / use cases (not exhaustive �
 
 | Use case | Mode | Notes |
 |---|---|---|
-| `/harbor:reward-tune` pooled candidates (`pool_size>1`) | same-repo | suffix `-rewarditer<NNN>`; one clone per in-flight candidate. (At `pool_size=1` the serial fast-path skips cloning.) |
-| A/B experiments on any section (actions, obs, reset, reward) | same-repo | suffix free-form (e.g. `-abtest1`); widen `surface=` to the sections being edited. |
+| A/B experiments on any section (actions, obs, reset, reward) | same-repo | suffix free-form (e.g. `-abtest1`); widen `surface=` to the sections being edited. The variant is edited while the source stays intact. |
 | sim2sim / cross-benchmark migration (e.g. IsaacLab → Genesis) | cross-repo (`dest_repo=`) | migrates the task's *design*, not its files — see "Cross-benchmark mode" below. |
 
-Cloning is serialized in the caller (one clone at a time per repo), so registration never races — only trainings run in parallel.
+Cloning is serialized in the caller (one clone at a time per repo), so registration never races.
+
+`/harbor:reward-tune` is a caller whenever its effective pool exceeds 1: it creates one slot clone per in-flight candidate, copying the full editable surface (candidates vary §1–§5 as well as the reward). It calls `clone_task.py` directly rather than dispatching this command. A sequential tune clones nothing.
 
 ## Required arguments
 
@@ -45,7 +46,7 @@ Cloning is serialized in the caller (one clone at a time per repo), so registrat
    ```
    Validate `<dest>` is a legal gym id and differs from `<source>`. Reject a `#` or a suffix placed after `-vN`.
 
-2. **Dispatch the `task-cloner` subagent** (main thread — no nesting):
+2. **Dispatch the `task-cloner` subagent** (from the main thread; `task-cloner` is a leaf agent):
    ```
    Agent(task-cloner, prompt={
      repo_path: <abs>,

@@ -50,6 +50,16 @@ Append-only ledger of high-level heuristics that have generalized across tunes �
 
 25. **A 10% return improvement that triples wall-clock is a worse outcome than the baseline.** Tuners who optimize purely for return without watching wall-clock waste cluster quota and produce policies the user won't run. Always log `wall_clock_sec` alongside `final_return` in `tuning-history.md`. Constraint #3 enforces this at the candidate-acceptance stage.
 
+## Diagnosis & evaluation discipline
+
+26. **Verify a hyperparameter is actually consumed before tuning it.** Config keys can be dead — declared, documented, and read by nothing. Grep the trainer for the key first; a silent no-op is indistinguishable from "this knob doesn't matter."
+27. **Diagnose the failing checkpoint before sweeping.** Probe what the policy physically does, and rule out actuation/reach limits with an open-loop control test. A learned stall and a kinematic limit look identical in the return curve, and only one is fixable by tuning.
+28. **`ent_coef` is single-peaked — too low fails as hard as too high.** #6/#24 cover collapse; below the peak the policy instead commits early to a partial strategy and never explores the full behaviour. Distinguish by DIRECTION: a decaying gated skill with entropy FALLING = too little exploration; RISING = too much. Sweep an order of magnitude both ways before concluding the knob is wrong.
+29. **A learnable-`log_std` ceiling makes high `ent_coef` fail silently.** Past some value entropy pins at the cap and the policy can only sharpen by growing the actor mean, so raising it further degrades results with no distinguishing entropy signal.
+30. **Time-to-first-success is a seed property; the exploration knob controls convergence AFTER breakthrough.** Budget for the slowest seed, not the mean, and don't attribute seed variance in breakthrough time to a hyperparameter.
+31. **Evaluate periodic checkpoints, not just the final one.** The last checkpoint is repeatedly not the best — once episodes terminate on success, long training drifts toward minimal-effort solutions that sit just inside the success window.
+32. **Auto-reset poisons post-`step()` state reads.** Vec wrappers reset terminated envs inside `step()`, so any state read after the call belongs to the NEXT episode — read from the info dict the algo itself consumes. The same trap makes a render's last frame a reset, not a result.
+
 ## Promotion guidelines
 
 When a per-tune `tuning-history.md` ends with a takeaway like "doubling X helped on this task", promote it here ONLY if:

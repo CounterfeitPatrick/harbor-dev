@@ -58,9 +58,9 @@ Grouped by filename prefix (the prefix is the group — Claude Code commands hav
 | `probe-task task=<id> [output=<p>]` | Emit a portable per-task spec `<task-slug>-implementation.md` with verbatim §1–§7 code. Runs in a subagent (context-saving). Feed back into `task-create from=<path>` to clone the task into another benchmark. |
 | `task-create name=<TaskID> (description=… \| from=<spec.md>)` | Author a NEW task (free-form via `description=`) OR reproduce one byte-identical from a `probe-task` spec (`from=`). Runs `task-generator` (§1–§5, smoke gates) → the `reward-tune` training loop (§6 — reward validated by actual training in all modes; reproduce seeds iter 0 with the spec's reward verbatim) → `dr-generator` (§7, opt-in — skipped unless DR is explicitly requested). |
 | `task-list [<task-id>]` | List / inspect tasks in the cwd-local benchmark's `benchmark-spec.json`. |
-| `task-clone op=create source=<id> dest=<id>` | Clone a task into an isolated, independently-editable copy under a new suffixed gym id (`op=delete` removes it). The collision-free isolation primitive behind parallel `reward-tune` candidates. |
+| `task-clone op=create source=<id> dest=<id>` | Clone a task into an isolated, independently-editable copy under a new suffixed gym id (`op=delete` removes it). The isolation primitive for A/B variants, cross-benchmark migration, and parallel reward-tune candidates. |
 | **reward — reward engineering** | |
-| `reward-tune task=<id> [algorithm=<algo>] [pool_size=N] [mode=local\|cluster]` | Async-pool §6 reward tuning. A thin orchestrator dispatches the self-contained **`reward-tuning-agent`**, which owns the whole loop per candidate — decide the full reward spec (B1), implement it in IsaacLab code (on a slot clone at `pool_size>1`, on the source at `pool_size=1`), train + render, score per-term log + frames → success_rate. Keeps `pool_size` candidates in flight (default 1 = serial; >1 = parallel clones), loops until success_rate ≥ threshold. |
+| `reward-tune task=<id> [algorithm=<algo>] [pool_size=N] [gpus=N] [mode=local\|cluster]` | Async-pool §6 reward tuning. A thin orchestrator dispatches **`reward-tuning-agent`** (designs each candidate's reward spec and judges the results), which dispatches one **`reward-candidate-agent`** per candidate (implements it, trains + renders, scores per-term log + frames → success_rate). Each candidate is a bounded §1–§5 task delta plus a complete reward. Keeps `pool_size` candidates in flight — capped by `gpus` locally — loops until success_rate ≥ threshold, then promotes the winning design onto the source task. Sequential tunes edit the task directly over a base snapshot; parallel ones give each candidate its own slot clone. |
 | `reward-add-log` | Wire per-reward-term decomposition into a benchmark repo without changing the env's reward — exposes per-term values via `info["detailed_reward"]` and asserts `composer(terms) == reward` every step. |
 | **rl — train / eval / policy** | |
 | `rl-run task=<id> algorithm=<ppo\|sac\|td3> [k=v…]` | Single-trial training; wraps the rendered `harbor/scripts/rl/<impl>/train.py` with Hydra overrides. Auto-renders the final checkpoint on rc=0. |
@@ -85,7 +85,8 @@ Grouped by filename prefix (the prefix is the group — Claude Code commands hav
 | `benchmark-generator` | Adds the env-sanity layer to a repo whose env is already set up. Renders `scripts/run_random.py` (random rollout) + `scripts/render_random.py` (render-to-MP4). Runs 2-tier smoke (L1 random / L2 render). RL-only. |
 | `rl-integration-generator` | Renders the RL training tree: `harbor/scripts/rl/{train,eval,render,visualize}.py`, `harbor/configs/rl/{ppo,sac,td3}{,.parallel}.yaml`, `rl-suite-spec.json`. Smokes each algorithm against `<repo>/.venv/bin/python` via the production T1–T5 tiers (mirroring `rl-run` / `rl-eval` / `rl-render` exactly). |
 | `task-generator` | Authors §1–§5 of a new task (register/scene · actions · reset · goal+termination · observation) with per-section smokes plus an actuator-tracking check (S2.5) and a render-stability + visual check (S6); iterates up to 2× per smoke before escalating. |
-| `reward-tuning-agent` | The self-contained §6 reward-tuning loop. Owns DESIGN (B1 spec) → IMPLEMENT (`RewardsCfg` + `mdp/rewards.py`, idiom + numerical safety + S6 smoke) → train + render → SCORE (per-term curves + rendered frames → `analysis.md` + success_rate) as an async pool of `pool_size` candidates. No nested dispatch — cloning is `scripts/task-cloner/clone_task.py`, per-term logging is the `reward-add-log` flow run in-line. Dispatched by `reward-tune` + `task-create` §6. |
+| `reward-tuning-agent` | The §6 **designer**: DESIGN (each candidate = a bounded §1–§5 task delta + a complete reward; B1 — adapt-first, magnitude budget, in-flight-aware distinctness) + DECIDE (best-so-far, convergence, refill, PROMOTE the winning design onto the source task and re-verify with that winner's smoke set). Runs an async pool of `pool_size` candidates and is the sole writer of every shared file. The one agent that dispatches a worker of its own. Dispatched by `reward-tune` + `task-create` §6. |
+| `reward-candidate-agent` | One candidate end to end: IMPLEMENT its §1–§5 task delta + reward → run the smokes for every section touched plus S6 → train + render (local bg or SLURM, sentinel watchdog) → SCORE via `score_iter.py` + rendered frames → verdict JSON. Implements only, and keeps task-design failures distinct from reward failures. |
 | `task-cloner` | Clones a task's editable surface (env_cfg + reward `mdp/`) into a new suffixed gym id with rewired imports + clone smokes, for collision-free parallel editing. Dispatched by `task-clone`. |
 | `dr-generator` | Authors §7 (domain randomization) — `EventCfg` startup / interval terms. `skipped` is a valid success when DR isn't required. |
 | `rl-tuning-agent` | Per-cell tuning loop: train → eval → render → analyze metrics + behavior → suggest next config. Per-cell state under `harbor/rl_experiments/tunes/<tune_id>/`. |
@@ -173,7 +174,7 @@ Once a benchmark is set up:
 /harbor:reward-tune task=IsaacLab-Franka-StackCube algorithm=ppo wandb=IsaacLab-Franka-StackCube
 ```
 
-Each candidate, the `reward-tuning-agent` owns end to end: decide the full reward spec (B1) → implement it in IsaacLab code (on an isolated slot clone via `scripts/task-cloner/clone_task.py` at `pool_size>1`, on the source directly at `pool_size=1`) → train (default `num_envs`) + render → score per-term log + frames vs the task description → decide the next candidate. An async pool keeps `pool_size` candidates in flight (default 1 = serial; >1 = parallel clones). Findings accumulate under `<repo>/harbor/create-task/<task_slug>/`. Loops until `success_rate ≥ threshold` (or the user interrupts at a stuck-prompt) — no hard cap.
+The work splits across two agents so that implementation noise never reaches the context making design decisions. `reward-tuning-agent` designs each candidate — a bounded §1–§5 task delta plus a complete reward, because a reward can only be as good as the signals the task exposes — and dispatches a `reward-candidate-agent` that implements both, smokes every section it touched, trains (default `num_envs`) + renders, and scores per-term log + frames against the task description, returning a compact verdict. Frames, tracebacks, and log tails stay on the candidate's side. An async pool keeps `pool_size` candidates in flight (default 1 = serial), capped by available GPUs in local mode; isolation follows that effective pool — sequential over a base snapshot at 1, one slot clone per candidate above 1. Findings accumulate under `<repo>/harbor/create-task/<task_slug>/`. Loops until `success_rate ≥ threshold` (or the user interrupts at a stuck-prompt) — no hard cap — then promotes the winning design onto the source task and re-verifies it there.
 
 ## Layout
 
@@ -194,8 +195,8 @@ harbor/                                        ← plugin root
 │
 ├── agents/                                      ← L3 subagents (flat .md files)
 │   ├── dependency-generator.md  benchmark-generator.md  rl-integration-generator.md
-│   ├── task-generator.md  reward-tuning-agent.md  dr-generator.md
-│   └── rl-tuning-agent.md  task-cloner.md
+│   ├── task-generator.md  reward-tuning-agent.md  reward-candidate-agent.md
+│   └── dr-generator.md  rl-tuning-agent.md  task-cloner.md
 │
 ├── scripts/                                     ← L4 deterministic CLIs, per-owner subdirs
 │   ├── dependency-generator/                             render_uv.py, smoke_uv.py
@@ -214,6 +215,7 @@ harbor/                                        ← plugin root
 │
 ├── references/                                  ← L5 read-only: agent decision aids
 │   ├── dependency-generator/  benchmark-generator/  rl-integration-generator/
+│   ├── task-sections/                             one file per §1–§5 section + the S6 render gate
 │   ├── task-generator/  reward-tuning-agent/  dr-generator/  rl-tuning-agent/
 │
 ├── experiences/                                 ← L5 cross-run ledgers (numbered, append-only)
@@ -239,7 +241,7 @@ Per-run workspace state lives inside the **target** repo, not the plugin:
 ## Constraints (also in CLAUDE.md)
 
 1. Generated `install.md` / `history.md` / `benchmark.md` / `rl-integration.md` MUST be English-only.
-2. Sub-agents return JSON to main thread; no nest-dispatch. The main thread orchestrates the dependency-generator → benchmark-generator → rl-integration-generator chain.
+2. Sub-agents return JSON to their caller. Dispatch depth is capped at 2: the main thread orchestrates the dependency-generator → benchmark-generator → rl-integration-generator chain, and exactly one agent (`reward-tuning-agent`) dispatches a worker of its own. Needs Claude Code ≥ 2.1.219.
 3. All plugin-generated files live under `<repo>/harbor/`. The folder is `harbor/` (no dot) so it doubles as a valid Python package — rendered scripts use `sys.path.insert(0, "<repo>/harbor")` to resolve `from utils.data_logger import DataLogger` etc.
 
 ## License

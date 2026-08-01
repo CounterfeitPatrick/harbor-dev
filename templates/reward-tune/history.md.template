@@ -7,9 +7,10 @@
 | algorithm | {{ALGORITHM}} |
 | wandb_project | `{{WANDB_PROJECT}}` |
 | mode | {{MODE}} |
-| max_iterations | {{MAX_ITERATIONS}} |
+| pool_size / effective_pool | {{POOL_SIZE}} / {{EFFECTIVE_POOL}} (gpus: {{GPUS}}) |
+| success_threshold | {{SUCCESS_THRESHOLD}} |
 | timesteps_per_iter | {{TIMESTEPS_PER_ITER}} |
-| stuck_threshold | {{STUCK_THRESHOLD}} |
+| prompt_every_n_stuck | {{PROMPT_EVERY_N_STUCK}} |
 | seed | {{SEED}} |
 | started_at | {{STARTED_AT}} |
 | finished_at | (in progress) |
@@ -17,8 +18,8 @@
 
 ## Per-iteration log
 
-| iter | reward edits | success_rate | total_reward | episode_length | improvement | decision | files |
-|---|---|---|---|---|---|---|---|
+| iter | reward terms (as written) | status | success_rate | total_return | behavior | decision |
+|---|---|---|---|---|---|---|
 
 (rows appended as iters complete)
 

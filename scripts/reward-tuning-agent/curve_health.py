@@ -18,40 +18,7 @@ import json
 import math
 import sys
 
-
-def _load(path):
-    rows = []
-    with open(path) as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                rows.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue  # live file: ignore a half-written trailing line
-    return rows
-
-
-def _series(rows):
-    """Return {key: [(step, value), ...]} sorted by step, for long OR wide format."""
-    out = {}
-    if rows and "key" in rows[0] and "value" in rows[0]:  # long format
-        for r in rows:
-            k, s, v = r.get("key"), r.get("step"), r.get("value")
-            if k is None or v is None:
-                continue
-            out.setdefault(k, []).append((s if s is not None else len(out.get(k, [])), v))
-    else:  # wide format
-        for i, r in enumerate(rows):
-            s = r.get("step", r.get("global_step", i))
-            for k, v in r.items():
-                if k in ("step", "global_step") or not isinstance(v, (int, float)):
-                    continue
-                out.setdefault(k, []).append((s, v))
-    for k in out:
-        out[k].sort(key=lambda t: t[0])
-    return out
+from _metrics import load_series
 
 
 def _finite(vals):
@@ -101,8 +68,7 @@ def main():
                          "20-40%% routinely recovers. Hard fails ignore this floor.")
     a = ap.parse_args()
 
-    rows = _load(a.metrics)
-    S = _series(rows)
+    S = load_series(a.metrics)
     W = a.window
 
     def ret_key(term):

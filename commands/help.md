@@ -32,7 +32,7 @@ Grouped by prefix: `env-*` · task (`task-*`/`probe-*`) · `reward-*` · `rl-*` 
 | `/harbor:task-list [<task-id>]` | List / inspect tasks in the cwd-local benchmark (falls back to the registry via `list_tasks`). |
 | `/harbor:task-clone op=create source=<id> dest=<id>` | Clone a task into an isolated, independently-editable copy under a new suffixed gym id (delete with `op=delete`). The collision-free isolation primitive behind parallel reward-tune candidates. |
 | **reward** | |
-| `/harbor:reward-tune task=<id> [algorithm=<algo>] [pool_size=N] [mode=local\|cluster]` | Async-pool §6 reward tuning. Thin orchestrator dispatches `reward-tuning-agent`, which owns design+implement+train+render+score per candidate; repeat until success. `pool_size>1` runs candidates in parallel, each on its own clone. |
+| `/harbor:reward-tune task=<id> [algorithm=<algo>] [pool_size=N] [gpus=N] [mode=local\|cluster]` | Async-pool §6 reward tuning. Thin orchestrator dispatches `reward-tuning-agent` (designs + decides), which dispatches one `reward-candidate-agent` per candidate (implements + trains + renders + scores); repeat until success, then promote the winner onto the source task. `pool_size>1` runs candidates in parallel, each on its own slot clone; a sequential tune edits the task directly. |
 | `/harbor:reward-add-log` | Wire per-reward-term decomposition into a benchmark repo without changing the env's native reward — asserts `composer(terms) == reward` every step. |
 | **rl** | |
 | `/harbor:rl-run task=<id> algorithm=<algo> [k=v ...]` | Train one trial. Wraps `harbor/scripts/rl/<impl>/train.py` with the repo's `<repo>/.venv/bin/python` and Hydra overrides. |
@@ -53,7 +53,7 @@ Grouped by prefix: `env-*` · task (`task-*`/`probe-*`) · `reward-*` · `rl-*` 
 
 ## Subagents (heavy, multi-step work; main thread dispatches)
 
-Invoke via `Task('<agent-name>')`. Subagents do not nest-dispatch — main thread orchestrates.
+Invoke via `Task('<agent-name>')`. Dispatch depth is capped at 2: the main thread orchestrates, and exactly one agent — `reward-tuning-agent` — dispatches a worker of its own (`reward-candidate-agent`). Every other agent is a leaf. Requires Claude Code ≥ 2.1.219.
 
 | Agent | Purpose |
 |---|---|
@@ -61,6 +61,11 @@ Invoke via `Task('<agent-name>')`. Subagents do not nest-dispatch — main threa
 | `benchmark-generator` | After dependency-generator finishes. Renders `scripts/{run_random,render_random}.py`, runs 2-tier smoke (L1 random / L2 render), captures suite spec into `harbor/benchmark-generator/benchmark-spec.json`. Training scaffolding is owned by `rl-integration-generator` (dispatched directly as a subagent once the spec is written). |
 | `rl-integration-generator` | After benchmark-generator finishes. Renders `harbor/scripts/rl/<impl>/{train,eval,render,env_wrapper}.py`, `harbor/configs/rl/{ppo,sac,td3}{,.parallel}.yaml`, and `harbor/rl-integration-generator/rl-suite-spec.json`. Smokes each algorithm. |
 | `rl-tuning-agent` | Per-algorithm hyperparameter tuning loop: train → eval → render → analyze metrics + behavior → suggest next config. Per-cell tune state under `harbor/rl_experiments/tunes/<tune_id>/<wandb_project>/`. |
+| `task-generator` | Authors §1–§5 of a task (register/scene · actions · reset · goal+termination · observation) with per-section smokes. Dispatched by `/harbor:task-create`. |
+| `reward-tuning-agent` | The §6 **designer**: decides each candidate's reward spec and what the results mean, dispatches `reward-candidate-agent` per candidate, promotes the winner onto the source task. The one agent that dispatches a worker of its own. |
+| `reward-candidate-agent` | One candidate end to end: implement its §1–§5 task delta + reward → run the smokes for every section touched, plus S6 → train + render → score curves + frames → verdict. Never designs. |
+| `dr-generator` | Authors §7 domain randomization across robot / object / observation-noise groups, then verifies each term by exact value read-back. Opt-in stage of `/harbor:task-create`. |
+| `task-cloner` | Clones a task's editable surface into an independently-editable copy under a new gym id. The isolation primitive behind `/harbor:task-clone`. |
 
 ## Lifecycle hooks
 

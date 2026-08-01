@@ -17,6 +17,27 @@ A smoke = render the template into the agent's workspace, run it inside the repo
 
 Render smokes into the agent's own subdir (e.g. `<task_dir>/smokes/`), never the repo root.
 
+### Smoke `num_envs` + indexing
+
+`{{NUM_ENVS}}` is set per benchmark from `harbor/benchmark-generator/benchmark-spec.json:gpu_sim`:
+
+- **gpu-sim (`gpu_sim == true`) → `2`.** Small enough to stay fast, ≥2 so per-env indexing
+  bugs that hide at 1 env still surface. Render smokes render env 0.
+- **non-gpu-sim → `1`.**
+
+In an agent-filled check block, index `[0]` when comparing a scalar read — every env sees the
+same point-interval reset at no-op DR, so any single env is representative. For batched
+assertions use `torch.allclose` over the full `(NUM_ENVS, dim)` tensor.
+
+### A smoke contract outranks a doc
+
+Per-section smoke commands in a repo's `task-implementation.md` are reference material, not
+the contract. Where the doc's smoke is weaker than the section's contract, use the contract
+and (optionally) patch the doc surgically to match.
+
+When a non-IsaacLab family is in play, substitute the family-equivalent API on the same
+contract surface — the *checks* stay the same; the *call sites* differ.
+
 ## Diagnose-and-retry
 
 On a step/smoke error, do NOT patch blindly:
@@ -43,7 +64,15 @@ one dump at the end):
 
 - **English-only** for all generated comments, logs, and receipts (CLAUDE.md constraint #1) —
   regardless of chat language.
-- **No nested dispatch** — a subagent never dispatches another subagent (CLAUDE.md constraint #4);
-  the main thread orchestrates.
+- **Dispatch depth ≤ 2** (CLAUDE.md constraint #2). Exactly one agent carries the `Agent`
+  tool — `reward-tuning-agent`, which dispatches `reward-candidate-agent`. Every other
+  agent is a leaf and does its delegated work itself.
+- **`AskUserQuestion` is unavailable inside a subagent** — Claude Code strips it whether or
+  not the `tools:` list names it. An agent that needs a decision returns it to its caller
+  (a `needs_decision` status plus enough context to ask), and the caller asks.
+  *Migration status:* only `reward-tuning-agent` follows this. `dependency-generator`,
+  `benchmark-generator`, `rl-integration-generator`, `task-generator`, `dr-generator`, and
+  `rl-tuning-agent` still escalate through `AskUserQuestion`, so those escalation paths do
+  not reach the user. Not yet fixed.
 - **Surgical edits** — touch only what the task requires; don't refactor adjacent code or
   silently edit sibling tasks. Log every cross-section edit in the agent's history file.

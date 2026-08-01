@@ -22,7 +22,7 @@ Task summary: a single FR3 + Franka-hand robot stacks **three** identical 4.3 cm
 | Robot init pos (env-local) | `(-0.274, 0.49, 0.01)` |
 | Robot init joint pose | `fr3_joint1=-0.785, joint2=-0.785, joint3=0.0, joint4=-2.655, joint5=0.0, joint6=1.87, joint7=0.0, fr3_finger_joint.*=0.04` |
 | Cube USD | `${ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd` |
-| Cube scale | `(0.86, 0.86, 0.86)` → 4.3 cm edge length |
+| Cube scale | `CUBE_SIZE / 0.06 = 0.716667` → 4.3 cm edge length. **Derive, don't hard-code** — the unscaled DexCube USD is **6 cm** (BBoxCache-measured on Isaac 5.1), so the old hard-coded `0.86` produced a 5.16 cm cube and broke the tower. See §1 code. |
 | Cube mass | `0.055 kg` (`MassPropertiesCfg(mass=0.055)`) |
 | `CUBE_SIZE` | `0.043` m |
 | `CUBE_INIT_Z` | `0.0215` m (= `CUBE_SIZE / 2.0` — cube center half a cube above table top → base on table) |
@@ -181,9 +181,21 @@ Per-robot subclass (`config/franka/joint_pos_env_cfg.py` — robot constants + s
 
 ```python
 # Cube geometry — DexCube USD scaled to a 4.3 cm edge length, 55 g mass.
-# DexCube unscaled bbox is 5 cm; 0.043 / 0.05 = 0.86.
-CUBE_SIZE = 0.043        # m — target edge length
-CUBE_USD_SCALE = 0.86    # 0.043 / 0.05 = 0.86
+#
+# The unscaled DexCube USD edge is **6 cm**, NOT 5 cm. Measured with
+# UsdGeom.BBoxCache on Isaac 5.1's
+# `Props/Blocks/DexCube/dex_cube_instanceable.usd`:
+#     min = (-0.03, -0.03, -0.03)   max = (0.03, 0.03, 0.03)
+# An earlier revision of this spec assumed 5 cm and hard-coded scale 0.86,
+# which yields a **5.16 cm** cube while every threshold in §4/§5/§6 assumes
+# CUBE_SIZE. The 8.6 mm error compounds per stack tier and shrinks the
+# `on_stack` mux window (|dz - 0.043| < 0.01) from 10 mm of slack to 1.4 mm,
+# which destabilises state B and blocks the 3-tier tower entirely.
+# DERIVE the scale — never hard-code it — so a different asset revision
+# cannot silently reintroduce the bug.
+CUBE_SIZE = 0.043            # m — target edge length
+DEX_CUBE_USD_EDGE = 0.06     # m — MEASURED unscaled edge (Isaac 5.1 DexCube)
+CUBE_USD_SCALE = CUBE_SIZE / DEX_CUBE_USD_EDGE  # = 0.716667
 CUBE_MASS = 0.055        # kg
 CUBE_INIT_Z = CUBE_SIZE / 2.0  # center half a cube above table top → base on table
 
@@ -1070,7 +1082,7 @@ def grasping_target_position_in_robot_root_frame(env: "ManagerBasedRLEnv") -> to
 
 ### Description
 
-Composer = **sum** (verified at the call site in `isaaclab.managers.reward_manager.RewardManager.compute` — line 153: `value = term_cfg.func(...) * term_cfg.weight`; accumulated via `self._reward_buf += value`). **9 total reward terms registered, 8 active** (the 9th — `release_bonus` — has `weight=0.0` and is short-circuited by RewardManager's `if term_cfg.weight == 0.0: continue`).
+Composer = **sum** (verified at the call site in `isaaclab.managers.reward_manager.RewardManager.compute` — line 153: `value = term_cfg.func(...) * term_cfg.weight`; accumulated via `self._reward_buf += value`). **7 reward terms, all active.**
 
 The reward is a grasping-cube mux + sparse latched bonuses + a no-op release-shaping placeholder. The §5 obs mux and §6 reward share the same `_cube_0_on_cube_1_predicate` (with identical thresholds — xy<0.02 AND |Δz−CUBE_SIZE|<0.01) so the "currently grasped cube" flips on the same instant in obs and reward. In state B, the dense terms (`reach`, `lift`, `align`, `linear_lift_grasping_cube`) are multiplied by an integer scale + offset (30·base+1, 10·lifted+1, 50·base+1, 10·base·gate+1) to outweigh the state-A magnitudes and prevent the policy from regressing when the predicate flips.
 
@@ -1087,13 +1099,13 @@ Weights below are **nominal per-step magnitudes** — the declared weight is exa
 | stack_broke_penalty | `mdp.cube_0_stack_broken_penalty_once_per_episode` | `xy_threshold=0.02, z_threshold=0.01` | **-200.0** |
 | tower_bonus | `mdp.three_tier_tower_bonus_once_per_episode` | `xy_threshold=0.02, z_threshold=0.01` | **2000.0** |
 | linear_lift_grasping_cube | `mdp.linear_lift_grasping_cube` | `init_z=0.0215, target_z_a=0.06, target_z_b=0.1075, contact_force_threshold=1e-3` | **0.15** |
-| release_bonus | `mdp.release_bonus_in_drop_zone` | `xy_threshold=0.02, z_threshold=0.03` | **0.0** (inactive; short-circuited by RewardManager) |
 
-> **WARN** — `RewardsCfg.align` is passed `minimal_height_b=0.0875` but the docstring annotation on the env_cfg line 306 says "`minimal_height_b = target_z = cube_1.z + 2·CUBE_SIZE = 0.1075`". The actual value (0.0875) is `cube_1.z(0.0215 init) + CUBE_SIZE(0.043) + xy_threshold-ish ≈ table_top + 1.5·CUBE_SIZE`. The 0.0875 value is what the code actually passes; the 0.1075 figure is the comment's intended design value. Either align — use what the code passes (`0.0875`) to reproduce exactly.
+`align.minimal_height_b = 0.0875` is authoritative — it is `table_top + 1.5·CUBE_SIZE`, i.e.
+cube_2 must clear the existing two-cube stack before `align` fires. (Independently
+corroborated by both sibling ports: Genesis `ALIGN_MIN_HEIGHT_B = 0.0875` and ManiSkill
+`min_h_b_align = 0.0875`.)
 
 #### Per-stage saturated per-step magnitude budget (nominal weights)
-
-Note: these are "(retro-computed)" — the env_cfg docstring on `RewardsCfg` lists older weights (`success_bonus w=300`, `stack_broke_penalty w=-500`, `reach w=0.02`, `lift w=0.1`, `align w=0.32`, etc.) that don't fully match the live values. Live weights below.
 
 | Stage | Term | State-A peak | State-B peak | Notes |
 |---|---|---:|---:|---|
@@ -1106,7 +1118,6 @@ Note: these are "(retro-computed)" — the env_cfg docstring on `RewardsCfg` lis
 | Sparse bonus 1 | success_bonus (w=200) | one-shot | one-shot | +200 first step cube_0 stacked + EE retreated + no contact |
 | Sparse penalty | stack_broke_penalty (w=-200) | one-shot | one-shot | −200 first step previously-stacked cube_0 falls off |
 | Sparse bonus 2 | tower_bonus (w=2000) | one-shot | one-shot | +2000 first step full tower assembled |
-| Release placeholder | release_bonus (w=0.0) | inert | inert | wired for re-enable, currently OFF |
 
 Full-task ceiling per episode ≈ dense state-B (~3540) + tower_bonus (2000) + success_bonus (200) − any stack_broke (~−200 worst case) = ~5540. Tower bonus dominates the sparse band by 10×; success_bonus is a partial credit; stack_broke pays a one-time tax for breaking your own stack. Policy is incentivised to (a) stack cube_0 cleanly, (b) move EE away, (c) build the upper tower with cube_2 without disturbing the lower pair.
 
@@ -1138,23 +1149,27 @@ class RewardsCfg:
             grasping_cube   <- cube_2
             target          <- cube_0.xyz + [0, 0, CUBE_SIZE]
 
-    Term order (weights match the pre-edit_mode_014 cube_0-phase scale):
-        reach                  — 1 - tanh(||ee - gc|| / 0.1)            w=0.02
-        lift                   — gc.z > 0.04                            w=0.1
-        align                  — lifted * (1 - tanh(||gc - target||/0.3)) w=0.32
-        success_bonus          — cube_0 stacked latch (once-per-episode) w=300
-        stack_broke_penalty    — cube_0 stack broken latch              w=-500
-        action_rate                                                     w=-2e-6
-        joint_vel                                                       w=-2e-6
+    Term order (7 terms, ALL ACTIVE — these are the live weights):
+        reach                  — 1 - tanh(||ee - gc|| / 0.1)             w=0.02
+        lift                   — gc.z > 0.04                             w=0.1
+        align                  — lifted * (1 - tanh(||gc - target||/0.08)) w=0.32
+        success_bonus          — cube_0 stacked latch (once-per-episode)  w=200
+        stack_broke_penalty    — cube_0 stack broken latch                w=-200
+        tower_bonus            — full 3-tier tower latch                  w=2000
+        linear_lift_grasping_cube — contact-gated linear lift ramp        w=0.15
+
+    There are NO action_rate / joint_vel regularizer terms, and no curriculum
+    (`CurriculumCfg` is empty — LiftCube's 1000x regularizer ramp suppressed
+    the cube-release motion needed to stack).
 
     Composer: sum.
     """
 
-    # Two-band reach:
-    #   reach_fine   — peaked (std=0.1) for precise contact in STATE B ONLY
-    #                  (zero in state A so the cube_0 phase isn't perturbed).
-    #   reach_coarse — broad (std=0.3) attractor in BOTH states.
-    # Both call the same grasping-cube mux function (cube_0 in A / cube_2 in B).
+    # Single-band reach: one term, std=0.1, applied in BOTH states via the
+    # grasping-cube mux (cube_0 in state A / cube_2 in state B). State B is
+    # magnitude-scaled (30*base + 1.0), NOT sharpness-scaled — the std is
+    # identical in both states. Matches Genesis (REACH_STD=0.1) and ManiSkill
+    # (std_reach=0.1), neither of which varies std by state either.
     reach = RewTerm(
         func=mdp.grasping_cube_ee_distance,
         params={"std": 0.1},
@@ -1222,16 +1237,11 @@ class RewardsCfg:
     # action this step. Modest weight: the success_bonus (200) and
     # tower_bonus (2000) still dominate, but this nudges the policy to
     # release at the right moment instead of squeezing forever.
-    release_bonus = RewTerm(
-        func=mdp.release_bonus_in_drop_zone,
-        params={"xy_threshold": 0.02, "z_threshold": 0.03},
-        weight=0.0,
-    )
 ```
 
 ### Full `stack_cube/mdp/rewards.py` source
 
-Split into three labeled blocks for readability — module preamble + predicate helper + dense terms; latch infrastructure + private helpers; sparse / once-per-episode terms + release placeholder.
+Split into three labeled blocks for readability — module preamble + predicate helper + dense terms; latch infrastructure + private helpers; sparse / once-per-episode terms.
 
 #### Block A — module preamble, predicate, dense reward terms
 
@@ -1261,10 +1271,6 @@ Sparse / once-per-episode (cube_0 stacking + full tower):
     cube_0_stack_broken_penalty_once_per_episode — −1 first step the latched
                                                      stack breaks again
     three_tier_tower_bonus_once_per_episode    — +1 first step BOTH pairs hold
-
-Misc:
-    release_bonus_in_drop_zone     — +1 when grasping_cube hovers over target
-                                      AND policy outputs gripper-open
 
 EE pose is read from the FrameTransformer scene entity `ee_frame` (LiftCube
 convention). The Franka per-robot cfg installs this sensor pointing at
@@ -1321,15 +1327,14 @@ def _cube_0_on_cube_1_predicate(
 def grasping_cube_ee_distance(
     env: "ManagerBasedRLEnv",
     std: float = 0.1,
-    std_state_b: float | None = None,
     ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame"),
 ) -> torch.Tensor:
     """`1 - tanh(||grasping_cube - ee|| / std)`.
 
-    Per-state std: `std` applies when predicate is False (state A — chasing
-    cube_0); `std_state_b` (defaults to `std`) applies when predicate is True
-    (state B — chasing cube_2). A sharper state-B std rewards precision near
-    cube_2; a wider state-A std attracts the EE from far away.
+    ONE std for BOTH states — the attractor has identical sharpness in state A
+    and state B. The states differ only in MAGNITUDE (state B is
+    `30*base + 1.0`), never in `std`. Genesis (`REACH_STD=0.1`) and ManiSkill
+    (`std_reach=0.1`) do the same; do not reintroduce a per-state std.
 
     grasping_cube = cube_0 when `_cube_0_on_cube_1_predicate` False, cube_2 when True.
     """
@@ -1342,10 +1347,8 @@ def grasping_cube_ee_distance(
     grasping_pos = torch.where(on_stack.unsqueeze(-1), pos_2, pos_0)
     ee_w = ee_frame.data.target_pos_w[..., 0, :]
     d = torch.norm(grasping_pos - ee_w, dim=1)
-    std_b = std if std_state_b is None else float(std_state_b)
-    effective_std = torch.where(on_stack, torch.full_like(d, std_b), torch.full_like(d, std))
-    base = 1.0 - torch.tanh(d / effective_std)
-    # State B: scale base by 100× and add the +1.0 compensation; state A unchanged.
+    base = 1.0 - torch.tanh(d / std)
+    # State B: scale base by 30x and add the +1.0 compensation; state A unchanged.
     return torch.where(on_stack, 30.0 * base + 1.0, base)
 
 
@@ -1488,23 +1491,6 @@ def _get_latch_buffer(env, key: str) -> torch.Tensor:
     return _LATCH_BUFFERS[full_key]
 
 
-def _gripper_far_from_cube_0(
-    env: "ManagerBasedRLEnv",
-    min_distance: float = 0.04,
-) -> torch.Tensor:
-    """True per env if EE (ee_frame target 0) is at least `min_distance` away from cube_0.
-
-    Uses ee_frame's `target_pos_w` (panda_hand + [0,0,0.1034] offset) and
-    cube_0 root pos, L2 distance in world frame. 4 cm default ≈ one cube edge.
-    """
-    cube_0 = env.scene["cube_0"]
-    ee_frame = env.scene["ee_frame"]
-    ee_pos = ee_frame.data.target_pos_w[..., 0, :]
-    cube_pos = cube_0.data.root_pos_w[:, :3]
-    distance = torch.norm(ee_pos - cube_pos, dim=-1)
-    return distance > min_distance
-
-
 def _no_contact_between_cube_0_and_gripper_or_ee(
     env: "ManagerBasedRLEnv",
     eps: float = 1e-3,
@@ -1532,16 +1518,22 @@ def cube_0_stacked_bonus_once_per_episode(
     env: "ManagerBasedRLEnv",
     xy_threshold: float = 0.02,
     z_threshold: float = 0.01,
-    gripper_away_min_distance: float = 0.04,
     cube_0_cfg: SceneEntityCfg = SceneEntityCfg("cube_0"),
     cube_1_cfg: SceneEntityCfg = SceneEntityCfg("cube_1"),
 ) -> torch.Tensor:
-    """+1.0 the FIRST step cube_0 stacked on cube_1 + EE moved away ≥ 4 cm + no contact, else 0.0.
+    """+1.0 the FIRST step cube_0 is stacked on cube_1 with no gripper contact, else 0.0.
 
-    Success criteria (ALL THREE must hold):
+    Success criteria (BOTH must hold):
       - geometric: |cube_0.xy − cube_1.xy| < xy_threshold AND |Δz − CUBE_SIZE| < z_threshold
-      - distance: ||EE_pos − cube_0_pos|| ≥ gripper_away_min_distance (default 4 cm)
       - no contact: neither fingertip nor the panda_hand body has any contact force on cube_0
+
+    NOTE — there is deliberately NO explicit EE-distance criterion. An earlier
+    revision computed a `far_enough` (EE ≥ 4 cm from cube_0) term and then
+    discarded it, while the docstring claimed three criteria; the dead code and
+    the wrong docstring have both been removed. `no_contact` is the only
+    "gripper has let go" signal. The ManiSkill port DOES additionally AND in
+    `far_enough`, so its success predicate is strictly stricter than this one —
+    success rates are not directly comparable across the two.
 
     Per-env latch reset when `env.episode_length_buf <= 1` and set the first
     time the combined criteria hold. Once latched the bonus stops firing —
@@ -1558,7 +1550,6 @@ def cube_0_stacked_bonus_once_per_episode(
     xy_dist = torch.norm(pos_0[:, :2] - pos_1[:, :2], dim=-1)
     z_gap = pos_0[:, 2] - pos_1[:, 2]
     geometric = (xy_dist < xy_threshold) & (torch.abs(z_gap - CUBE_SIZE) < z_threshold)
-    far_enough = _gripper_far_from_cube_0(env, min_distance=gripper_away_min_distance)
     no_contact = _no_contact_between_cube_0_and_gripper_or_ee(env)
     now_stacked = geometric & no_contact
 
@@ -1657,61 +1648,19 @@ def cube_0_stack_broken_penalty_once_per_episode(
     _LATCH_BUFFERS[(id(env), "stack_broke_penalty_fired")] = penalty_fired
     return fire.float()
 
-
-# --------------------------------------------------------------------------- #
-# Release-in-drop-zone bonus                                                  #
-# --------------------------------------------------------------------------- #
-#
-# Per-step bonus when the *grasping cube* (same mux used by §5 obs and §6
-# align reward) is within `xy_threshold` and `z_threshold` of the stack target
-# AND the policy outputs an "open gripper" action this step. Encourages the
-# policy to release the cube once it's hovering over the goal position.
-#
-# Gripper action convention (`BinaryJointPositionAction` in IsaacLab):
-#   `action[:, -1] < 0`  → close
-#   `action[:, -1] >= 0` → open
-#
-# Action index `-1` is the gripper because `ActionsCfg` declares
-# `arm_action` (3-D) then `gripper_action` (1-D); concatenated layout is
-# `[ee_dx, ee_dy, ee_dz, gripper]`.
-def release_bonus_in_drop_zone(
-    env: "ManagerBasedRLEnv",
-    xy_threshold: float = 0.02,
-    z_threshold: float = 0.03,
-) -> torch.Tensor:
-    """`1.0` if (xy_to_target < xy_threshold AND |z_to_target| < z_threshold
-    AND gripper_action >= 0) else `0.0`.
-
-    Target follows the same mux as `grasping_cube_goal_distance`:
-        not-yet-stacked: grasping_cube=cube_0, target=cube_1.xyz+[0,0,CUBE_SIZE]
-        stacked        : grasping_cube=cube_2, target=cube_0.xyz+[0,0,CUBE_SIZE]
-    """
-    cube_0 = env.scene["cube_0"]
-    cube_1 = env.scene["cube_1"]
-    cube_2 = env.scene["cube_2"]
-    on_stack = _cube_0_on_cube_1_predicate(env)              # (N,) bool
-    pos_0 = cube_0.data.root_pos_w[:, :3]
-    pos_1 = cube_1.data.root_pos_w[:, :3]
-    pos_2 = cube_2.data.root_pos_w[:, :3]
-    grasping_pos = torch.where(on_stack.unsqueeze(-1), pos_2, pos_0)
-    base_pos     = torch.where(on_stack.unsqueeze(-1), pos_0, pos_1)
-    target_pos   = base_pos.clone()
-    target_pos[:, 2] = target_pos[:, 2] + CUBE_SIZE
-
-    delta = grasping_pos - target_pos                        # (N, 3)
-    xy_dist = torch.norm(delta[:, :2], dim=-1)
-    z_dist  = torch.abs(delta[:, 2])
-    in_zone = (xy_dist < xy_threshold) & (z_dist < z_threshold)
-
-    # action_manager.action carries the latest policy output, raw, in the
-    # concatenated [arm(3), gripper(1)] layout. >= 0 → open per the
-    # BinaryJointAction.process_actions threshold.
-    gripper_open = env.action_manager.action[:, -1] >= 0.0   # (N,) bool
-
-    return (in_zone & gripper_open).float()
 ```
 
-> **WARN — Block-B `_gripper_far_from_cube_0` is defined but NOT used** by the active reward terms. `cube_0_stacked_bonus_once_per_episode` computes `far_enough = _gripper_far_from_cube_0(...)` but then drops it on the floor — `now_stacked = geometric & no_contact` ignores `far_enough`. The docstring claims "Success criteria (ALL THREE must hold): … - distance: ||EE_pos − cube_0_pos|| ≥ 4 cm". In code, only TWO of the three are AND-ed (geometric + no_contact). When reproducing, decide whether to keep the existing behaviour (no_contact alone) or change `now_stacked = geometric & no_contact & far_enough` to match the docstring.
+> **Note — everything in this §6 is live.** A previous revision carried three dead artifacts,
+> all now removed: an inactive `release_bonus_in_drop_zone` term (`weight=0.0`, short-circuited
+> by `RewardManager`), an unused `_gripper_far_from_cube_0` helper whose result was computed and
+> then discarded, and an unused `std_state_b` parameter on `grasping_cube_ee_distance`.
+> Reproducing this spec should yield **7 reward terms, all active**, with no unreferenced
+> helpers or parameters.
+>
+> Behavioural consequence worth knowing: because the discarded `far_enough` was never AND-ed
+> in, `success_bonus` latches on `geometric & no_contact` alone — the gripper may still be
+> within 4 cm. The ManiSkill port DOES AND it in, so its predicate is strictly stricter and
+> success rates are not directly comparable across the two.
 
 ### Smoke
 
@@ -1744,7 +1693,7 @@ To add later: `/harbor:create-task name=IsaacLab-Franka-StackCube description="a
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/mdp/actions_cfg.py` | 1–45 | `EMACumulativeDeltaPositionActionCfg` dataclass. |
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/mdp/events.py` | 1–15 | Empty placeholder (`dr-generator` may add §7 helpers). |
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/mdp/observations.py` | 1–117 | `ee_pose_in_robot_root_frame`, `_cube_pos_in_robot_root_frame`, `_stack_target_in_root_frame`, `_cube_0_on_cube_1_predicate`, `grasping_cube_position_in_robot_root_frame`, `grasping_target_position_in_robot_root_frame`. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/mdp/rewards.py` | 1–472 | 8 active reward terms (incl. inactive `release_bonus`) + private predicate + latch infra + private contact helpers + 1 unused `_gripper_far_from_cube_0` helper. |
+| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/mdp/rewards.py` | — | 7 reward terms, all active + private predicate + latch infra + private contact helpers. No unused helpers or parameters. |
 | `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/mdp/terminations.py` | 1–41 | Cross-module helper `_no_contact_between_cube_and_gripper_or_ee` only (no public termination funcs — the only DoneTerm is `mdp.time_out` from the shared namespace). |
 | `harbor/assets/fr3/fr3_franka_hand.usd` | (binary) | FR3 + Franka hand articulation USD (converted from `franka_description/urdfs/fr3_franka_hand.urdf` via `scripts/tools/convert_urdf.py`). Verified `test -e` OK. |
 | `harbor/assets/table/lab_table_instanceable_colored_rotated.usd` | (binary) | Lab table (the source repo rotated/colored variant, kinematic), surface at z≈0. Verified `test -e` OK. |
@@ -1785,5 +1734,5 @@ External imports the task relies on:
   assets=path/to/dest/fr3.usd,path/to/dest/table.usd
 ```
 
-> probe-task: wrote `harbor/create-task/isaaclab-franka-stackcube-implementation.md` (sections §1..§7, 8 active reward funcs + 1 inactive `release_bonus`, 5 obs terms / 19-D obs, 3-D position EMA action + binary gripper / 4-D action).
+> probe-task: wrote `harbor/create-task/isaaclab-franka-stackcube-implementation.md` (sections §1..§7, 7 active reward funcs, 5 obs terms / 19-D obs, 3-D position EMA action + binary gripper / 4-D action).
 > Reproduce via: `/harbor:create-task name=<new_task_id> from=<output>`.

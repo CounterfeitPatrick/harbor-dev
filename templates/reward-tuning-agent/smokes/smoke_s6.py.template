@@ -1,14 +1,26 @@
-"""S6 smoke — reward is finite, non-constant, and composer matches per-term decomposition.
+"""S6 smoke — the candidate reward is finite, non-constant, and per-term decomposable.
 
-Runs at num_envs=128. Reward is a (128,) tensor each step; the contract checks
-that EVERY env returns a finite scalar, that the cross-step time series of the
-mean-across-envs has non-zero std, and that the composer match holds element-wise
-across all envs at every step (when `info["detailed_reward"]` is present).
+Builds the env through ``<repo>/scripts/_isaaclab_env.py:make_isaaclab_env`` — the SAME
+factory train.py / render.py use, and the only path that wires per-term reward
+visibility (``info["detailed_reward"]``). A smoke that called ``gym.make`` directly would
+report ``passthrough`` and prove nothing about the decomposition the tune scores on.
+
+``{{TASK_ID}}`` is the candidate's own task: its slot clone when the pool runs more than
+one candidate, the source task when it runs sequentially.
+
+Runs at num_envs=128. Reward is a (128,) tensor each step; the contract checks that
+EVERY env returns a finite scalar, that the cross-step time series of the mean across
+envs has non-zero std, and that the per-term decomposition composes back to the env
+reward element-wise at every step.
 
 Substitutions:
   {{TASK_ID}} — gym task id
+  {{REPO}}    — absolute path to the benchmark repo (locates the env factory)
 """
 import argparse
+import importlib.util
+import os
+
 import numpy as np
 from isaaclab.app import AppLauncher
 
@@ -19,22 +31,28 @@ args.headless = True
 args.enable_cameras = False
 sim_app = AppLauncher(args).app
 
-import gymnasium as gym  # noqa: E402
-import isaaclab_tasks    # noqa: F401, E402
-from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
+REPO = "{{REPO}}"                                                        # noqa: E402
+HELPER = os.path.join(REPO, "scripts", "_isaaclab_env.py")               # noqa: E402
+assert os.path.isfile(HELPER), (                                         # noqa: E402
+    f"env factory not found at {HELPER} — run the /harbor:reward-add-log flow first. "
+    "Without it the reward has no per-term decomposition to check."
+)
+_spec = importlib.util.spec_from_file_location("_isaaclab_env", HELPER)  # noqa: E402
+_helper = importlib.util.module_from_spec(_spec)                         # noqa: E402
+_spec.loader.exec_module(_helper)                                        # noqa: E402
 
 
 def _to_np(t):
     return t.detach().cpu().numpy() if hasattr(t, "detach") else np.asarray(t)
 
 
-cfg = parse_env_cfg("{{TASK_ID}}", device="cuda:0", num_envs=128, use_fabric=True)
-env = gym.make("{{TASK_ID}}", cfg=cfg)
+env = _helper.make_isaaclab_env("{{TASK_ID}}", num_envs=128, device="cuda:0")
 obs, info = env.reset(seed=0)
 
 step_means = []                  # mean reward across envs at each step (for time-std)
 term_sums = {}                   # name -> running sum (mean across envs)
-saw_detailed = False
+term_names = set()
+composer = "sum"
 all_finite = True
 
 for _ in range(30):
@@ -47,33 +65,44 @@ for _ in range(30):
     step_means.append(float(r_np.mean()))
 
     detailed = info.get("detailed_reward")
-    if detailed is not None:
-        saw_detailed = True
-        per_term_np = {k: _to_np(v).reshape(-1) for k, v in detailed.items()}
+    assert detailed is not None, (
+        "info['detailed_reward'] is missing — the env was not built through the "
+        "instrumented factory, so the tune would be blind to per-term curves."
+    )
+    composer = info.get("reward_composer", "sum")
+    per_term = {k: _to_np(v).reshape(-1) for k, v in detailed.items()}
+    term_names |= set(per_term)
+
+    # 'diagnostic' terms are pre-scale means that deliberately do NOT compose back to
+    # the env reward (Factory / Forge / Industreal). Only 'sum' is checkable.
+    if composer == "sum":
         composed = np.zeros_like(r_np)
-        for v in per_term_np.values():
+        for v in per_term.values():
             composed = composed + v
         assert np.allclose(composed, r_np, atol=1e-5), (
             "composer mismatch (some env): "
             f"max|sum(terms) - reward|={np.max(np.abs(composed - r_np)):.6f} "
-            f"terms={list(per_term_np)}"
+            f"terms={sorted(per_term)}"
         )
-        for k, v in per_term_np.items():
-            term_sums[k] = term_sums.get(k, 0.0) + float(v.mean())
+    for k, v in per_term.items():
+        term_sums[k] = term_sums.get(k, 0.0) + float(v.mean())
     # IsaacLab auto-resets terminated envs internally — no manual reset needed.
 
 assert all_finite, "NaN or Inf in reward at 128 envs over 30 steps"
 arr = np.asarray(step_means)
 assert arr.std() > 0, f"reward (mean across envs) is constant over 30 steps (mean={arr.mean()})"
+assert term_names != {"total"}, (
+    "detailed_reward carries only 'total' — the factory fell back to passthrough. "
+    "The tune scores per-term curves, so this is a wiring failure, not a warning."
+)
 
-if saw_detailed:
-    print("per-term episodic mean (across 128 envs, summed over 30 steps):")
-    for k, v in sorted(term_sums.items(), key=lambda kv: -abs(kv[1])):
-        print(f"  {k}: {v:+.4f}")
+print("per-term episodic mean (across 128 envs, summed over 30 steps):")
+for k, v in sorted(term_sums.items(), key=lambda kv: -abs(kv[1])):
+    print(f"  {k}: {v:+.4f}")
 
 print(
     f"S6 OK: 30 steps × 128 envs, reward mean={arr.mean():.3f} std={arr.std():.3f} "
-    f"composer={'sum-verified' if saw_detailed else 'passthrough'}"
+    f"terms={len(term_names)} composer={composer}"
 )
 env.close()
 sim_app.close()

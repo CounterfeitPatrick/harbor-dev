@@ -68,6 +68,7 @@ _RENDERED_OUTPUTS = {
     "actions.py", "actions_cfg.py", "rewards.py", "tune.py", "__init__.py",
     "env.py", "env_cfg.py", "joint_pos_env_cfg.py", "manager_based_env.py",
     "_env.py",      # from the `scripts/_<family>_env.py` glob
+    "_isaaclab_env.py",  # rendered by /harbor:reward-add-log (Path B env factory)
     "launch.sh",    # rendered by /harbor:rl-sweep into the sweep dir
 }
 

@@ -23,6 +23,7 @@ _TEXT_GLOBS = [
 KNOWN_TOOLS = {
     "Read", "Write", "Edit", "Bash", "Glob", "Grep",
     "AskUserQuestion", "WebFetch", "WebSearch", "NotebookEdit",
+    "Agent", "TaskStop",
 }
 KNOWN_MODELS = {"opus", "sonnet", "haiku", "fable", "inherit"}
 BUILTIN_AGENTS = {"general-purpose", "claude", "Explore", "Plan", "statusline-setup"}
