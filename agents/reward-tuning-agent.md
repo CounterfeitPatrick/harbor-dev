@@ -71,7 +71,7 @@ base/                            # snapshot of the task's editable surface, take
 clone-slot<i>.json               # clone manifest per slot (effective_pool > 1 only)
 iter_<NNN>/                      # one per candidate, written by the candidate agent:
                                  #   design.json, smokes/, run.sh, run.log, render.mp4,
-                                 #   frames/, analysis.md, verdict.json, .done
+                                 #   frames/, verdict.json, .done
 ```
 
 ## STEP 0 — Pre-flight + per-term logging (before iter 0)
@@ -300,8 +300,10 @@ and the file is what resume reads). Then, as the single writer of every shared f
 - update `tune-state.json:iters[NNN]`, remove the iter from `in_flight[]`, checkpoint.
 
 **`success_rate: null` is ungradable, not zero.** Rank it below every graded candidate and
-never write it into `best_success_rate`. Read `artifacts.analysis_md` only when a verdict
-doesn't add up — a surprising number, a behavior that contradicts the curves.
+never write it into `best_success_rate`. When a verdict doesn't add up — a surprising number,
+a behavior that contradicts the curves — pull the RAW evidence the verdict points at
+(`artifacts.render_mp4` / `frames_dir` / `metrics_jsonl` / `run_log`). There is no companion
+analysis file: `verdict.json` is the candidate's entire write-up.
 
 **Read `status` before you read the number.** `task_smoke_failed` and `reward_smoke_failed`
 both arrive with no score, but they say opposite things: the first means the structural

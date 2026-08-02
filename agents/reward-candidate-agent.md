@@ -218,7 +218,8 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/reward-tuning-agent/score_iter.py" \
     --metrics "$trial/metrics.jsonl" --design "<iter_dir>/design.json" --iter <NNN> \
     --status scored --smoke S1=pass --smoke S6=pass [--smoke ...] \
     --behavior "<what the policy does>" [--failure-mode "..."] [--finding "..."]... \
-    --artifact render_mp4=<...> --artifact trial_dir=<...> \
+    --artifact render_mp4=<...> --artifact frames_dir=<...> --artifact trial_dir=<...> \
+    --artifact metrics_jsonl=<...> --artifact run_log=<...> \
     --out "<iter_dir>/verdict.json"
 ```
 
@@ -236,9 +237,11 @@ The scorer owns every number. Your contribution is the part it cannot compute:
   the task design or the reward. This is your entire influence on the search; a vague
   finding is a wasted iteration.
 
-Write `<iter_dir>/analysis.md` (per-term table, success_rate, smoke results, behavior,
-findings) for the designer to pull on demand. Then `touch <iter_dir>/.done` — **last, after
-`verdict.json` exists**, since `.done` is what the designer polls. Return the verdict as your
+`verdict.json` is your whole write-up — there is no companion `analysis.md`. Everything you
+want the designer to know goes in `behavior` / `failure_mode` / `findings`; everything it might
+want to check itself is already on disk under `iter_<NNN>/` and listed in `artifacts`. Then
+`touch <iter_dir>/.done` — **last, after `verdict.json` exists**, since `.done` is what the
+designer polls. Return the verdict as your
 final message. Emit a verdict on every exit path, including the smoke-failure ones: a
 candidate that returns nothing looks identical to a crashed agent.
 

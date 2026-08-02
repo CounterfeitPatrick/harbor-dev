@@ -99,15 +99,14 @@ numeric fields come from `scripts/reward-tuning-agent/score_iter.py`, which owns
   "failure_mode": "<one line, or null when it converged>",
   "findings": ["<0-3 lines the next design should act on>"],
   "notes": ["<scorer-emitted caveats>"],
-  "artifacts": {"render_mp4": "...", "trial_dir": "...", "metrics_jsonl": "...",
-                "analysis_md": "<optional>"} }
+  "artifacts": {"render_mp4": "...", "frames_dir": "...", "trial_dir": "...",
+                "metrics_jsonl": "...", "run_log": "..."} }
 ```
 
-`behavior` / `failure_mode` / `findings` in the verdict ARE the analysis — a separate
-`analysis.md` is optional, not required. (It was mandatory; every candidate in the first real
-tune hit a harness rule against writing analysis `.md` files and inlined the prose into the
-verdict instead. The verdict is the channel the designer actually reads, so that is the right
-home; the file is a convenience when a candidate wants to leave longer notes.)
+**`verdict.json` is the ONLY analysis channel.** `behavior` / `failure_mode` / `findings` are
+the write-up; there is no companion prose file. A candidate that has more to say says it in
+those fields. `artifacts` are raw evidence — the render, the frames, the metrics, the run log —
+for the designer to pull when a verdict doesn't add up, never a second narrative to maintain.
 
 The durable copy on disk is what makes the loop resume-safe: a crashed session, a killed
 agent, or a lost notification all recover by reading `verdict.json`.
