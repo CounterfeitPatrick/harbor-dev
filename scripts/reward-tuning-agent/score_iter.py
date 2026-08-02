@@ -27,7 +27,7 @@ import math
 import os
 import sys
 
-from _metrics import final_values, load_series
+from _metrics import final_values, load_series, peak_values
 
 PREFIX, SUFFIX = "reward/", "/episodic_return_mean"
 TOTAL_KEY = PREFIX + "total" + SUFFIX
@@ -123,13 +123,30 @@ def main():
         design = json.load(f)
 
     if os.path.isfile(a.metrics):
-        final = final_values(load_series(a.metrics))
+        ser = load_series(a.metrics)
+        final = final_values(ser)
         rate, gate, notes = score(final, design)
         per_term = per_term_returns(final)
         total = final.get(TOTAL_KEY)
+
+        # Peak-vs-final. A run that peaked and collapsed is scored on the collapse unless the
+        # designer is shown the gap, and the end-of-training checkpoint is then not the policy
+        # that earned the peak.
+        peak = peak_values(ser)
+        peak_total, peak_step = peak.get(TOTAL_KEY, (None, None))
+        peak_rate, _, _ = score({k: v for k, (v, _) in peak.items()}, design)
+        if (peak_total is not None and total is not None
+                and peak_total > 0 and total < 0.7 * peak_total):
+            notes.append(
+                f"run PEAKED at total_return {peak_total:.1f} @step {peak_step} and ended at "
+                f"{total:.1f} ({total / peak_total:.0%} of peak) — the final checkpoint is not "
+                f"the best policy this run produced. Score the run on both; render "
+                f"checkpoint_best.pth, not checkpoint.pth."
+            )
     else:
         rate, gate, notes = None, "no_metrics", [f"metrics.jsonl not found: {a.metrics}"]
         per_term, total = {}, None
+        peak_total = peak_step = peak_rate = None
 
     def _pairs(items):
         out = {}
@@ -145,6 +162,7 @@ def main():
         "smokes": _pairs(a.smoke),
         "success_rate": rate,
         "total_return": total,
+        "peak": {"success_rate": peak_rate, "total_return": peak_total, "step": peak_step},
         "per_term": {k: round(v, 4) for k, v in sorted(per_term.items())},
         "gate": gate,
         "behavior": a.behavior,

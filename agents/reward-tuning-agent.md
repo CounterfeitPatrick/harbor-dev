@@ -39,7 +39,7 @@ every DESIGN sees the freshest completed history plus the designs still running.
 | `on_success` | no | First convergence: `cancel` (default) or `drain` in-flight. |
 | `success_threshold` | no | Stop when `success_rate ≥` this (default 0.5). |
 | `timesteps_per_iter` | no | Per-candidate budget; unset → config default. |
-| `seed` | no | Unset → config default. |
+| `seed` | no | Unset ⇒ **you draw ONE seed at STEP 1 and pin it for the whole tune**. Candidates differ by design, not by seed: unpinned, small reward deltas are unmeasurable — a candidate and its parent can be identical for 7.4M steps and then diverge on seed alone. Record it in `tune-state.json:seed` and pass it to every candidate. |
 | `n_frames` | no | Frames the candidate reads per render (default 12). |
 | `prompt_every_n_stuck` | no | Return `needs_decision` after N non-improving completions (default 5). |
 | `monitor_early_stop` | no | Forwarded to candidates (default **false** ⇒ train to full budget). |
@@ -109,7 +109,9 @@ rest. Else CREATE:
 ```json
 { "schema_version": 4, "task_id": "<task>", "algorithm": "<algo>", "wandb_project": "<wandb>",
   "pool_size": <N>, "gpus": <N>, "effective_pool": <N>, "on_success": "cancel|drain",
-  "success_threshold": 0.5, "timesteps_per_iter": <N>, "seed": <N>, "library_refs": [...],
+  "success_threshold": 0.5, "timesteps_per_iter": <N>,
+  "seed": <the ONE seed pinned for this tune — drawn here if the caller gave none>,
+  "library_refs": [...],
   "monitor_early_stop": false, "monitor_interval": 300, "monitor_soft_floor": 0.5,
   "started_at": "<iso8601>", "next_iter": 0, "best_iter": null, "best_success_rate": null,
   "best_total_return": null, "consecutive_non_improving": 0,

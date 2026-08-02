@@ -52,3 +52,18 @@ def load_series(path):
 def final_values(ser):
     """{key: last value} — the value at the largest step for each key."""
     return {k: pts[-1][1] for k, pts in ser.items() if pts}
+
+
+def peak_values(ser):
+    """{key: (best value, step at which it occurred)} over the whole curve.
+
+    RL runs routinely peak mid-training and degrade: scoring only the last point can
+    understate a candidate several-fold. Reported ALONGSIDE the final value, never instead
+    of it — a lone noisy spike is not a policy's quality, so the designer needs to see both.
+    """
+    out = {}
+    for k, pts in ser.items():
+        vals = [(v, st) for st, v in pts if isinstance(v, (int, float))]
+        if vals:
+            out[k] = max(vals, key=lambda t: t[0])
+    return out

@@ -218,6 +218,31 @@ def main(cfg: DictConfig):
     print(f"[train] algo={cfg.algo.name} task={task} num_envs={cfg.num_envs} max_step={max_step} "
           f"log_interval={log_interval} wandb={'on' if use_wandb else 'off'}", flush=True)
 
+    # Checkpointing. A run that peaks mid-training and degrades by the end is common, and
+    # saving only the final policy silently scores the wrong one (observed: a tune candidate
+    # peaked at 772 and was scored at 158). So: keep the best-so-far, plus periodic snapshots
+    # for post-hoc inspection and crash recovery.
+    ckpt_interval = int(cfg.get("checkpoint_interval", 0)) or max(max_step // 10, 1)
+    next_ckpt_at = ckpt_interval
+    best_return = float("-inf")
+    best_step = 0
+
+    def _save_ckpt(path):
+        extra = {"algo": str(cfg.algo.name), "task": str(task)}
+        # Persist obs_rms / value_rms when active — the actor was trained on normalized obs;
+        # restoring these stats is required for render/eval to reproduce training-time
+        # behavior (without them, inference feeds raw obs into a network expecting
+        # normalized obs and produces garbage).
+        if getattr(agent, "obs_rms", None) is not None:
+            extra["obs_rms"] = agent.obs_rms.state_dict()
+            extra["obs_norm"] = True
+        if getattr(agent, "value_rms", None) is not None:
+            extra["value_rms"] = agent.value_rms.state_dict()
+            extra["value_norm"] = True
+        save_model(path, actor=agent.actor.state_dict(), critic=agent.critic.state_dict(),
+                   **extra)
+        return path
+
     next_log_at = log_interval
     try:
         for it in count():
@@ -237,24 +262,30 @@ def main(cfg: DictConfig):
                       f"return={log_info.get('reward/total/episodic_return_mean', 0.0):.3f}", flush=True)
                 next_log_at = ((global_steps // log_interval) + 1) * log_interval
 
+                ret = (log_info or {}).get("reward/total/episodic_return_mean")
+                if ret is not None and float(ret) > best_return:
+                    best_return, best_step = float(ret), global_steps
+                    _save_ckpt(log_dir / "checkpoint_best.pth")
+                    _record("train/best_return", best_return, global_steps)
+                    print(f"[train] new best return={best_return:.3f} @{global_steps}", flush=True)
+
+            if global_steps >= next_ckpt_at:
+                _save_ckpt(log_dir / f"checkpoint_{global_steps}.pth")
+                print(f"[train] periodic checkpoint @{global_steps}", flush=True)
+                next_ckpt_at = ((global_steps // ckpt_interval) + 1) * ckpt_interval
+
             if global_steps >= max_step:
                 break
 
-        ckpt = log_dir / "checkpoint.pth"
-        extra = {"algo": str(cfg.algo.name), "task": str(task)}
-        # Persist obs_rms / value_rms when active — the actor was trained on
-        # normalized obs; restoring these stats is required for render/eval to
-        # reproduce training-time behavior (without them, inference feeds raw
-        # obs into a network expecting normalized obs and produces garbage).
-        if getattr(agent, "obs_rms", None) is not None:
-            extra["obs_rms"] = agent.obs_rms.state_dict()
-            extra["obs_norm"] = True
-        if getattr(agent, "value_rms", None) is not None:
-            extra["value_rms"] = agent.value_rms.state_dict()
-            extra["value_norm"] = True
-        save_model(ckpt, actor=agent.actor.state_dict(), critic=agent.critic.state_dict(),
-                   **extra)
+        ckpt = _save_ckpt(log_dir / "checkpoint.pth")
         dl.log_text("final/checkpoint_path", str(ckpt), step=global_steps)
+        if best_step:
+            dl.log_text("final/best_checkpoint_path", str(log_dir / "checkpoint_best.pth"),
+                        step=global_steps)
+            print(f"[train] best return={best_return:.3f} @{best_step} "
+                  f"-> {log_dir / 'checkpoint_best.pth'}", flush=True)
+        # This exact string is the completion SENTINEL the reward-tune watchdog polls for.
+        # Keep it unique to the FINAL save — periodic/best saves must not emit it.
         print(f"[train] saved checkpoint to {ckpt}", flush=True)
         if bool(cfg.get("record_video", True)):
             _render_and_log_video(agent, cfg, log_dir, global_steps, use_wandb,

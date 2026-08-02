@@ -149,3 +149,34 @@ def test_prose_and_artifacts_pass_through(tmp_path):
     assert v["findings"] == ["contact gate never fires"]
     assert v["artifacts"] == {"render_mp4": "/abs/render.mp4"}
     assert json.loads(out.read_text()) == v      # --out and stdout agree
+
+
+def test_peak_is_reported_alongside_final_when_a_run_collapses(tmp_path):
+    """A run that peaks and degrades is scored on the collapse unless the designer sees the
+    gap — observed in a real tune: peak 772, scored 158."""
+    m, d = _write(tmp_path, [
+        {"step": 100, "reward/total/episodic_return_mean": 100.0,
+         "reward/stack_success/episodic_return_mean": 100.0},
+        {"step": 200, "reward/total/episodic_return_mean": 772.0,
+         "reward/stack_success/episodic_return_mean": 160.0},
+        {"step": 300, "reward/total/episodic_return_mean": 158.0,
+         "reward/stack_success/episodic_return_mean": 20.0},
+    ])
+    v = _run(m, d)
+    assert v["total_return"] == 158.0, "final must stay the headline number"
+    assert v["peak"]["total_return"] == 772.0 and v["peak"]["step"] == 200
+    assert v["peak"]["success_rate"] == 160.0 / 200.0
+    assert any("PEAKED" in n for n in v["notes"])
+    assert any("checkpoint_best.pth" in n for n in v["notes"])
+
+
+def test_no_peak_note_when_the_run_ends_at_its_best(tmp_path):
+    m, d = _write(tmp_path, [
+        {"step": 100, "reward/total/episodic_return_mean": 10.0,
+         "reward/stack_success/episodic_return_mean": 10.0},
+        {"step": 200, "reward/total/episodic_return_mean": 90.0,
+         "reward/stack_success/episodic_return_mean": 100.0},
+    ])
+    v = _run(m, d)
+    assert v["peak"]["total_return"] == 90.0
+    assert not any("PEAKED" in n for n in v["notes"])

@@ -138,9 +138,12 @@ slug=$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/common/resolve_suite.py" --field s
 .venv/bin/python -u harbor/scripts/rl/${slug}/train.py --config-name=<config_name> \
     task=<task> [seed=<seed>] [total_timesteps=<N>] \
     wandb=<wandb_project> wandb_run_name=<wandb_run_name>
-# resolve the trial dir, then:
+# resolve the trial dir, then render the BEST checkpoint when the trainer saved one —
+# runs routinely peak mid-training and degrade, so checkpoint.pth is often NOT the policy
+# that earned the score you are about to explain.
+ckpt=$trial/checkpoint_best.pth; [ -f "$ckpt" ] || ckpt=$trial/checkpoint.pth
 .venv/bin/python -u harbor/scripts/rl/${slug}/render.py \
-    checkpoint=$trial/checkpoint.pth task=<task> +gpu_sim=true
+    checkpoint=$ckpt task=<task> +gpu_sim=true
 ```
 
 `<task>` is your task id throughout — the clone's when you have one, so W&B and the trial
@@ -225,6 +228,9 @@ The scorer owns every number. Your contribution is the part it cannot compute:
   `<iter_dir>/frames/`, `Read` them, and write `behavior` as what the policy actually does
   compared with `description`. "Reward went up" is not a behavior; "the arm reaches the cube
   and hovers, gripper never closes" is.
+- **Read the scorer's `peak` block before writing `behavior`.** If it reports the run peaked
+  and collapsed, say which policy you actually watched — the rendered best checkpoint is not
+  the end-of-training one, and conflating them misreports what the reward produced.
 - **`failure_mode`** — one line naming the mechanism, not the symptom.
 - **`findings`** — 0–3 lines the next design should act on, and say whether each points at
   the task design or the reward. This is your entire influence on the search; a vague
