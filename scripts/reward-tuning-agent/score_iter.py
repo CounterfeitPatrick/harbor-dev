@@ -156,6 +156,19 @@ def main():
                 out[k] = v
         return out
 
+    # Artifact existence gate. A verdict that points at a path which was never written sends
+    # the designer to a dead file exactly when it is already suspicious of the numbers — and a
+    # silent `cp` failure is invisible otherwise. Missing paths are REPORTED, not carried.
+    declared = _pairs(a.artifact)
+    artifacts = {k: v for k, v in declared.items() if v and os.path.exists(v)}
+    missing = {k: v for k, v in declared.items() if k not in artifacts}
+    if missing:
+        notes.append(
+            "declared artifact(s) do not exist and were dropped from the verdict: "
+            + ", ".join(f"{k}={v}" for k, v in sorted(missing.items()))
+            + " — the designer cannot pull evidence that was never written."
+        )
+
     verdict = {
         "iter": a.iter,
         "status": a.status,
@@ -169,7 +182,7 @@ def main():
         "failure_mode": a.failure_mode,
         "findings": a.finding,
         "notes": notes,
-        "artifacts": _pairs(a.artifact),
+        "artifacts": artifacts,
     }
 
     out = json.dumps(verdict, indent=2)

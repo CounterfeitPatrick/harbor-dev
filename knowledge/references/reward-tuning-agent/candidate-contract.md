@@ -99,9 +99,15 @@ numeric fields come from `scripts/reward-tuning-agent/score_iter.py`, which owns
   "failure_mode": "<one line, or null when it converged>",
   "findings": ["<0-3 lines the next design should act on>"],
   "notes": ["<scorer-emitted caveats>"],
-  "artifacts": {"render_mp4": "...", "frames_dir": "...", "trial_dir": "...",
-                "metrics_jsonl": "...", "run_log": "..."} }
+  "artifacts": {"render_mp4": "...", "frames_dir": "...", "curves_dir": "...",
+                "metrics_jsonl": "...", "run_log": "...", "trial_dir": "..."} }
 ```
+
+Every artifact but `trial_dir` lives **inside `iter_<NNN>/`**, copied there by the candidate,
+so an iteration is reviewable on its own without resolving a timestamped path under
+`harbor/outputs/`. `trial_dir` still points at the canonical training output (checkpoints,
+TensorBoard events). `score_iter.py` **drops any declared path that does not exist** and says
+so in `notes` — the designer is never sent to a dead file.
 
 **`verdict.json` is the ONLY analysis channel.** `behavior` / `failure_mode` / `findings` are
 the write-up; there is no companion prose file. A candidate that has more to say says it in

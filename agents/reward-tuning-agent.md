@@ -69,9 +69,10 @@ handoff-reward-tuning-agent.md   # latest BEST design (task_changes + reward), o
 memories.jsonl                   # cumulative findings — YOU are the single writer
 base/                            # snapshot of the task's editable surface, taken once at STEP 1
 clone-slot<i>.json               # clone manifest per slot (effective_pool > 1 only)
-iter_<NNN>/                      # one per candidate, written by the candidate agent:
-                                 #   design.json, smokes/, run.sh, run.log, render.mp4,
-                                 #   frames/, verdict.json, .done
+iter_<NNN>/                      # one per candidate, written by the candidate agent. Self-
+                                 # contained: design.json, smokes/, run.sh, run.log,
+                                 # render.mp4, frames/, curves/, metrics.jsonl,
+                                 # trial_dir.txt, verdict.json, .done
 ```
 
 ## STEP 0 — Pre-flight + per-term logging (before iter 0)

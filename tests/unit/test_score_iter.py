@@ -139,15 +139,16 @@ def test_prose_and_artifacts_pass_through(tmp_path):
          "reward/stack_success/episodic_return_mean": 100.0},
     ])
     out = tmp_path / "verdict.json"
+    mp4 = tmp_path / "render.mp4"; mp4.write_bytes(b"mp4")   # must exist — see the gate below
     v = _run(m, d, "--behavior", "arm reaches but never closes the gripper",
              "--failure-mode", "no grasp",
              "--finding", "contact gate never fires",
-             "--artifact", "render_mp4=/abs/render.mp4",
+             f"--artifact", f"render_mp4={mp4}",
              "--out", str(out))
     assert v["behavior"].startswith("arm reaches")
     assert v["failure_mode"] == "no grasp"
     assert v["findings"] == ["contact gate never fires"]
-    assert v["artifacts"] == {"render_mp4": "/abs/render.mp4"}
+    assert v["artifacts"] == {"render_mp4": str(mp4)}
     assert json.loads(out.read_text()) == v      # --out and stdout agree
 
 
@@ -180,3 +181,30 @@ def test_no_peak_note_when_the_run_ends_at_its_best(tmp_path):
     v = _run(m, d)
     assert v["peak"]["total_return"] == 90.0
     assert not any("PEAKED" in n for n in v["notes"])
+
+
+def test_declared_artifacts_that_do_not_exist_are_dropped_and_reported(tmp_path):
+    """A silent `cp` failure would otherwise leave the verdict pointing at a dead path —
+    discovered exactly when the designer is already suspicious of the numbers."""
+    m, d = _write(tmp_path, [
+        {"step": 1, "reward/total/episodic_return_mean": 1.0,
+         "reward/stack_success/episodic_return_mean": 100.0},
+    ])
+    real = tmp_path / "render.mp4"; real.write_bytes(b"mp4")
+    v = _run(m, d,
+             "--artifact", f"render_mp4={real}",
+             "--artifact", f"curves_dir={tmp_path / 'curves'}")     # never written
+    assert v["artifacts"] == {"render_mp4": str(real)}, "dead path must not survive"
+    assert any("curves_dir" in n and "do not exist" in n for n in v["notes"])
+
+
+def test_all_artifacts_present_produces_no_note(tmp_path):
+    m, d = _write(tmp_path, [
+        {"step": 1, "reward/total/episodic_return_mean": 1.0,
+         "reward/stack_success/episodic_return_mean": 100.0},
+    ])
+    mp4 = tmp_path / "render.mp4"; mp4.write_bytes(b"mp4")
+    curves = tmp_path / "curves"; curves.mkdir()
+    v = _run(m, d, "--artifact", f"render_mp4={mp4}", "--artifact", f"curves_dir={curves}")
+    assert set(v["artifacts"]) == {"render_mp4", "curves_dir"}
+    assert not any("do not exist" in n for n in v["notes"])

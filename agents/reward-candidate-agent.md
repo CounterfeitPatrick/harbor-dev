@@ -144,7 +144,21 @@ slug=$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/common/resolve_suite.py" --field s
 ckpt=$trial/checkpoint_best.pth; [ -f "$ckpt" ] || ckpt=$trial/checkpoint.pth
 .venv/bin/python -u harbor/scripts/rl/${slug}/render.py \
     checkpoint=$ckpt task=<task> +gpu_sim=true
+
+# Collect this candidate's viewable evidence INTO its own iter dir, so an iteration can be
+# reviewed on its own without resolving a timestamped path under harbor/outputs/.
+echo "$trial" > "<iter_dir>/trial_dir.txt"
+for src in render.mp4 metrics.jsonl; do
+    cp    "$trial/$src"  "<iter_dir>/$src"  || echo "[collect] MISSING $trial/$src" >&2
+done
+cp -r "$trial/curves" "<iter_dir>/curves"  || echo "[collect] MISSING $trial/curves" >&2
 ```
+
+**Every artifact the designer or a human reviews lives under `iter_<NNN>/`.** The trial dir
+stays the canonical training output (checkpoints, TensorBoard events, the original curves) and
+is recorded in `trial_dir.txt`; the copies are what make an iteration self-contained. Copy
+rather than move — `harbor/outputs/<trial>/` is the path `/harbor:rl-eval`, `/harbor:rl-render`
+and `/harbor:plot` resolve against, and emptying it would break them for a few MB saved.
 
 `<task>` is your task id throughout — the clone's when you have one, so W&B and the trial
 dir carry the candidate's own identity. Include a bracketed override **only** for a key the
@@ -218,8 +232,9 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/reward-tuning-agent/score_iter.py" \
     --metrics "$trial/metrics.jsonl" --design "<iter_dir>/design.json" --iter <NNN> \
     --status scored --smoke S1=pass --smoke S6=pass [--smoke ...] \
     --behavior "<what the policy does>" [--failure-mode "..."] [--finding "..."]... \
-    --artifact render_mp4=<...> --artifact frames_dir=<...> --artifact trial_dir=<...> \
-    --artifact metrics_jsonl=<...> --artifact run_log=<...> \
+    --artifact render_mp4=<iter_dir>/render.mp4 --artifact frames_dir=<iter_dir>/frames \
+    --artifact curves_dir=<iter_dir>/curves --artifact metrics_jsonl=<iter_dir>/metrics.jsonl \
+    --artifact run_log=<iter_dir>/run.log --artifact trial_dir=$trial \
     --out "<iter_dir>/verdict.json"
 ```
 
@@ -239,9 +254,23 @@ The scorer owns every number. Your contribution is the part it cannot compute:
 
 `verdict.json` is your whole write-up — there is no companion `analysis.md`. Everything you
 want the designer to know goes in `behavior` / `failure_mode` / `findings`; everything it might
-want to check itself is already on disk under `iter_<NNN>/` and listed in `artifacts`. Then
-`touch <iter_dir>/.done` — **last, after `verdict.json` exists**, since `.done` is what the
-designer polls. Return the verdict as your
+want to check itself is already on disk under `iter_<NNN>/` — render, frames, curves, metrics,
+run log — and listed in `artifacts`.
+
+**Completeness gate — check before you return.** `score_iter.py` drops any `--artifact` path
+that does not exist and records it in `notes`, so a dead path can never reach the designer.
+That is the backstop, not the goal: read the emitted `notes` and, for anything reported
+missing, either produce it or say in `failure_mode` why it does not exist (an early-stopped
+run has no render; a crashed trainer has no curves). Returning with silently absent evidence
+is how a suspicious verdict becomes un-auditable.
+
+```bash
+ls -la "<iter_dir>"          # expect: design.json reward.py run.sh run.log verdict.json
+                             #         render.mp4 metrics.jsonl curves/ frames/ trial_dir.txt
+```
+
+Then `touch <iter_dir>/.done` — **last, after `verdict.json` exists**, since `.done` is what
+the designer polls. Return the verdict as your
 final message. Emit a verdict on every exit path, including the smoke-failure ones: a
 candidate that returns nothing looks identical to a crashed agent.
 
