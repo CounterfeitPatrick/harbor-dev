@@ -167,7 +167,10 @@ real failure. Resolve `$trial` between the two calls.
 
 Launch per `mode`:
 
-- **`local`** — `Bash(run_in_background=true, "bash <iter_dir>/run.sh > <iter_dir>/run.log 2>&1")`, then wait for it.
+- **`local`** — launch DETACHED so a harness-side process-group cleanup cannot kill a
+  multi-hour trainer mid-run:
+  `Bash(run_in_background=true, "setsid bash <iter_dir>/run.sh > <iter_dir>/run.log 2>&1 < /dev/null &")`,
+  then wait for it. (Without `setsid`, a real tune lost a candidate at ~58M steps.)
 - **`cluster`** — write the same body as `<iter_dir>/launch.sh` with SBATCH directives so
   train **and** render both run on the compute node (never render on a login node), submit
   with `sbatch`, write the jobid to `<iter_dir>/jobid.txt` (the designer needs it to

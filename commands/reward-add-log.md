@@ -73,7 +73,14 @@ ls "$(pwd)"/scripts/_*_env.py
 
 Exactly one match expected (benchmark-generator convention). If zero, stop. If more than one, ask the user which to patch.
 
-**Path B — IsaacLab:** the helper does not exist yet (IsaacLab tasks aren't built through `scripts/_<family>_env.py` — `harbor/scripts/rl/custom_torch/env_wrapper.py::_build_isaaclab_env` builds them inline via `gym.make` + `parse_env_cfg`). Step 5 will render `<repo>/scripts/_isaaclab_env.py` from a template and add a one-line delegation in `env_wrapper.py` so the rl-integration tree picks it up.
+**Path B — IsaacLab:** ⚠️ **check first — `<repo>/scripts/_isaaclab_env.py` may already exist.**
+`benchmark-generator` writes its L1/L2 smoke helper at that exact path, with an incompatible
+signature (`make_isaaclab_env(task, num_envs, render)`, boots Kit itself, returns a smoke
+adapter) and no per-term decomposition. `run_random.py` and `render_random.py` import it.
+Rendering this template over it silently breaks both smokes. If the file exists, do NOT
+overwrite it — check whether per-term logging is already provided by
+`harbor/scripts/rl/<slug>/env_wrapper.py` (it often is), and if a helper is still needed,
+render to a distinct filename. Otherwise: the helper does not exist yet (IsaacLab tasks aren't built through `scripts/_<family>_env.py` — `harbor/scripts/rl/custom_torch/env_wrapper.py::_build_isaaclab_env` builds them inline via `gym.make` + `parse_env_cfg`). Step 5 will render `<repo>/scripts/_isaaclab_env.py` from a template and add a one-line delegation in `env_wrapper.py` so the rl-integration tree picks it up.
 
 ### Step 4 — Build the term spec / composer
 

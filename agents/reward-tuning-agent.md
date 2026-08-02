@@ -84,10 +84,17 @@ test -x .venv/bin/python && test -f harbor/benchmark-generator/benchmark-spec.js
 command -v ffmpeg >/dev/null || exit 1
 ```
 
-**Per-term reward logging MUST be wired before iter 0.** You score `reward/<term>/...`
-keys; without `info["detailed_reward"]` the loop is blind, and the injection hook that
-isolates candidates lives in the same factory. If `scripts/_isaaclab_env.py` is missing or
-not delegating, **run the `/harbor:reward-add-log` flow yourself** — read
+**Per-term reward logging MUST be wired before iter 0.** You score `reward/<term>/...` keys;
+without `info["detailed_reward"]` the loop is blind.
+
+Test the CAPABILITY, not a filename: does a short training run emit
+`reward/<term>/episodic_return_mean` beyond `reward/total/...`? The decomposition may already
+live inline in `harbor/scripts/rl/<slug>/env_wrapper.py` (reading the RewardManager's
+`_step_reward`), in which case nothing needs wiring. **Do NOT test for
+`scripts/_isaaclab_env.py`** — that path is owned by benchmark-generator's L1/L2 smoke helper,
+a different module with a different signature, and overwriting it breaks `run_random.py` and
+`render_random.py`. Only if the capability is genuinely absent, **run the
+`/harbor:reward-add-log` flow yourself** — read
 `commands/reward-add-log.md` and follow its family-detection + patch + sanity-check steps
 using `scripts/reward-add-log/*`. Do not dispatch an agent for it. Only start once
 per-term logging is green.
@@ -271,6 +278,10 @@ until for d in <task_dir>/iter_007/.done <task_dir>/iter_009/.done; do
         [ -f "$d" ] && echo "$d" && break
       done | grep -q .; do sleep 15; done
 ```
+
+**One Bash call is not enough.** Bash caps at ~600 s while a candidate runs 35 min to 3 h, so
+this is a RE-POLL loop: issue the bounded wait, and when it times out with no `.done`, issue it
+again. Expect tens of iterations over a long candidate — that is normal, not a hang.
 
 The agent's completion notification is the fast path; the file is the reliable one — trust
 the file, since it survives a lost notification, a killed agent, and a resumed session.
