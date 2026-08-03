@@ -84,7 +84,7 @@ Grouped by filename prefix (the prefix is the group — Claude Code commands hav
 | `dependency-generator` | Entry point for any Python GPU repo. Probes deps, renders `setup_uv.sh`, runs setup + import smoke, returns to main thread. |
 | `benchmark-generator` | Adds the env-sanity layer to a repo whose env is already set up. Renders `scripts/run_random.py` (random rollout) + `scripts/render_random.py` (render-to-MP4). Runs 2-tier smoke (L1 random / L2 render). RL-only. |
 | `rl-integration-generator` | Renders the RL training tree: `harbor/scripts/rl/{train,eval,render,visualize}.py`, `harbor/configs/rl/{ppo,sac,td3}{,.parallel}.yaml`, `rl-suite-spec.json`. Smokes each algorithm against `<repo>/.venv/bin/python` via the production T1–T5 tiers (mirroring `rl-run` / `rl-eval` / `rl-render` exactly). |
-| `task-generator` | Authors §1–§5 of a new task (register/scene · actions · reset · goal+termination · observation) with per-section smokes plus an actuator-tracking check (S2.5) and a render-stability + visual check (S6); iterates up to 2× per smoke before escalating. |
+| `task-generator` | Authors §1–§5 of a new task (register/scene · actions · reset · goal+termination · observation). Records the analysis behind every design choice in `task-history.md`, runs each section's smokes in a loop until they pass (escalating when two attempts fail to move the measured quantity), and emits `test-checklist.md` — the checks that actually ran, which depends on the design. |
 | `reward-tuning-agent` | The §6 **designer**: DESIGN (each candidate = a bounded §1–§5 task delta + a complete reward; B1 — adapt-first, magnitude budget, in-flight-aware distinctness) + DECIDE (best-so-far, convergence, refill, PROMOTE the winning design onto the source task and re-verify with that winner's smoke set). Runs an async pool of `pool_size` candidates and is the sole writer of every shared file. The one agent that dispatches a worker of its own. Dispatched by `reward-tune` + `task-create` §6. |
 | `reward-candidate-agent` | One candidate end to end: IMPLEMENT its §1–§5 task delta + reward → run the smokes for every section touched plus S6 → train + render (local bg or SLURM, sentinel watchdog) → SCORE via `score_iter.py` + rendered frames → verdict JSON. Implements only, and keeps task-design failures distinct from reward failures. |
 | `task-cloner` | Clones a task's editable surface (env_cfg + reward `mdp/`) into a new suffixed gym id with rewired imports + clone smokes, for collision-free parallel editing. Dispatched by `task-clone`. |
@@ -202,6 +202,7 @@ harbor/                                        ← plugin root
 │   ├── dependency-generator/                             render_uv.py, smoke_uv.py
 │   ├── benchmark-generator/                       capture_spec.py
 │   ├── rl-integration-generator/                  render_rl_suite.py, render_data_logger.py, discover_*.py, validate_rl_suite.py
+│   ├── task-generator/                          check_task_history.py
 │   ├── reward-add-log/                          sanity_check.py, sanity_check_isaaclab.py
 │   ├── rl-run/  rl-tricks/  plot/  install/
 │
@@ -209,15 +210,16 @@ harbor/                                        ← plugin root
 │   ├── templates/                                 rendered into target repos
 │   │   ├── dependency-generator/  benchmark-generator/    includes task-implementation.md.template
 │   │   ├── rl-integration-generator/              custom_torch / stable_baseline3 / local_implementation + data_logger
-│   │   ├── task-generator/                        per-section smokes + custom action terms
+│   │   ├── task-generator/                        per-section smokes + custom action terms + task-history scaffold
 │   │   ├── reward-tuning-agent/  dr-generator/    per-section smokes
 │   │   ├── reward-add-log/                        reward_terms_block + isaaclab_env_helper
 │   │   └── rl-tuning-agent/  rl-tune/  reward-tune/  rl-sweep/  rl-tricks/  plot/
 │   ├── references/                                agent decision aids
-│   │   ├── task-sections/                         one file per §1–§5 section + the S6 render gate
+│   │   ├── task-generator/                        one file per §1–§5 section + the S6 render gate,
+│   │   │                                          plus the IsaacLab code reference
 │   │   ├── common/                                conventions shared by every authoring agent
 │   │   └── dependency-generator/  benchmark-generator/  rl-integration-generator/
-│   │       task-generator/  reward-tuning-agent/  dr-generator/  rl-tuning-agent/  task-cloner/
+│   │       reward-tuning-agent/  dr-generator/  rl-tuning-agent/  task-cloner/
 │   └── experiences/                               cross-run ledgers (numbered, append-only)
 │       ├── rl-tuning-agent/tuning-experience.md   (25 entries)
 │       ├── reward-tuning-agent/reward-experience.md  (8 entries incl. [MUST] magnitude-budget)

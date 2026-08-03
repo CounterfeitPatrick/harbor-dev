@@ -9,8 +9,11 @@ robot's physics params are improper — actuator `stiffness` / `damping` / `effo
 own built-in robot ActuatorCfg (e.g. the canonical robot cfg the example task uses) until the
 error is small, then re-run.
 
-Only meaningful for POSITION-controlled modes (abs/delta joint, ee-pose IK, ema_*). Skip for
-joint_effort / non_holonomic / binary_gripper (no position target to track).
+MANDATORY, and it runs every time S2 passes — all three modes §2's analysis recommends are
+position control, so there is always a target to track. Iterate on the PARAMETERS until it
+passes. Raising TRACKING_TOL to clear the assert is not a fix: it ships a robot that cannot
+hold the pose the policy will command on every step of every episode, and the cost surfaces in
+§6 as a reward that will not converge.
 
 Substitutions:
   TASK_ID            — gym task id
@@ -31,6 +34,8 @@ import sys
 # Kit's shutdown can kill the process before stdout flushes, losing the
 # `S<N> OK:` verdict line that IS this smoke's pass criterion.
 sys.stdout.reconfigure(line_buffering=True)
+from _verdict import Verdict   # noqa: E402  — sibling module, rendered alongside
+V = Verdict("S2.5")
 import torch
 from isaaclab.app import AppLauncher
 
@@ -85,7 +90,7 @@ assert max_err < TRACKING_TOL, (
     f"built-in example for this robot, then re-run S2.5."
 )
 
-print(f"S2.5 OK: held {SETTLE_STEPS} steps, actuator tracks target "
+V.done(f"held {SETTLE_STEPS} steps, actuator tracks target "
       f"(max err {max_err:.4f} rad, mean {mean_err:.4f} rad < tol {TRACKING_TOL}) across {NUM_ENVS} envs")
 env.close()
 sim_app.close()

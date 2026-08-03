@@ -123,11 +123,11 @@ Each phase also writes a process log inside the same directory:
 
 | Phase | Log file | Contents |
 |---|---|---|
-| `task-generator`   | `<task_dir>/task-history.md`   | **Adaptation delta** block (base library spec or "pure creation mode"; kept-as-is; enumerated changes + why), then per-section block for each section in `task_sections`: decisions resolved (with source — user / canonical / library-base / repo-scan / batched-ask), files written, smoke command, smoke output (last 50 lines), per-attempt diagnosis, verdict |
+| `task-generator`   | `<task_dir>/task-history.md` + `<task_dir>/test-checklist.md` | `task-history.md` is scaffolded from `knowledge/templates/task-generator/task-history.md.template` at agent entry, then filled in place: an **Adaptation delta** block, one `## §N` block per section §1..§6 — **Analysis** (that section's numbered design questions, answered: §1's task interpretation / desired behavior / failure modes, §2's orientation decision, §3's layout feasibility, §4's subgoal decomposition, §5's observability) and **Validations** (one row per check the smoke emitted, iteration table + last-50-lines stdout on retries) — a doc-patch table, and a final per-section verdict table. `test-checklist.md` is generated at Phase C from the smokes' own `*.verdict.json`: every check that ACTUALLY ran, which is task-specific — §4 emits one `C<i>`/`V<i>` pair per implemented predicate |
 | `reward-tune` loop | `<task_dir>/reward-history.md` | Shared with `/harbor:reward-tune`: one `## Iter <N>` section per tune iteration (iter 0 opens with the **Adaptation delta** vs the base library spec; decisions, files modified, composer, smoke, training analysis). Plus `tune-state.json`, `memories.jsonl`, `iter_<NNN>/` per the reward-tune layout. |
 | `dr-generator`     | `<task_dir>/dr-history.md`     | Skip-or-wire rationale, decisions resolved, files modified, smoke command + output, iteration notes |
 
-These logs are **append-only within one agent's run**, written as work progresses. Each agent discovers state from the repo (env_cfg, mdp/ tree) on entry — there is no inter-agent handoff file.
+These logs are written **as work progresses**, never assembled at the end. Each agent discovers state from the repo (env_cfg, mdp/ tree) on entry — there is no inter-agent handoff file.
 
 ### Step 1.5 — Select the design base (create / edit mode)
 
@@ -228,7 +228,8 @@ create-task : <task_id>  (mode: create|edit, sections: [...])
 slug          : <slug>
 spec          : <task_dir>/spec.json
 phases        :
-  task-generator : pass — S1..S6 green                          (log: <task_dir>/task-history.md)
+  task-generator : pass — 23/23 checks green                     (why: <task_dir>/task-history.md)
+                                                                (what: <task_dir>/test-checklist.md)
   reward-tune    : pass — converged @ iter <N>, success_rate=<v> (log: <task_dir>/reward-history.md)
   dr-generator   : skipped — DR not requested (opt-in)           (log: <task_dir>/dr-history.md)
 files written : <count>

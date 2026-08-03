@@ -43,18 +43,25 @@ read as you enter it, and nothing for the sections you don't:
 
 | Section in `sections` | Read |
 |---|---|
-| 1 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s1-scene.md` |
-| 2 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s2-actions.md` |
-| 3 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s3-reset.md` |
-| 4 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s4-termination.md` |
-| 5 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s5-observation.md` |
-| any of 1/2/3 | also `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s6-render.md` (the render gate fires) |
+| 1 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/s1-scene.md` |
+| 2 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/s2-actions.md` |
+| 3 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/s3-reset.md` |
+| 4 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/s4-termination.md` |
+| 5 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/s5-observation.md` |
+| any of 1/2/3 | also `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/s6-render.md` (the render gate fires) |
 
-Each carries that section's decisions, the smoke that verifies it, its failure→fix table, and
-its traps, and points into
+Each carries that section's **analysis terms**, its decisions, the numbered checks its smoke
+runs, its failure→diagnosis→fix table, and its traps, and points into
 `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/isaaclab-code-reference.md` for the API. These
 are the same files `task-generator` authors from, so a candidate's delta is held to the same
-contract as the original section.
+contract as the original section — the analysis terms are the designer's job, but the section's
+smoke checks and traps are yours.
+
+Also read `<task_dir>/task-analysis.md`'s `### Analysis` block for each section you touch (the
+design-rationale digest; fall back to `task-history.md` if it is absent), when the file exists: it records why that section is shaped the way it is. A delta that contradicts
+its own section's recorded reasoning — re-introducing a layout §3 rejected, reading a signal §5
+deliberately withheld — is a design defect to report, not an implementation detail to work
+around.
 
 Plus, whenever you change §1–§5: `<repo_path>/harbor/create-task/task-implementation.md` —
 **this benchmark's** implementation scheme, i.e. where the task's files live and how a sensor
@@ -98,18 +105,29 @@ clone or source) and `{{REPO}}` = `repo_path`. Run inside `.venv`. Which ones yo
 driven by `design.task_changes.sections` — the same table that told you which section files
 to read:
 
+**Render `_verdict.py.template` into `<iter_dir>/smokes/_verdict.py` first** (no
+substitutions). Every smoke in both trees imports it as a sibling module and it writes each
+`<iter_dir>/smokes/<smoke>.verdict.json` as the smoke runs — that file, not your recollection,
+is what the `smokes` map must report. (Distinct from `<iter_dir>/verdict.json`, which is your
+scored write-up at STEP 4.)
+
 | Trigger | Smokes |
 |---|---|
-| always | **S1** (env builds) … then **S6** (reward finite / non-constant / composer) |
+| always | **S1** (env builds; C1–C7) … then **S6** (reward finite / non-constant / composer) |
 | §2 in `sections` | S2, S2.5 |
-| §3 in `sections` | S3 |
-| §4 in `sections` | S4, S-success |
+| §3 in `sections` | S3 (numeric, C1–C5) **and** S3-visual (rendered resets) |
+| §4 in `sections` | S4 (G1 + one `C<i>`/`V<i>` pair per implemented predicate) |
 | §5 in `sections` | S5 |
 | any of §1/§2/§3 | S6-render (scene stability + keyframes you then `Read`) |
 
-Order: `S1 → S2 → S2.5 → S3 → S4 → S5 → S-success → S6-render → S6`. A reward-only
+Order: `S1 → S2 → S2.5 → S3 → S3-visual → S4 → S5 → S6-render → S6`. A reward-only
 candidate therefore runs just S1 and S6. Record every smoke's result — `pass`, `fail`, or
-`skipped` — for the verdict's `smokes` map.
+`skipped` — for the verdict's `smokes` map, reading each result out of its `verdict.json`.
+
+Several smokes end in a **visual** judgement — S3-visual's reset frames, S4's per-predicate
+keyframes, S6-render's rollout keyframes. `Read` them; a green numeric verdict beside a frame
+showing the wrong state is a finding for the designer, and one of the few things you can see
+that the designer cannot.
 
 **3 attempts per smoke, fixing implementation only** — idiom, an un-rewired import, a
 malformed cfg. Diagnose from the failing section's own failure→fix table before guessing.
@@ -148,7 +166,7 @@ ckpt=$trial/checkpoint_best.pth; [ -f "$ckpt" ] || ckpt=$trial/checkpoint.pth
 # Collect this candidate's viewable evidence INTO its own iter dir, so an iteration can be
 # reviewed on its own without resolving a timestamped path under harbor/outputs/.
 echo "$trial" > "<iter_dir>/trial_dir.txt"
-for src in render.mp4 metrics.jsonl; do
+for src in render.mp4 render_contact_sheet.jpg metrics.jsonl; do
     cp    "$trial/$src"  "<iter_dir>/$src"  || echo "[collect] MISSING $trial/$src" >&2
 done
 cp -r "$trial/curves" "<iter_dir>/curves"  || echo "[collect] MISSING $trial/curves" >&2
@@ -172,10 +190,27 @@ Do not hand-roll the wait; wrap both commands:
 ```bash
 SENTINEL="${CLAUDE_PLUGIN_ROOT}/scripts/common/run_with_sentinel.sh"
 bash "$SENTINEL" --cmd "<train command>"  --sentinel-log "saved checkpoint to" \
-     --log "<iter_dir>/train.log"  || exit 1
-bash "$SENTINEL" --cmd "<render command>" --sentinel-file "$trial/render.mp4" \
-     --log "<iter_dir>/render.log" || exit 1
+     --log "<iter_dir>/train.log"
+train_rc=$?          # NOT `|| exit 1` — see below
+
+# Render whatever the trainer managed to save, even when it died. The trainer writes
+# checkpoint_best.pth on every improvement and checkpoint_<steps>.pth periodically, so a run
+# that crashed at 28M of 150M still has a policy on disk — and the rollout is the only way to
+# see WHAT it had learned when it died. Exiting here instead is how a whole tune produced
+# nine verdicts and not one video.
+ckpt=$trial/checkpoint_best.pth; [ -f "$ckpt" ] || ckpt=$trial/checkpoint.pth
+if [ -f "$ckpt" ]; then
+    bash "$SENTINEL" --cmd "<render command>" --sentinel-file "$trial/render.mp4" \
+         --log "<iter_dir>/render.log" || echo "[render] FAILED — see render.log" >&2
+else
+    echo "[render] SKIPPED: no checkpoint at all — the trainer died before its first save" >&2
+fi
+[ $train_rc -ne 0 ] && echo "[train] rc=$train_rc (crashed or timed out)" >&2
 ```
+
+A non-zero `train_rc` still means `status: "train_failed"` in the verdict — but with the
+rollout attached, so `behavior` describes the partial policy instead of reading `NOT OBSERVED`.
+A crash is a result about the task, and it deserves the same evidence as a success.
 
 It polls for the sentinel, gives the process a short grace period once it appears, then tears
 down the whole process group — a trainer killed **after** its sentinel is a success, gated on

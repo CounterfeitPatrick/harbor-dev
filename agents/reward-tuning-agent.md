@@ -51,11 +51,33 @@ Return: `{status: "converged"|"aborted"|"needs_decision", best_iter, best_succes
 
 ## References (read ONCE at entry, work from memory after)
 
+**`<task_dir>/task-analysis.md` — read it FIRST**, before any other reference. It is the
+design-rationale half of `task-history.md`, generated at that agent's Phase C with the
+per-check Validations stripped, so it carries every §1–§5 `### Analysis` block and the
+Adaptation delta at ~58% of the size. Fall back to `task-history.md` when the digest is absent
+(a task authored before it existed). `task-generator` recorded, per section, the reasoning behind the task you are
+about to write a reward for, and four of those terms are direct inputs to reward design:
+
+| From | What it gives you |
+|---|---|
+| §1 **potential failures** | the physical ways this scene defeats a policy. A reward that ignores them is asking for a behavior the geometry blocks — the failure looks like non-convergence and is not fixable by reweighting. |
+| §2 **orientation decision** | what the action space can express. A term rewarding an alignment the wrist cannot reach is unlearnable by construction. |
+| §3 **reset layout feasibility** | the start state every episode begins in, and which candidate layouts were rejected. Your first shaping term is measured from here. |
+| §4 **subgoal decomposition** + **degenerate states** | the subgoal list is your term ladder, already decomposed with testable criteria. The named degenerate states are the reward-hacking surface — a term that pays out in one of them is a bug you were warned about. |
+| §5 **observability** | the quantities a term may key on. A term reading a signal §5 does not expose makes the task partially observable; §6 cannot fix that. |
+
+`<task_dir>/test-checklist.md` (sibling) lists what was actually verified — which predicates
+exist and fired, and which subgoals §4 chose **not** to implement. Read the full
+`task-history.md` only when you need a specific smoke's evidence, which is rare at design time.
+
+Both are absent when tuning a task `task-generator` did not author. Say so in iter 0's
+`reward-history.md` and design from the task source instead; do not fabricate the analysis.
+
 - `${CLAUDE_PLUGIN_ROOT}/knowledge/references/reward-tuning-agent/candidate-contract.md` — the request you send, the `design.json` shape, the verdict you get back, the boundary rule, the write scopes.
 - `${CLAUDE_PLUGIN_ROOT}/knowledge/references/adapt-first.md` — how to build from `library_refs` (port everything, change only overrides, document the delta).
 - `${CLAUDE_PLUGIN_ROOT}/knowledge/references/reward-tuning-agent/isaaclab-reward-reference.md` — composer-by-family, RewTerm idiom, common `mdp.*` blocks, weight conventions.
 - `<repo_path>/harbor/create-task/task-implementation.md` — this benchmark's implementation scheme; what a §1–§5 change costs and how it is expressed here. Read before designing any `task_changes`.
-- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/README.md` — which smoke covers which section, and what each section costs to change, so `task_changes.sections` maps to real verification. Read a specific `s<N>-*.md` only when weighing a change to that section.
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/README.md` — which smoke covers which section, and what each section costs to change, so `task_changes.sections` maps to real verification. Read a specific `s<N>-*.md` only when weighing a change to that section.
 - `${CLAUDE_PLUGIN_ROOT}/knowledge/experiences/reward-tuning-agent/reward-experience.md` — staging / gating / scale-ratio heuristics (subordinate to a matched library base).
 - `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-library-search.md` — only if the caller passed no `library_refs` and you must pick a base.
 - `${CLAUDE_PLUGIN_ROOT}/commands/reward-add-log.md` — the per-term-logging flow you run in-line at STEP 0.
@@ -221,6 +243,19 @@ Task-design rules:
 
 Reward-design rules:
 
+- **Start from §4's subgoal decomposition, not from a blank ladder.** It already enumerates
+  every subgoal between the reset state and completion, each with a testable criterion, and
+  says which ones §4 implemented as predicates and which it deliberately left out. An
+  unimplemented subgoal is exactly where a shaping term belongs; an implemented one usually
+  already has the predicate your gate needs. Deriving your own decomposition when one is on
+  file wastes an iteration and risks contradicting §4's success criterion.
+- **Check every term against §4's named degenerate states.** §4 recorded what else satisfies
+  the success predicate — a mug beside the peg, an object held at the right height. For each
+  term ask: does this pay out in one of those? A term that does will be found by the policy,
+  and the run reports a `success_rate` nobody can trust. This check costs a minute and is the
+  cheapest reward-hacking defense available.
+- **A term may only read what §5 exposes.** If the signal a term needs is not an observation,
+  the fix is a `task_changes` §5 entry — not a term that reads it out of the scene anyway.
 - **Nominal weights.** Every `weight` is the term's nominal per-step magnitude, applied
   directly (a `+200` one-shot latch reads `200`). Plan the budget in these units. The
   scorer divides the success term's episodic return by this weight, so it must be exact.

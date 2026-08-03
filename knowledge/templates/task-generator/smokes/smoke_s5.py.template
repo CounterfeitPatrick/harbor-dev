@@ -16,6 +16,8 @@ import sys
 # Kit's shutdown can kill the process before stdout flushes, losing the
 # `S<N> OK:` verdict line that IS this smoke's pass criterion.
 sys.stdout.reconfigure(line_buffering=True)
+from _verdict import Verdict   # noqa: E402  — sibling module, rendered alongside
+V = Verdict("S5")
 import torch
 from isaaclab.app import AppLauncher
 
@@ -54,6 +56,6 @@ assert actual == EXPECTED_TERMS, (
 # Value check (at least one term)
 {{VALUE_CHECK_BLOCK}}
 
-print(f"S5 OK: {len(EXPECTED_TERMS)} terms, order + shapes match, value check verified")
+V.done(f"{len(EXPECTED_TERMS)} terms, order + shapes match, value check verified")
 env.close()
 sim_app.close()

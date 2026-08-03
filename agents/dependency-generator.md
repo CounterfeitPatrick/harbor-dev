@@ -158,7 +158,7 @@ Reads `probe.json` + `install_plan.json` (if present) and emits `<repo>/harbor/d
 | `git_clone` | clone to `<repo>/.harbor_thirdparty/<name>/` |
 | `shell` | run the cmd; `/workspace/<repo>` paths are rewritten to host absolute |
 
-After the user's install plan, `render_uv.py` always appends a "harbor extras" block that idempotently `uv pip install`s `wandb`, `tensorboardX`, `imageio[ffmpeg]`, `matplotlib`, `hydra-core`, `omegaconf`, and `stable_baselines3[extra]` — these are required by downstream subagents (benchmark-generator, rl-integration-generator) and so are folded into the env at setup time.
+After the user's install plan, `render_uv.py` always appends a "harbor extras" block that idempotently `uv pip install`s `wandb`, `tensorboardX`, `imageio[ffmpeg]`, `matplotlib`, `hydra-core`, `omegaconf`, `stable_baselines3[extra]`, and `coacd` + `trimesh` (task-generator pre-decomposes every mesh collider — S1/C8) — these are required by downstream subagents (benchmark-generator, rl-integration-generator) and so are folded into the env at setup time.
 
 `setup_uv.sh` is regenerated on every run — never hand-edit it. Persist changes by editing `install_plan.json` and re-running `render_uv.py`.
 

@@ -70,6 +70,7 @@ _RENDERED_OUTPUTS = {
     "_env.py",      # from the `scripts/_<family>_env.py` glob
     "_isaaclab_env.py",  # rendered by /harbor:reward-add-log (Path B env factory)
     "launch.sh",    # rendered by /harbor:rl-sweep into the sweep dir
+    "_verdict.py",  # the shared smoke recorder, rendered into <task_dir>/smokes/
 }
 
 # The archived section deliberately names files that no longer exist.

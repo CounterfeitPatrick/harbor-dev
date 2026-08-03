@@ -87,3 +87,18 @@ def test_cli_runs_and_reports_the_path(tmp_path):
     r = subprocess.run([sys.executable, str(SRC), str(repo)], capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
     assert "setup_uv.sh" in (r.stdout + r.stderr)
+
+
+def test_harbor_extras_include_every_downstream_dependency(tmp_path):
+    """The extras block is the ONLY place a downstream agent's dependency gets installed.
+
+    Each entry exists because some later stage imports it and would otherwise fail deep inside
+    a subagent run: coacd/trimesh back task-generator's S1/C8 mesh pre-decomposition, imageio
+    the render path, hydra/omegaconf every rl script.
+    """
+    repo = _repo(tmp_path, plan={"primary_install_strategy": "uv-pip-editable",
+                                 "installation_steps": [{"kind": "shell", "cmd": "echo hi"}]})
+    script = _render(repo)
+    for pkg in ("wandb", "tensorboardX", "imageio[ffmpeg]", "matplotlib",
+                "hydra-core", "omegaconf", "stable_baselines3[extra]", "coacd", "trimesh"):
+        assert pkg in script, f"{pkg} missing from the harbor extras block"

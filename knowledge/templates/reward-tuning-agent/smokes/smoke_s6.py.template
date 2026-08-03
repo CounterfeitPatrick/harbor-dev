@@ -27,6 +27,8 @@ import sys
 # Kit's shutdown can kill the process before stdout flushes, losing the
 # `S<N> OK:` verdict line that IS this smoke's pass criterion.
 sys.stdout.reconfigure(line_buffering=True)
+from _verdict import Verdict   # noqa: E402  — sibling module, rendered alongside
+V = Verdict("S6")
 import importlib.util
 import os
 
@@ -114,8 +116,8 @@ print("per-term episodic mean (across 128 envs, summed over 30 steps):")
 for k, v in sorted(term_sums.items(), key=lambda kv: -abs(kv[1])):
     print(f"  {k}: {v:+.4f}")
 
-print(
-    f"S6 OK: 30 steps × 128 envs, reward mean={arr.mean():.3f} std={arr.std():.3f} "
+V.done(
+    f"30 steps × 128 envs, reward mean={arr.mean():.3f} std={arr.std():.3f} "
     f"terms={len(term_names)} composer={composer}"
 )
 env.close()

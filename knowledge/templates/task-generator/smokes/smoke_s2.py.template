@@ -16,6 +16,8 @@ import sys
 # Kit's shutdown can kill the process before stdout flushes, losing the
 # `S<N> OK:` verdict line that IS this smoke's pass criterion.
 sys.stdout.reconfigure(line_buffering=True)
+from _verdict import Verdict   # noqa: E402  — sibling module, rendered alongside
+V = Verdict("S2")
 import torch
 from isaaclab.app import AppLauncher
 
@@ -75,7 +77,7 @@ elif MODE == "delta_ee_pose":
     actual_pos   = actual_target[..., :3]
     assert torch.allclose(actual_pos, expected_pos, atol=1e-3), \
         f"delta_ee_pose target.pos mismatch:\n  actual={actual_pos}\n  expected={expected_pos}"
-    print(f"S2 OK: mode={MODE} action 0.2 → EE pos delta ≈ {(actual_pos - initial_ee[..., :3]).norm(dim=-1).mean():.4f}")
+    V.done(f"mode={MODE} action 0.2 → EE pos delta ≈ {(actual_pos - initial_ee[..., :3]).norm(dim=-1).mean():.4f}")
     env.close(); sim_app.close()
     raise SystemExit(0)
 elif MODE == "binary_gripper":
@@ -85,7 +87,7 @@ elif MODE == "binary_gripper":
     assert (torch.allclose(actual_target, open_expr.expand_as(actual_target)) or
             torch.allclose(actual_target, close_expr.expand_as(actual_target))), \
         f"binary_gripper target {actual_target} matches neither open ({open_expr}) nor close ({close_expr})"
-    print(f"S2 OK: mode={MODE} action 0.2 → gripper picks open/close target as expected")
+    V.done(f"mode={MODE} action 0.2 → gripper picks open/close target as expected")
     env.close(); sim_app.close()
     raise SystemExit(0)
 elif MODE == "joint_effort":
@@ -121,7 +123,7 @@ elif MODE == "ema_delta_ee_pose":
     assert torch.allclose(actual_pos, expected_pos, atol=1e-4), \
         f"ema_delta_ee_pose target.pos mismatch:\n  actual={actual_pos}\n  expected={expected_pos}"
     delta_norm = (actual_pos - term.init_ee_pos).norm(dim=-1).mean()
-    print(f"S2 OK: mode={MODE} action 0.2 → EE pos delta ≈ {delta_norm:.4f} as expected")
+    V.done(f"mode={MODE} action 0.2 → EE pos delta ≈ {delta_norm:.4f} as expected")
     env.close(); sim_app.close()
     raise SystemExit(0)
 else:
@@ -129,6 +131,6 @@ else:
 
 assert torch.allclose(actual_target, expected, atol=1e-4), \
     f"action target mismatch (mode={MODE}):\n  actual={actual_target}\n  expected={expected}"
-print(f"S2 OK: mode={MODE} action 0.2 → target ≈ {actual_target.mean():.4f} as expected")
+V.done(f"mode={MODE} action 0.2 → target ≈ {actual_target.mean():.4f} as expected")
 env.close()
 sim_app.close()

@@ -11,6 +11,29 @@ What the policy sees, in what order, in what frame.
 - Any additional groups the benchmark uses (`critic`, `subtask_terms`, …) when the family's
   canonical example has them.
 
+## Analysis terms
+
+Recorded in `task-history.md` §5 **Analysis** before authoring:
+
+1. **Observability.** Walk §1's *desired robot behavior* stage by stage and §4's predicate list
+   term by term, and for each one name the observation that makes it decidable. Two directions,
+   both of which have to come out clean:
+
+   - **Every stage and predicate is observable.** If §4 keys success on the mug's handle
+     clearing the peg, the policy needs the quantity that expresses it. A reward or termination
+     reading a signal §5 does not expose makes the task partially observable **by accident** —
+     it trains, badly, and looks like a reward problem for the whole of §6.
+   - **Nothing is exposed that should not be.** An observation that leaks the answer (the
+     success flag itself, a privileged pose the real robot could never measure) produces a
+     policy that solves the benchmark and nothing else.
+
+   Answer as a table — stage or predicate → the term that covers it — so a gap is visible as an
+   empty cell rather than something you have to notice.
+
+2. **Frame.** State the frame every term is expressed in and why. `root_pos_w` is world-framed
+   and most terms want env-local or robot-root; this is the single most common §5 error, and it
+   passes every shape check.
+
 ## Decisions to resolve
 
 | Decision | Notes |

@@ -49,10 +49,19 @@ On a step/smoke error, do NOT patch blindly:
 1. Read the **actual stderr + the rendered file** that failed.
 2. Form ONE focused hypothesis from the symptom — reason from the error, not from precedent.
 3. Apply the **minimal surgical fix** and retry.
-4. After the agent's retry budget is exhausted (the budget is stated in the agent's body),
-   stop and escalate via `AskUserQuestion` rather than guessing further.
+4. **Loop until it passes.** The exit condition is a passing smoke, not an exhausted counter.
+5. Escalate via `AskUserQuestion` when the retry stops making progress — the agent's body states
+   what that means for it (`task-generator`: two consecutive attempts that fail to move the
+   measured quantity, or a 10-attempt backstop).
 
-Never silently rewrite env/config files to make a smoke pass; fix the actual cause.
+A retry that fails is not automatically a reason to stop; a retry that fails **the same way** is.
+When a smoke reports a number — a residual, an overshoot, a frame-diff — that number is the
+signal: still moving means the diagnosis is right and the fix was too small, unchanged twice
+means the diagnosis is wrong and further attempts will not find it.
+
+Never silently rewrite env/config files to make a smoke pass; fix the actual cause. In
+particular, never make a smoke pass by weakening what it checks — a widened tolerance, a lowered
+threshold, or a shortened settle time is not a fix, it is the failure with the alarm turned off.
 
 ## Process log (`*-history.md`)
 

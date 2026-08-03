@@ -14,6 +14,20 @@ Two stages, and the second is the point:
 A scene that passes stage 1 and fails stage 2 is a fail. Mechanical stability is cheap to
 satisfy and says nothing about whether the robot is standing inside the table.
 
+## Analysis terms
+
+Recorded in `task-history.md` §6 **Analysis** before running the gate. §6 authors nothing, so
+these record what the gate is being held against — written **before** you look at the frames,
+so the judgement is against a stated expectation rather than against whatever the frames happen
+to show.
+
+1. **What the rollout should show.** Under random actions: which entities are in frame, what
+   the robot does, what stays put. Not "the task being solved" — a random policy solves nothing
+   — but the scene being *physically right* while nothing useful happens.
+2. **Camera.** Which framing the render used: the shared one, or a `{{VIEWER_OVERRIDE_BLOCK}}`
+   (name it, and say why the shared angle could not show the scene — the render is no longer
+   comparable to any other).
+
 ## When it runs
 
 | Mode | When |
@@ -27,10 +41,15 @@ satisfy and says nothing about whether the robot is standing inside the table.
 Renders a random-action rollout to MP4 plus keyframe PNGs, into the per-task workspace next
 to `task-history.md` — **not** `/tmp`; the MP4 is a user-facing artifact.
 
-- `{{VIEWER_BLOCK}}` — **required**: IsaacLab's default viewer sits ~10 m out, so without
-  framing the workspace the keyframes come back as a few pixels of table and the visual
-  judgement — half of S6's pass criterion — cannot be made. Set `cfg.viewer.origin_type` /
-  `env_index` / `eye` / `lookat`.
+- **Camera: do not choose one.** The template already sets harbor's shared framing —
+  `eye=(2.5, 2.5, 1.6)`, `lookat=(0.30, 0.0, 0.4)`, env-relative — the same numbers
+  `render.py` uses for every trained-policy video. One angle across every render is what
+  makes keyframes comparable between tasks AND between candidates of one task; a candidate
+  that also moved the camera cannot be told apart from one that changed behavior.
+  `{{VIEWER_OVERRIDE_BLOCK}}` is **optional and normally empty** — use it only when the
+  shared angle genuinely cannot show the scene (a tall fixture it crops), and log that you
+  did, because the resulting render is no longer comparable to any other.
+  (`tests/contract/test_shared_camera.py` keeps the two definitions in sync.)
 - `{{OUTPUT_MP4}}` = `<task_dir>/smoke_s6_render.mp4`, `{{FRAMES_DIR}}` = `<task_dir>/smoke_s6_frames`
 - `{{N_STEPS}}` default `120`, `{{N_KEYFRAMES}}` default `8`
 - `{{STABILITY_CHECKS}}` — OPTIONAL extra per-step asserts for task-specific penetration, e.g.

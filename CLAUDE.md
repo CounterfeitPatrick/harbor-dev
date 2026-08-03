@@ -103,10 +103,10 @@ Commands are grouped by area via filename prefix (Claude Code commands have no t
 - `agents/benchmark-generator.md` — env-sanity layer: random rollout + render-to-MP4 + 2-tier smoke (L1 random / L2 render). Always treats the repo as RL — no IL detection. Does NOT generate train/eval scripts (rl-integration-generator owns those).
 - `agents/rl-integration-generator.md` — RL experiment scaffold: configs, train/eval/render/visualize scripts, algorithm adapter, smoke per algorithm
 - `agents/rl-tuning-agent.md` — algorithm-by-algorithm hyperparameter tuning loop (train→eval→render→analyze→suggest)
-- `agents/task-generator.md` — authors §1–§5 of a new task (register/scene · actions · reset · goal+termination · observation) with per-section smokes plus an actuator-tracking check (S2.5) and a render-stability + visual check (S6); iterates up to 2× per smoke before escalating. Reads `<repo>/harbor/create-task/task-implementation.md`. Dispatched only by `/harbor:task-create`.
+- `agents/task-generator.md` — authors §1–§5 of a new task (register/scene · actions · reset · goal+termination · observation) with per-section smokes plus an actuator-tracking check (S2.5) and a render-stability + visual check (S6); looping each smoke until it passes (escalates on two attempts that fail to move the measured quantity, or a 10-attempt backstop). Reads `<repo>/harbor/create-task/task-implementation.md`. Dispatched only by `/harbor:task-create`.
 - `agents/task-cloner.md` — clones a task's editable surface (env_cfg + the mdp modules the requested `surface` covers) into dest-named copies, rewires imports, registers `<dest>` (suffix before `-vN`), runs the clone smokes (build + rollout + per-term-logging), writes a delete manifest. Dispatched by `/harbor:task-clone op=create`; `reward-tune` calls the underlying `clone_task.py` directly for its slot clones. Never edits source files.
-- `agents/reward-tuning-agent.md` — the §6 **designer**: DESIGN (each candidate = a bounded §1–§5 task delta + a complete reward; B1 — adapt-first, magnitude budget, concrete weights/gates/composer, in-flight-aware distinctness) + DECIDE (best-so-far, convergence, refill, PROMOTE the winning design onto the source task and re-verify with that winner's smoke set). Runs an async fixed pool of `pool_size` candidates — capped by `gpus` in local mode — until `success_rate ≥ threshold`. **The one agent with the `Agent` tool** (depth ≤ 2): it dispatches `reward-candidate-agent` per candidate and never writes reward code itself, which is what keeps implementation noise out of the design context. Sole writer of every shared file; per-term logging is the `/harbor:reward-add-log` flow run in-line. Dispatched by `/harbor:reward-tune` (standalone) and `/harbor:task-create` (§6). Checkpoints `tune-state.json` every iteration (resume-safe); returns `needs_decision` for the caller to put to the user.
-- `agents/reward-candidate-agent.md` — ONE candidate end to end: IMPLEMENT its §1–§5 task delta + reward into its own task (slot clone, or the source when sequential) → run the smokes for every section it touched plus S6 → train + render (local bg or SLURM, sentinel watchdog, optional mid-run early-stop monitor) → SCORE via `scripts/reward-tuning-agent/score_iter.py` + rendered frames → verdict JSON. Implements only — never designs, never reweights to pass a smoke. Reports `task_smoke_failed` and `reward_smoke_failed` distinctly, since they lead to opposite next moves. Leaf agent (no `Agent` tool); dispatched only by `reward-tuning-agent`.
+- `agents/reward-tuning-agent.md` — the §6 **designer**: reads `task-history.md`'s §1–§5 Analysis first (§1 failure modes · §2 what the action space can express · §3 the start layout · §4 the subgoal decomposition that IS the term ladder, plus the degenerate states that are the reward-hacking surface · §5 what a term may key on), then DESIGN (each candidate = a bounded §1–§5 task delta + a complete reward; B1 — adapt-first, magnitude budget, concrete weights/gates/composer, in-flight-aware distinctness) + DECIDE (best-so-far, convergence, refill, PROMOTE the winning design onto the source task and re-verify with that winner's smoke set). Runs an async fixed pool of `pool_size` candidates — capped by `gpus` in local mode — until `success_rate ≥ threshold`. **The one agent with the `Agent` tool** (depth ≤ 2): it dispatches `reward-candidate-agent` per candidate and never writes reward code itself, which is what keeps implementation noise out of the design context. Sole writer of every shared file; per-term logging is the `/harbor:reward-add-log` flow run in-line. Dispatched by `/harbor:reward-tune` (standalone) and `/harbor:task-create` (§6). Checkpoints `tune-state.json` every iteration (resume-safe); returns `needs_decision` for the caller to put to the user.
+- `agents/reward-candidate-agent.md` — ONE candidate end to end: IMPLEMENT its §1–§5 task delta + reward into its own task (slot clone, or the source when sequential), authoring each touched section from the same `knowledge/references/task-generator/s<N>-*.md` file `task-generator` used → run that section's smokes plus S6, reading every result out of the `<smoke>.verdict.json` the shared `_verdict.py` recorder writes, and `Read`ing the visual passes' keyframes → train + render (local bg or SLURM, sentinel watchdog, optional mid-run early-stop monitor) → SCORE via `scripts/reward-tuning-agent/score_iter.py` + rendered frames → verdict JSON. Implements only — never designs, never reweights to pass a smoke. Reports `task_smoke_failed` and `reward_smoke_failed` distinctly, since they lead to opposite next moves. Leaf agent (no `Agent` tool); dispatched only by `reward-tuning-agent`.
 - `agents/dr-generator.md` — authors §7 (domain randomization) across 3 groups (robot · object · observation-noise) at the placeholder, once-per-episode-per-env (`mode="reset"`). Discovers available terms per group and wires EVERY available term by default (comprehensive, not minimal — hard constraint; un-wired terms need a logged reason) (modes: multiplicative/additive/direct for groups 1–2 default `(0.9,1.1)`; uniform/gaussian for obs noise default σ=0.01), runs the §7 smoke (exact value read-back at num_envs=16 + after-reset re-check), and writes a handoff at `harbor/create-task/<slug>/handoff-dr-generator.md`. Final agent in the `/create-task` chain; `skipped` is a valid success when no DR is requested and the canonical example has none.
 
 ### L4 — Tools (deterministic CLIs)
@@ -160,6 +160,21 @@ scripts/
                       design.json → the candidate's verdict.json; an ungradable run
                       returns success_rate=null + a gate reason, never a fabricated score)
                       _metrics.py  (shared long/wide metrics.jsonl reader for both)
+  task-generator/     coacd_decompose.py  (mesh -> <=32 CoACD parts + a .coacd.json manifest;
+                      --inspect reports an existing USD/MJCF's collision provenance and admits
+                      when a binary usdc is unreadable rather than calling it clean)
+                      build_coacd_usd.py  (the middle of that pipeline: authors ONE convexHull
+                      collider prim per part. Merging the parts into a single mesh instead
+                      passes every provenance check while PhysX hulls the whole thing)
+                      check_task_history.py  (the gate task-generator passes before it
+                      returns: every analysis term answered, every table cell filled, and
+                      every claimed verdict diffed against the smoke's own
+                      <smoke>.verdict.json — the transcription stops being load-bearing.
+                      --checklist-out also renders test-checklist.md, the checks that
+                      ACTUALLY ran, which is task-specific: §4 emits one C<i>/V<i> pair per
+                      predicate the design implemented. --analysis-out renders task-analysis.md,
+                      the design-rationale half with Validations stripped — what §6's designer
+                      and every reward candidate read instead of the full 72KB history)
   rl-run/             check_reward_logger.py
   rl-tricks/          apply_trick.py, list_tricks.py
   task-cloner/        clone_task.py  (deterministic same-repo clone for /harbor:task-clone:
@@ -199,14 +214,23 @@ knowledge/templates/
   rl-tuning-agent/       tuning-history.md.template (per-cell ledger)
   rl-tune/               history.md.template (tune-level ledger written by /harbor:rl-tune)
   reward-tune/           history.md.template (tune-level ledger written by /harbor:reward-tune)
-  task-generator/        smokes/smoke_s{1..5}.py.template (per-section behavioral smokes,
-                           num_envs=2 for gpu-sim) + smoke_s2_5.py.template (actuator
-                           tracking error → physics-param sanity, runs after S2) +
-                           smoke_s6_render.py.template (random-rollout render → scene-stability
-                           asserts + keyframe PNGs the agent visually inspects; MP4 to
-                           <task_dir>/) + smoke_success{,_visualize}.py.template (success-scenario
-                           replication → confirm the success termination fires; the visualize
-                           sibling is headed and NOT run in regression) —
+  task-generator/        task-history.md.template (the §1..§5 + S6-gate process-log scaffold rendered at
+                           agent entry — one block per section, each with an Analysis and a
+                           Validations subsection, filled in place by Phase A / Phase B);
+                         smokes/_verdict.py.template (shared recorder every smoke imports;
+                           writes <smoke>.verdict.json eagerly so a smoke's result reaches the
+                           history as machine truth rather than agent recollection);
+                         smokes/smoke_s{1..5}.py.template (per-section behavioral smokes,
+                           num_envs=2 for gpu-sim; S1 runs C1..C7 incl. collision-solidity and
+                           articulation-limit checks, S3 runs C1..C5, S4 runs G1 + one
+                           C<i>/V<i> pair per implemented predicate) + smoke_s2_5.py.template
+                           (actuator tracking error → physics-param sanity, runs after S2) +
+                           smoke_s3_render.py.template (§3 visual pass: one frame per reset →
+                           the agent judges the layout) + smoke_s6_render.py.template
+                           (random-rollout render → scene-stability asserts + keyframe PNGs;
+                           MP4 to <task_dir>/) + smoke_success_visualize.py.template (headed,
+                           user-run success-scenario viewer; NOT run in regression — the
+                           success predicate itself is one of S4's C<i>/V<i> pairs) —
                            all rendered to <task_dir>/smokes/ then run in .venv;
                          action_terms/ema_delta_joint_pos{,_cfg}.py.template (custom
                            EMACumulativeRelativeJointPositionAction — rendered into
@@ -243,15 +267,15 @@ knowledge/references/
                            /harbor:task-create guide)
   rl-integration-generator/ rl-suite-spec (schema for harbor/rl-integration-generator/rl-suite-spec.json + benchmark-spec rl extension)
   rl-tuning-agent/       tuning-instruction (procedure + 4 hard constraints)
-  task-sections/         cross-cutting: ONE file per task section (s1-scene · s2-actions ·
-                           s3-reset · s4-termination · s5-observation · s6-render), each with
-                           the same six headings (what it authors / decisions / API pointers /
-                           its smoke / failure→diagnosis→fix / traps). Read by task-generator
-                           (the sections it authors) AND reward-candidate-agent (the sections
-                           its task_changes touch) — both load only the files they need.
-                           README.md states the filing rule for new detail.
-  task-generator/        isaaclab-code-reference (action / scene / obs / termination /
-                           command APIs the section files point into)
+  task-generator/        s1-scene · s2-actions · s3-reset · s4-termination · s5-observation ·
+                           s6-render — ONE file per task section, each with the same six
+                           headings (what it authors / decisions / API pointers / its smoke /
+                           failure→diagnosis→fix / traps). Cross-cutting despite the folder
+                           name: read by task-generator (the sections it authors) AND
+                           reward-candidate-agent (the sections its task_changes touch) — both
+                           load only the files they need. Plus isaaclab-code-reference (action /
+                           scene / obs / termination / command APIs the section files point
+                           into). README.md states the filing rule for new detail.
   reward-tuning-agent/   isaaclab-reward-reference (composer-by-family, RewTerm idiom,
                            common mdp.* building blocks, weight conventions),
                          smoke-contract (what S6 verifies + substitutions),
@@ -301,7 +325,11 @@ Each agent's per-run process log lives **inside its own subdir** — `<repo>/har
     │   ├── task-implementation.md                                family guide (benchmark-generator output)
     │   └── <slug>/                                               per-task workspace, one folder per /task-create run
     │       ├── spec.json                                         args + per-phase status (orchestrator)
-    │       ├── task-history.md                                   verbose log: §1..§5 phases (task-generator)
+    │       ├── task-history.md                                   §1..§6 design record: per-section Analysis (why) + Validations (what passed)
+    │       ├── test-checklist.md                                 every check that actually ran, rendered from the smokes' verdict files
+    │       ├── task-analysis.md                                  design rationale only (Validations stripped) — read by §6 + reward candidates
+    │       ├── smokes/                                           rendered smokes + <smoke>.verdict.json each writes as it runs
+    │       ├── smoke_s{3,4,6}_frames/                            reset layout · per-predicate states · rollout keyframes
     │       ├── reward-history.md                                 verbose log: §6 (reward-tuning-agent)
     │       ├── dr-history.md                                     verbose log: §7 (dr-generator)
     │       └── handoff-dr-generator.md                           §7 handoff: available+effective DR terms per group, modes, ranges, smoke results

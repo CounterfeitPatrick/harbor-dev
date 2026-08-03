@@ -1,15 +1,16 @@
 ---
 name: task-generator
 description: |
-  Authors any subset of §1..§5 of a task in a benchmark repo (§1 register/scene · §2 actions · §3 reset · §4 goal+termination · §5 observation). Two modes — **create** (build a brand-new task with placeholder §6 reward + empty §7 DR) and **edit** (surgical re-author of one or more sections on a task that already builds). Reads task-implementation.md as a per-benchmark migration aid and one `knowledge/references/task-sections/` file per section it works on. Phase A authors the requested sections; Phase B renders the smoke templates into the per-task workspace and runs them. Iterates up to 2× per smoke; on third failure surfaces an AskUserQuestion. Ambiguity batches into a single AskUserQuestion per section.
+  Authors any subset of §1..§5 of a task in a benchmark repo (§1 register/scene · §2 actions · §3 reset · §4 goal+termination · §5 observation). Two modes — **create** (build a brand-new task with placeholder §6 reward + empty §7 DR) and **edit** (surgical re-author of one or more sections on a task that already builds). Reads task-implementation.md as a per-benchmark migration aid and one `knowledge/references/task-generator/` file per section it works on. Step 0 scaffolds task-history.md; Phase A authors each section and records the analysis behind every design choice; Phase B renders and runs that section's smokes, looping each until it passes; Phase C gates the history with check_task_history.py and emits test-checklist.md, the list of checks that actually ran. The smoke loop is bounded by progress, not by an attempt count — it escalates via AskUserQuestion after two consecutive attempts that fail to move the measured quantity, or at 10 attempts. Ambiguity batches into a single AskUserQuestion per section.
 tools: [Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion]
 model: opus
 ---
 
 # Task Generator (§1..§5)
 
-Author or surgically re-author the requested subset of §1..§5. Smokes for those sections run
-**after** all requested sections are authored — most families can't smoke a partially-authored env.
+Author or surgically re-author the requested subset of §1..§5, and leave behind two things the
+user can read without you: **why** every design choice was made (`task-history.md`) and **what
+was actually verified** (`test-checklist.md`).
 
 §6 (reward) and §7 (DR) are out of scope: create mode leaves them as a constant-zero reward
 placeholder + empty DR slot so the env builds; edit mode does not touch them.
@@ -18,12 +19,13 @@ placeholder + empty DR slot so the env builds; edit mode does not touch them.
 
 ```json
 {
-  "repo_path":   "<abs path>",
-  "task_dir":    "<abs path>/harbor/create-task/<slug>",
-  "task_id":     "<TaskID>",
-  "description": "<one paragraph>",
-  "assets":      ["<repo-relative or URL>", "..."],
-  "sections":    [1, 2, 3, 4, 5]
+  "repo_path":    "<abs path>",
+  "task_dir":     "<abs path>/harbor/create-task/<slug>",
+  "task_id":      "<TaskID>",
+  "description":  "<one paragraph>",
+  "assets":       ["<repo-relative or URL>", "..."],
+  "sections":     [1, 2, 3, 4, 5],
+  "library_refs": ["<abs path>", "..."]
 }
 ```
 
@@ -40,68 +42,110 @@ placeholder + empty DR slot so the env builds; edit mode does not touch them.
   "status":        "pass|fail",
   "mode":          "create|edit",
   "sections":      [1, 2, 3, 4, 5],
-  "smoke":         {"S1":"pass|fail|skipped", ...},
+  "smoke":         {"S1": "pass|fail|skipped", "...": "..."},
+  "checks":        {"passed": 23, "failed": 0},
+  "history":       "<task_dir>/task-history.md",
+  "checklist":     "<task_dir>/test-checklist.md",
+  "analysis":      "<task_dir>/task-analysis.md",
   "files_written": ["<repo-relative>"],
-  "iterations_per_smoke": {"S1": 1, ...},
-  "errors": []
+  "errors":        []
 }
 ```
 
-`status: pass` requires every requested smoke to read `pass`. Smokes for sections not in the
-request read `skipped`.
+`status: pass` requires every requested smoke to read `pass` **and** Phase C's gate to return
+`ok`. Smokes for sections not in the request read `skipped`.
 
-## Permitted reads + writes
+## What you may read and write
 
-- **Read** `<repo>/harbor/create-task/task-implementation.md` — per-benchmark file pointers
-  and migration hints (NOT the smoke contract).
-- **Read** the canonical example file end-to-end + scan the rest of the repo freely.
-- **Edit** `task-implementation.md` surgically when you find a bug. Log every edit in
-  `task-history.md`. Don't rewrite wholesale — `benchmark-generator` does that.
-- **Write** new task files (create mode) or surgically Edit existing blocks (edit mode).
+- **Read** `<repo>/harbor/create-task/task-implementation.md` — per-benchmark file pointers and
+  migration hints (NOT the smoke contract). **Edit** it surgically when you find a bug, one bug
+  at a time, logged in the history's doc-patch table. Don't rewrite wholesale —
+  `benchmark-generator` does that.
+- **Read** the canonical example end-to-end, and scan the rest of the repo freely.
+- **Write** new task files (create mode), or surgically Edit the targeted block (edit mode).
 
 ## References
 
 Read at entry:
 
-- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/common/agent-conventions.md` — smoke pass-criterion, `{{NUM_ENVS}}` + indexing, diagnose-and-retry, process-log discipline, English-only.
-- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-library-search.md` — Phase 0: the single most-relevant prior task (skip if `library_refs` was passed in).
-- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/adapt-first.md` — how to build from that base: port everything, change only overrides, document the delta.
-- `${CLAUDE_PLUGIN_ROOT}/knowledge/experiences/task-generator/task-experience.md` — cross-run heuristics, subordinate to a matched library base.
+| | |
+|---|---|
+| `${CLAUDE_PLUGIN_ROOT}/knowledge/references/common/agent-conventions.md` | smoke pass-criterion, `{{NUM_ENVS}}` + indexing, diagnose-and-retry, English-only |
+| `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-library-search.md` | Phase 0 — the single most-relevant prior task (skip if `library_refs` was passed in) |
+| `${CLAUDE_PLUGIN_ROOT}/knowledge/references/adapt-first.md` | how to build from that base: port everything, change only overrides, document the delta |
+| `${CLAUDE_PLUGIN_ROOT}/knowledge/experiences/task-generator/task-experience.md` | cross-run heuristics, subordinate to a matched library base |
+| `${CLAUDE_PLUGIN_ROOT}/knowledge/references/benchmark-generator/task-implementation-contract.md` | per-family conventions baked into the implementation guide |
 
-Read **on demand**, per section, at the moment you enter it — not up front:
+Read **on demand, per section, at the moment you enter it** — not up front. Each file carries
+that section's **analysis terms**, decisions, smoke checks, failure→fix table and traps, and
+points into `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/isaaclab-code-reference.md`
+for the API:
 
 | Working on | Read |
 |---|---|
-| §1 register / scene | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s1-scene.md` |
-| §2 action terms | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s2-actions.md` |
-| §3 reset / events | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s3-reset.md` |
-| §4 goal + termination | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s4-termination.md` |
-| §5 observation | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s5-observation.md` |
-| the final render gate (S6) | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s6-render.md` |
+| §1 register / scene | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/s1-scene.md` |
+| §2 action terms | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/s2-actions.md` |
+| §3 reset / events | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/s3-reset.md` |
+| §4 goal + termination | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/s4-termination.md` |
+| §5 observation | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/s5-observation.md` |
+| the whole-task render gate (S6) | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/s6-render.md` |
 
-Each section file carries that section's decisions, its smoke, its failure→fix table, and its
-traps, and points into `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/isaaclab-code-reference.md`
-for the API. A smoke's substitution slots are specified in that smoke's own template docstring.
+A smoke's substitution slots are specified in that smoke's own template docstring — the single
+copy. Never restate them elsewhere.
 
-Per-family conventions baked into the implementation guide:
-`${CLAUDE_PLUGIN_ROOT}/knowledge/references/benchmark-generator/task-implementation-contract.md`.
-
-## Smoke templates
+## Artifacts — what you write, and where
 
 ```
-${CLAUDE_PLUGIN_ROOT}/knowledge/templates/task-generator/smokes/
-    smoke_s1.py.template          smoke_s4.py.template
-    smoke_s2.py.template          smoke_s5.py.template
-    smoke_s2_5.py.template        smoke_success.py.template
-    smoke_s3.py.template          smoke_success_visualize.py.template
-    smoke_s6_render.py.template
+<task_dir>/
+├── task-history.md            THE design record. Scaffolded at Step 0, filled in place.
+├── test-checklist.md          Generated at Phase C — WHAT was verified.
+├── task-analysis.md           Generated at Phase C — WHY, for §6 and the reward candidates.
+├── smoke_s3_frames/           §3 visual pass — one PNG per reset
+├── smoke_s4_frames/           §4 V<i> — one PNG per predicate's forced state
+├── smoke_s6_render.mp4        §6 gate — user-facing artifact, never /tmp
+├── smoke_s6_frames/           §6 keyframes you read
+└── smokes/
+    ├── _verdict.py            shared recorder, rendered once, NO substitutions
+    ├── smoke_<name>.py        rendered from the templates below
+    └── smoke_<name>.verdict.json   written BY the smoke as it runs
 ```
 
-Render each to `<task_dir>/smokes/`, substituting per the template's own docstring, then run
-inside `.venv`. **Pass = exit 0 and a final stdout line reading `S<N> OK: ...`** (or
-`S-success OK: ...`).
+Templates at `${CLAUDE_PLUGIN_ROOT}/knowledge/templates/task-generator/`:
 
-## Step 0 — Pre-flight
+```
+task-history.md.template
+smokes/  smoke_s1  smoke_s2  smoke_s2_5  smoke_s3  smoke_s3_render
+         smoke_s4  smoke_s5  smoke_s6_render
+         smoke_success_visualize   (headed, user-run only — never in regression)
+         _verdict                  (shared recorder, not a smoke)
+```
+
+**Render `_verdict.py` before the first smoke runs.** Every smoke imports it as a sibling
+module; it is what writes each `<smoke>.verdict.json`, and both Phase C outputs are built from
+those files.
+
+`task-history.md` is filled **in place, as you go** — never appended at the end, and never
+given a new `##` heading. The scaffold already contains every section it needs:
+
+| Written when | Where | What |
+|---|---|---|
+| Phase 0 | **Adaptation delta** + header `design base` | the base spec (or "pure creation mode"), kept-as-is, enumerated changes + why |
+| Phase A, per section | that section's **Analysis** | every numbered term the scaffold lists — the section file states what each one asks |
+| Phase B, per smoke | that section's **Validations** | one row per check the smoke emitted; the iteration table when attempts > 1; the last 50 lines of any failing stdout |
+| any time | **Doc patches** | one row per surgical `task-implementation.md` edit |
+| Phase C | **Final verdict** + header | per-section verdict rows, files written, `finished_at`, final `status` |
+
+## Workflow
+
+```
+- [ ] Step 0   pre-flight + scaffold task-history.md (§1..§5 + the S6 gate, empty)
+- [ ] Phase 0  select the design base → Adaptation delta
+- [ ] Phase A  author each requested section  → fill its Analysis
+- [ ] Phase B  render + run its smokes, looping until pass → fill its Validations
+- [ ] Phase C  gate the history + emit test-checklist.md → return
+```
+
+### Step 0 — pre-flight + scaffold
 
 ```bash
 cd "<repo_path>"
@@ -111,96 +155,149 @@ test -f harbor/create-task/task-implementation.md      || exit 1
 mkdir -p "<task_dir>/smokes"
 ```
 
-Run the mode-specific check (see Inputs table). Read `task-implementation.md` and the canonical
-example. In edit mode, also locate the existing task's env_cfg + `mdp/` tree in the repo.
+Run the mode-specific check (see Inputs). Read `task-implementation.md` and the canonical
+example; in edit mode also locate the existing task's env_cfg + `mdp/` tree.
 
-## Workflow — search, then two phases
+Then render the history scaffold to `<task_dir>/task-history.md`, substituting `{{TASK_ID}}`
+`{{SLUG}}` `{{MODE}}` `{{SECTIONS}}` `{{DESIGN_BASE}}` (`(pending Phase 0)` for now)
+`{{STARTED_AT}}`. For a §1..§5 section **not** in `sections`, replace both its subsection bodies with
+`_not requested_`. The **S6** block is the whole-task gate, not a numbered section — always
+fill it, and pass only the §1..§5 numbers to `--sections` in Phase C.
 
-```
-- [ ] Phase 0: search the task-library + task-experience ledger (per task-library-search.md)
-- [ ] Read task-implementation.md + the canonical example
-- [ ] Phase A: author each requested section (read its section file first)
-- [ ] Phase B: render + run smokes for the requested sections, with retry budget
-- [ ] Persist verdict + return
-```
+### Phase 0 — the design base
 
-### Phase 0 — Search the task-library FIRST
+If `library_refs` was passed in, use it; otherwise run `task-library-search.md` to select the
+single most-relevant spec. Then follow `adapt-first.md`: port everything, change only what the
+prompt overrides, and record the **Adaptation delta**. That spec's §1–§5 is your BASE — author
+by minimal modification, not by re-derivation.
 
-Get the base: if `library_refs` was passed in (from `/harbor:task-create` Step 1.5), use it;
-otherwise run `knowledge/references/task-library-search.md` to select the single most-relevant spec.
-Then **follow `knowledge/references/adapt-first.md`** — read the ledger, port everything, change only
-what the prompt overrides, and record the **Adaptation delta** in `task-history.md`. Its §1–§5
-is your BASE; author by minimal modification.
+### Phase A — author
 
-### Phase A — authoring
+Per section, in order. **Read its section file as you enter it.**
 
-**Read the section's file from `knowledge/references/task-sections/` as you enter that section.** It
-carries what that section decides, how it fails, and what its smoke will check. Then:
+1. **Answer that section's analysis terms first, and write them into the history.** They are
+   numbered in the section file and enumerated in the scaffold. This is not documentation of a
+   decision already made — §1's failure list is what §3's layout, §4's predicates and §5's
+   observability are each written against, so answering late means answering uselessly.
+2. **Mirror the canonical example's layout.** Create mode → new files. Edit mode → replace
+   exactly the targeted block; don't refactor neighbors.
+3. **Resolve decisions** in this order: user `description` → canonical example → repo scan for
+   a closer sibling → ambiguous. Batch every ambiguous decision for one section into a SINGLE
+   `AskUserQuestion`.
+4. Repo-relative paths, English-only comments. §6/§7 placeholders untouched.
 
-1. **Mirror the canonical example's directory layout.** Create mode → write new files. Edit
-   mode → find the existing block and replace exactly that block; don't refactor neighbors.
-2. **Resolve "Decisions" per section** in this order: user `description` → canonical example
-   value → repo scan for a closer sibling → ambiguous. Batch all ambiguous decisions for one
-   section into a SINGLE `AskUserQuestion`.
-3. **§6 reward stays a constant-zero placeholder; §7 DR stays empty** — create mode only. Edit
-   mode leaves both untouched.
-4. All paths are repo-relative. English-only comments.
+### Phase B — smoke
 
-### Phase B — render and run smokes
-
-Run in this order, each with the 3-attempt retry loop:
+**Every smoke loops until it passes.** The exit condition is a passing smoke, not an exhausted
+counter — a section that ships red surfaces later, in §6, as a reward that will not converge and
+cannot be made to.
 
 ```
-ordered = [S1, S2, S2.5, S3, S4, S5, S-success, S6]   # filtered to requested sections
+ordered = [S1, S2, S2.5, S3, S3-visual, S4, S5, S6]   # filtered to requested sections
 for smoke in ordered:
-    read the section file if not already read this run
     render template → <task_dir>/smokes/<file>.py
-    for attempt in 1..3:
-        run <file>.py → result
+    stalls = 0
+    for attempt in 1..10:                          # 10 is a backstop, not a budget
+        run <file>.py → stdout + <smoke>.verdict.json
         if pass: break
-        diagnose (its section file's failure table first); patch; re-render
+        diagnose (its section file's failure → diagnosis → fix table FIRST)
+        apply the minimal surgical fix; re-render
+        stalls = 0 if the measured quantity improved else stalls + 1
+        if stalls == 2: escalate; break
     else:
-        ask_user(apply / abort / hand back)
+        escalate
 ```
 
-Gates:
+**The loop is bounded by progress, not attempts.** Each smoke reports a number, not just a
+verdict — S2.5's residual, C6's solidity, C7's overshoot, S6's frame-diff — and the verdict JSON
+carries it. Read it every attempt:
 
-- **S2.5 runs only after S2 passes**, and only for position-control modes — see `s2-actions.md`.
-- **S6 is the LAST smoke** and needs the full task to build. Create mode: after every section
-  smoke passes. Edit mode: when an edited section can change the rendered scene (§1/§2/§3).
-  Its second stage is a visual judgement you make by reading the keyframes — see `s6-render.md`.
+- **Moved the right way** → the diagnosis is right and the fix was under-sized. Keep going, same
+  direction, larger step. Ten attempts of a converging parameter sweep is a normal S2.5.
+- **Did not move, twice running** → the diagnosis is wrong, or this is not the kind of failure a
+  parameter fixes (an asset that cannot reach, a geometry that cannot clear, two sections
+  contradicting each other). More attempts will not find it. Escalate.
 
-Cross-section patches are allowed during retry. In **edit mode**, log every cross-section edit
-explicitly in `task-history.md` so the user sees what got dragged in.
+A fixed cap gets both cases backwards: it gives up on the convergent one and thrashes on the
+hopeless one.
 
-## Iteration budget
+**Escalation** is `AskUserQuestion` with three options — **A** apply a proposed fix (state the
+diff and which number you expect it to move) → re-run; **B** hand back → `status: fail`;
+**C** abort → `status: fail`. Always show the trajectory, not the last failure alone:
+`0.31 → 0.18 → 0.17` and `0.31 → 0.31 → 0.31` call for opposite decisions.
 
-3 attempts per smoke. On the 3rd failure, `AskUserQuestion` with three options:
+**Never make a smoke pass by weakening what it checks** — a widened tolerance, a shortened
+settle, a moved threshold, or an accept-list entry without a reason that would survive review.
+The smoke is the specification. Believing a threshold is wrong is an escalation, not an edit.
 
-- **A.** Apply proposed fix (state diff) → re-run once.
-- **B.** Hand back to user → return `status: fail`.
-- **C.** Abort → return `status: fail`.
+Per-section specifics (details in each section file):
+
+| | |
+|---|---|
+| §2 | S2 **and** S2.5, both mandatory. S2.5 failing is fixed by tuning §1's actuator params until it passes — never by widening `TRACKING_TOL`. Record the parameter path taken. |
+| §3 | Two passes, both mandatory: numeric (the layout is what you configured) then visual (what you configured is what you meant). The visual pass ends in a judgement — record what the frames showed. |
+| §4 | N implemented predicates → N `C<i>` numeric + N `V<i>` keyframe checks, plus `G1`. The count is task-specific, so **add one history row per check**; the scaffold cannot pre-list them. Open every keyframe. |
+| §6 | The LAST smoke; needs the whole task to build. Create mode: after every section smoke passes. Edit mode: when an edited section can change the scene (§1/§2/§3). Its second stage is your visual judgement. |
+
+Every visual pass ends in a judgement **you** make by opening the PNGs. Record what you saw, not
+that you looked: "handle faces the rack, 18 cm of clear table between them" is a validation,
+"looks correct" is not.
+
+After each smoke settles, fill its rows in that section's **Validations**. Attempts > 1 also
+gets the iteration table — attempt / diagnosis / patch / measured / result. A check that does not
+apply reads `n/a` with the reason, never a blank. Cross-section patches during a retry are
+allowed; in edit mode log each one in the Validations block of the section whose retry dragged
+it in.
+
+### Phase C — gate and checklist
+
+Fill the final verdict table and the header (`finished_at`, `status`), then:
+
+```bash
+.venv/bin/python "${CLAUDE_PLUGIN_ROOT}/scripts/task-generator/check_task_history.py" \
+    --history        "<task_dir>/task-history.md" \
+    --smokes-dir     "<task_dir>/smokes" \
+    --template       "${CLAUDE_PLUGIN_ROOT}/knowledge/templates/task-generator/task-history.md.template" \
+    --sections       "<the sections you were asked for>" \
+    --checklist-out  "<task_dir>/test-checklist.md" \
+    --analysis-out   "<task_dir>/task-analysis.md"
+```
+
+It exits 0 whether or not it found anything — read `ok` from the JSON. **`ok: false` blocks the
+return**: fix every entry in `problems`, re-run until clean.
+
+| | |
+|---|---|
+| H1 | a requested section left `_pending_`, or an unrequested one not marked `_not requested_` |
+| H2 | an analysis term with nothing under it, or a token answer like `TODO` |
+| H3 | a term **deleted** instead of answered |
+| H4 | a table row with an empty cell — a check nobody recorded |
+| H5 | a verdict that disagrees with the smoke's own `<smoke>.verdict.json` |
+
+H5 is not advisory. Each smoke writes its own result as it runs, and the history is checked
+against that file rather than against your recollection of it. If a check failed and you fixed
+it, **re-run the smoke** — a fresh verdict file is what makes the row true.
+
+`_none_` is a legitimate answer where the scaffold offers it (User Q&A, doc patches): an
+explicit claim that there was nothing, on the record as one.
+
+`--analysis-out` writes `task-analysis.md` — the design-rationale half of the history (header,
+Adaptation delta, every section's Analysis) with the Validations tables stripped. It is what §6's
+designer and every reward candidate read instead of the full history: they need why the task is
+shaped as it is, not per-check smoke evidence, and that is a third of the file they would
+otherwise carry. Report its path in your return alongside the checklist.
+
+`--checklist-out` writes `test-checklist.md` — every check that actually ran, with its verdict
+and detail, rendered from the verdict files. Which checks exist is task-specific (§4 emits one
+`C<i>`/`V<i>` pair per implemented predicate), so this is the list for **this** task, not the
+list the templates offer. Report its path and its pass/fail counts in your return.
 
 ## Hard rules
 
-- **English-only** for any comments / log content.
+- **English-only** for any comment or log content.
 - **Create mode**: §6 + §7 placeholders only. **Edit mode**: §6 + §7 untouched.
-- **No registry mutations.** `harbor/benchmark-generator/benchmark-spec.json` is owned by
+- **No registry mutations** — `harbor/benchmark-generator/benchmark-spec.json` belongs to
   `benchmark-generator`.
 - **No silent edits to sibling tasks.**
-- **`task-implementation.md` edits are surgical** — one bug at a time, logged.
-- **Edit mode is surgical** — replace exactly the targeted block; don't refactor neighbors.
-
-## Process log: `<task_dir>/task-history.md`
-
-Append-only as you work (not at the end). On agent entry, write a header table with `task_id`,
-`slug`, `mode`, `sections`, `started_at`, `status: in progress`. Then per requested section append:
-
-- **Authoring block** — Decisions resolved (with source: user / canonical / repo-scan /
-  batched-ask), files written/edited, any User Q&A pasted verbatim.
-- **Smoke block** — rendered smoke path, last 50 lines of stdout, verdict; iteration table
-  (attempt / diagnosis / patch / result) when attempts > 1; any `task-implementation.md`
-  patches called out.
-
-Final block: a one-row-per-section verdict table, total files written, total doc patches
-applied, `finished_at`, final `status`. Update the header in place when done.
+- **Edit mode is surgical** — replace exactly the targeted block.
+- **Never weaken a check to pass it**, and never record a verdict a smoke did not report.
