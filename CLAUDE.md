@@ -55,6 +55,16 @@ L2 vs L3 are **not the same axis**:
 - L3 asks "how is the context isolated" (fresh `messages=[]`, independent loop)
 - Skills can dispatch subagents internally; subagents don't need a slash entry. The two are independent.
 
+## Native harness generation
+
+`commands/` and `agents/` are also the only source for the Codex harness.
+`tools/generate.py` delegates to `tools/adapters/codex.py`, which renders
+project-local `.agents/skills/` and `.codex/agents/`. There is no provider
+runner or cross-provider orchestration runtime. See `docs/harnesses.md`.
+`tools/harbor.py` is only a sync-and-exec convenience: `harbor claude` loads
+this root with `--plugin-dir`; `harbor codex` generates and links the
+`harbor-*` Codex entries, then both replace themselves with the vendor CLI.
+
 ---
 
 ## Where things live (post-refactor)

@@ -18,4 +18,10 @@ outputs/
 plot_output/
 *.mp4
 *.pdf
-.claude/settings.local.json
+
+# Harness-native artifacts rendered from commands/ and agents/.
+/.agents/skills/harbor-*/
+/.codex/agents/harbor-*.toml
+
+# Developer-local Claude Code settings.
+/.claude/settings.local.json

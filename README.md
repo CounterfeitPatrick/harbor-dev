@@ -33,14 +33,28 @@ uv --version
 nvidia-smi
 ```
 
-## Install (Claude Code)
+## Install for Claude Code and Codex
 
-```text
-/plugin marketplace add supersglzc/harbor
-/plugin install harbor@harbor
+After cloning, one command prepares both harnesses:
+
+```bash
+cd ~/harbor
+make install
 ```
 
-(The marketplace bundles a single plugin named `harbor`.) `/harbor:help` lists the full surface.
+Then start either vendor-owned session from the repository you want it to work
+on:
+
+```bash
+cd /path/to/benchmark
+harbor claude
+# or
+harbor codex
+```
+
+Installation and every Codex launch synchronize the generated Harbor files
+automatically. Claude Code reads the checkout directly. See
+[docs/harnesses.md](docs/harnesses.md) for implementation details.
 
 ## What you get
 
