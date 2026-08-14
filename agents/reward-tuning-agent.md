@@ -310,19 +310,26 @@ The candidate writes `verdict.json` then `.done`. Wait on the **union** of in-fl
 candidates, never on one in particular — at `pool_size>1`, blocking on slot 0 while slot 3
 finishes wastes the whole point of the pool:
 
-```bash
-# list one .done path per in-flight candidate; first to appear wins
-until for d in <task_dir>/iter_007/.done <task_dir>/iter_009/.done; do
-        [ -f "$d" ] && echo "$d" && break
-      done | grep -q .; do sleep 15; done
+**[MUST] Wait in the BACKGROUND — one call, not a poll loop.**
+
+```
+Bash(run_in_background=true,
+     "until for d in <task_dir>/iter_007/.done <task_dir>/iter_009/.done; do \
+              [ -f \"$d\" ] && echo \"$d\" && break; \
+            done | grep -q .; do sleep 30; done")
 ```
 
-**One Bash call is not enough.** Bash caps at ~600 s while a candidate runs 35 min to 3 h, so
-this is a RE-POLL loop: issue the bounded wait, and when it times out with no `.done`, issue it
-again. Expect tens of iterations over a long candidate — that is normal, not a hang.
+A foreground Bash call caps at ~600 s while a candidate runs 35 min to 3 h, so waiting in the
+foreground becomes five-to-seven turns per candidate — and the prompt cache expires in each
+gap, so every one of them re-caches your ENTIRE context at full price. Measured on a
+10-candidate tune: 51 such turns burned **13.58M cache-write tokens, 94 % of this agent's
+total and ~31 % of the whole run**, to ask "is it done yet". Backgrounded, the job runs
+uncapped and the harness re-invokes you when it exits — you spend nothing while it waits.
 
-The agent's completion notification is the fast path; the file is the reliable one — trust
-the file, since it survives a lost notification, a killed agent, and a resumed session.
+The file is still the truth, so nothing about the contract changes: the wait is on the
+**union** of in-flight `.done` files, first to appear wins, and it survives a lost
+notification, a killed agent, and a resumed session. If you are re-invoked and no `.done`
+exists, re-issue the same backgrounded wait — that is the exception path, not the norm.
 
 ### 2.4 — COLLECT
 
