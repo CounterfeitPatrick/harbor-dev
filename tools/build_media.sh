@@ -52,10 +52,19 @@ drawtext=fontfile=$FONT:text='recording pending':fontcolor=0x39424e:fontsize=14:
     echo "    $(printf '%-34s' "$1") placeholder"
 }
 
-# Poster for the walkthrough: the 14 s beat where the prompt and the trained G1 are both on
-# screen, which states the whole premise in one frame. A still rather than a loop because the
-# video is the thing being linked to — an animation here would just compete with it, and cost
-# megabytes above the fold to do so.
+# The whole narrated walkthrough as one self-playing loop. A README animates images and
+# nothing else — a repo-relative <video> renders no player at all — so the full run has to be
+# an animated WebP to play on its own. 860px keeps the terminal text sharp, which is the point
+# of a screencast; 6 fps and q72 are what bring 3m45s down to a size worth putting above the
+# fold. Downscaling is what would blur it, so the frame rate takes the cut instead.
+echo "==> hero: full walkthrough"
+WIDTH_SAVE=$WIDTH; Q_SAVE=$Q; FPS_SAVE=$FPS
+WIDTH=860; Q=72; FPS=6
+encode demo.mp4 hero/walkthrough.webp
+WIDTH=$WIDTH_SAVE; Q=$Q_SAVE; FPS=$FPS_SAVE
+
+# Still of the same 14 s beat, used as the poster on the docs site's <video> element so a
+# 9 MB file is not fetched before anyone presses play.
 echo "==> hero poster"
 # The frame is dimmed and given a play triangle so it reads as a poster rather than as a
 # screenshot someone forgot to crop. DejaVu Sans carries U+25B6; the Mono face's version is

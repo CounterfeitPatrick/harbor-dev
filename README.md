@@ -21,17 +21,9 @@ trains the policy — and checks its own work at every step.
 
 <br>
 
-<!-- TODO(hero): swap this poster for GitHub's inline player once docs/public/demo.mp4 has
-     been uploaded through the web UI. Drag it into any issue/PR comment box (do not submit
-     the comment) and GitHub returns a user-attachments URL; then this block becomes:
+<img src="assets/hero/walkthrough.webp" alt="One prompt drives all six stages, from dependency setup to a trained G1 jumping policy" width="860">
 
-       <video src="https://github.com/user-attachments/assets/<uuid>" width="860" controls></video>
-
-     That URL is the only way to get a player inline in a README — a repo-relative <video>
-     renders nothing. The file is kept under 10 MB precisely so that upload is allowed. -->
-<a href="docs/public/demo.mp4"><img src="assets/hero/walkthrough-poster.webp" alt="Watch the full walkthrough: one prompt drives all six stages, from dependency setup to a trained G1 jumping policy" width="860"></a>
-
-**[▶ Watch the full 3:45 walkthrough](docs/public/demo.mp4)** — one prompt, all six stages, start to trained policy.
+<sub>The full run, start to finish. **[Same walkthrough with narration and a scrubber →](docs/public/demo.mp4)**</sub>
 
 </div>
 
