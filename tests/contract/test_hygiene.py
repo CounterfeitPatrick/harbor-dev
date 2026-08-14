@@ -25,10 +25,14 @@ _IDENTITY_RE = re.compile(
 )
 
 
-# The plugin's own marketplace / clone URL — the one place the publisher handle
-# is expected to appear. Stripped before the identity scan so any OTHER use of
-# the handle (home paths, W&B entities) still fails.
-_PUBLISHER_URL_RE = re.compile(r"(?:github\.com/)?supersglzc/harbor(?:\.git)?")
+# The plugin's own published URLs — marketplace / clone, and the GitHub Pages host the
+# README and docs site link to. These are the only places the publisher handle is
+# expected. Stripped before the identity scan so any OTHER use of the handle (home
+# paths, W&B entities) still fails.
+_PUBLISHER_URL_RE = re.compile(
+    r"(?:github\.com/)?supersglzc/harbor(?:-dev)?(?:\.git)?"
+    r"|supersglzc\.github\.io"
+)
 
 
 def _is_placeholder_user(u):

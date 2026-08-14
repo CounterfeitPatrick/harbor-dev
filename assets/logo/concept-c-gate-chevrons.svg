@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="HARBOR">
+  <title>HARBOR — stages passing gates</title>
+  <!-- Three chevrons gaining solidity left to right: a workflow advancing through gates,
+       in the shape of a nautical signal flag. -->
+  <rect x="6.5" y="6.5" width="51" height="51" rx="14" fill="none" stroke="#0FB6C9" stroke-width="5"/>
+  <g fill="none" stroke="#0FB6C9" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 22 L29 32 L21 42" opacity="0.45"/>
+    <path d="M30 22 L38 32 L30 42" opacity="0.72"/>
+    <path d="M39 22 L47 32 L39 42"/>
+  </g>
+</svg>

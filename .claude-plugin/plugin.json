@@ -8,7 +8,7 @@
   },
   "homepage": "https://github.com/supersglzc/harbor",
   "repository": "https://github.com/supersglzc/harbor",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "keywords": [
     "robotics",
     "uv",
