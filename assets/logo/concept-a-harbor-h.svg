@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="HARBOR">
-  <title>HARBOR — harbor basin H</title>
-  <!-- Two quay walls closing into a basin; the crossbar is the water between them.
-       Read as a letterform it is an H; read as an outline it is a sheltered harbor. -->
-  <g fill="none" stroke="#0FB6C9" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M13 12 V40 C13 49 21 54.5 32 54.5 C43 54.5 51 49 51 40 V12"/>
-    <path d="M13 30 C19.3 25.5 25.7 34.5 32 30 C38.3 25.5 44.7 34.5 51 30"/>
-  </g>
-</svg>

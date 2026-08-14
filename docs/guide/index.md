@@ -31,4 +31,4 @@ HARBOR is not a code generator with a robotics prompt. Three design choices sepa
 
 - [Install HARBOR](/guide/install)
 - [Set up your first benchmark](/guide/first-benchmark)
-- [Understand the harness](/concepts/)
+- [Understand the harness](/guide/harness)

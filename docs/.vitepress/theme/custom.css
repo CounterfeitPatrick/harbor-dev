@@ -21,8 +21,34 @@
   --vp-c-brand-3: #0FB6C9;
 }
 
-/* The results tables are the point of the Results page; let them breathe and keep the
-   numeric columns centred so a reader can scan a column rather than parse each row. */
+/* Wider than VitePress ships. The defaults are tuned for narrow prose, which leaves the
+   command reference — wide three-column tables — squeezed into ~688px with acres of margin
+   either side. These four variables are the whole layout chain: the outer shell, the doc
+   column, the prose measure, and the aside. */
+:root {
+  --vp-layout-max-width: 1680px;
+  --vp-sidebar-width: 260px;
+}
+
+.VPDoc .container {
+  max-width: 1320px !important;
+}
+
+.VPDoc .content {
+  max-width: 1060px !important;
+}
+
+.VPDoc.has-aside .content-container {
+  max-width: 1060px !important;
+}
+
+.VPNavBar .container,
+.VPNavBar .content-body {
+  max-width: none !important;
+}
+
+/* Tables carry most of the reference, so let them use the full measure and centre the
+   non-label columns — a reader scans a column rather than parsing each row. */
 .vp-doc table {
   display: table;
   width: 100%;
@@ -31,6 +57,11 @@
 .vp-doc th:not(:first-child),
 .vp-doc td:not(:first-child) {
   text-align: center;
+}
+
+/* The command reference's Purpose column is prose, not a value; centring it is unreadable. */
+.vp-doc td:last-child {
+  text-align: left;
 }
 
 /* Wide content must scroll inside its own box, never the page body. */

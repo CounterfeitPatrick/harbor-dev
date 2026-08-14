@@ -4,7 +4,7 @@
 The reference is the one part of the documentation that must never drift from the code,
 and the only reliable way to guarantee that is to not write it by hand. This reads
 `commands/*.md` and `agents/*.md` — the definitions Claude Code actually loads — and emits
-`docs/reference/{commands,agents}.md`. CI runs it and fails if the result differs from
+`docs/guide/{commands,agents}.md`. CI runs it and fails if the result differs from
 what is committed, so a command whose description changes cannot ship stale docs.
 
 Usage: tools/gen_docs_reference.py [--check]
@@ -15,7 +15,7 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-OUT = ROOT / "docs" / "reference"
+OUT = ROOT / "docs" / "guide"
 REPO_URL = "https://github.com/supersglzc/harbor-dev"
 
 # Commands are grouped by filename prefix, which is the only grouping mechanism Claude Code

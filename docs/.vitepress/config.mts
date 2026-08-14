@@ -27,17 +27,16 @@ export default defineConfig({
   ],
 
   themeConfig: {
-    logo: '/logo.svg',
+    logo: { light: '/logo.svg', dark: '/logo-dark.svg' },
     siteTitle: 'HARBOR',
 
     nav: [
       { text: 'Guide', link: '/guide/', activeMatch: '/guide/' },
-      { text: 'Concepts', link: '/concepts/', activeMatch: '/concepts/' },
-      { text: 'Reference', link: '/reference/commands', activeMatch: '/reference/' },
-      { text: 'Results', link: '/results' },
       { text: 'Paper', link: 'https://arxiv.org/abs/2606.08610' },
     ],
 
+    // One section. Concepts and the generated reference live under /guide/ too, so the
+    // sidebar is the whole map of the site and nothing hides behind a second nav entry.
     sidebar: {
       '/guide/': [
         {
@@ -56,23 +55,19 @@ export default defineConfig({
             { text: 'Training and tuning', link: '/guide/training' },
           ],
         },
-      ],
-      '/concepts/': [
         {
           text: 'Concepts',
           items: [
-            { text: 'The harness', link: '/concepts/' },
-            { text: 'Gates', link: '/concepts/gates' },
-            { text: 'Your workspace', link: '/concepts/workspace' },
+            { text: 'The harness', link: '/guide/harness' },
+            { text: 'Gates', link: '/guide/gates' },
+            { text: 'Your workspace', link: '/guide/workspace' },
           ],
         },
-      ],
-      '/reference/': [
         {
           text: 'Reference',
           items: [
-            { text: 'Commands', link: '/reference/commands' },
-            { text: 'Agents', link: '/reference/agents' },
+            { text: 'Commands', link: '/guide/commands' },
+            { text: 'Agents', link: '/guide/agents' },
           ],
         },
       ],

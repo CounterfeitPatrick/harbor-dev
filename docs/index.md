@@ -14,7 +14,7 @@ hero:
       link: /guide/
     - theme: alt
       text: How it works
-      link: /concepts/
+      link: /guide/harness
     - theme: alt
       text: Read the paper
       link: https://arxiv.org/abs/2606.08610
@@ -52,6 +52,6 @@ HARBOR treats the whole problem as **harness engineering**: shifting human effor
 
 HARBOR cannot prove your policy is semantically correct. What it does is turn the common RL engineering failures into **gate failures that surface before they propagate downstream**.
 
-[Read the concepts →](/concepts/)
+[Read the concepts →](/guide/harness)
 
 </div>

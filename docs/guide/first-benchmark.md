@@ -74,7 +74,7 @@ To see what tasks are available:
     └── outputs/
 ```
 
-Everything is plain Python and YAML, meant to be read and edited. See [your workspace](/concepts/workspace) for the full map.
+Everything is plain Python and YAML, meant to be read and edited. See [your workspace](/guide/workspace) for the full map.
 
 ## Next
 

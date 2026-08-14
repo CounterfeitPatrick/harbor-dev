@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Transcode the raw sim-recording archive into the web assets the README and docs site use.
 #
-# The raw recordings are 1280x720 MP4s totalling ~465 MB — far too heavy for git. This
-# script renders them down to looping animated WebP tiles (~50-800 KB each) under assets/,
-# which is what actually gets committed. Full-resolution MP4s belong in a GitHub Release,
-# and the narrated demo belongs on YouTube; neither is produced here.
+# The raw recordings total ~465 MB — far too heavy for git. This script renders them down
+# to looping animated WebP tiles (~50-800 KB each) plus one re-encoded walkthrough, which is
+# what actually gets committed. The full-resolution originals belong in a GitHub Release.
 #
-# WebP rather than MP4 because a README cannot play a repo-relative <video> — only images
-# animate. WebP rather than GIF because it is 3-5x smaller at the same quality.
+# Tiles are WebP rather than MP4 because a README cannot autoplay a repo-relative <video> —
+# only images animate — and WebP is 3-5x smaller than GIF at the same quality. The
+# walkthrough stays an MP4 because it has narration and needs a scrubber.
 #
 # Usage: tools/build_media.sh [path/to/Archive.zip]
 set -euo pipefail
@@ -28,7 +28,7 @@ command -v ffmpeg >/dev/null || { echo "ffmpeg not found" >&2; exit 1; }
 
 echo "==> extracting from $ARCHIVE"
 unzip -q -o -j "$ARCHIVE" "sim videos/*/*.mp4" "demo.mp4" -d "$WORK" -x "__MACOSX/*"
-mkdir -p "$OUT/gallery" "$OUT/locomotion" "$OUT/hero"
+mkdir -p "$OUT/gallery" "$OUT/hero"
 
 # encode <src> <dest> [extra filters] [trim args]
 encode() {
@@ -59,7 +59,14 @@ WIDTH_SAVE=$WIDTH; WIDTH=760
 encode demo.mp4 hero/prompt-to-policy.webp "" "-ss 9 -t 8"
 WIDTH=$WIDTH_SAVE
 
-echo "==> gallery: 4 tasks x 4 simulators"
+# The narrated walkthrough, re-encoded so it can live in the repo. 1080p is kept rather than
+# downscaled: it is a screencast, and terminal text is the thing that has to stay readable.
+echo "==> full demo"
+ffmpeg -y -v error -i "$WORK/demo.mp4" -c:v libx264 -crf 30 -preset veryfast \
+    -c:a aac -b:a 96k -movflags +faststart "$OUT/demo.mp4"
+echo "    $(printf '%-34s' "assets/demo.mp4") $(du -h "$OUT/demo.mp4" | cut -f1)"
+
+echo "==> gallery: 8 tasks x 4 simulators"
 # IsaacLab. dex-grasp is recorded from far off and lasts 8 frames, so it is cropped to the
 # workspace and motion-interpolated to a readable ~2 s loop instead of a 0.5 s twitch.
 encode stack_three_cube.mp4          gallery/stack-cube__isaaclab.webp
@@ -80,26 +87,37 @@ encode genesis_insert_drawer.mp4      gallery/insert-drawer__genesis.webp "" "-s
 encode genesis_lift_box.mp4           gallery/lift-box__genesis.webp
 encode genesis_dex_grasp.mp4          gallery/dex-grasp__genesis.webp
 
-# MJLab is the paper's fourth simulator but no recordings shipped in the archive.
-placeholder gallery/stack-cube__mjlab.webp    "MJLab"
-placeholder gallery/insert-drawer__mjlab.webp "MJLab"
-placeholder gallery/lift-box__mjlab.webp      "MJLab"
-placeholder gallery/dex-grasp__mjlab.webp     "MJLab"
+# Locomotion sits in the same grid as manipulation: the harness is embodiment-agnostic, so
+# splitting them into two galleries would imply a distinction that does not exist. These
+# recordings run 33 s where the manipulation tiles are 2-5 s, so each is trimmed to a loop.
+echo "==> locomotion (IsaacLab, trimmed to a 6 s loop each)"
+encode g1_jump.mp4       gallery/g1-jump__isaaclab.webp       "" "-ss 2 -t 6"
+encode g1-backflip.mp4   gallery/g1-backflip__isaaclab.webp   "" "-ss 2 -t 6"
+encode g1_footstep.mp4   gallery/g1-footstep__isaaclab.webp   "" "-ss 2 -t 6"
+encode g1_rough_jump.mp4 gallery/g1-rough-jump__isaaclab.webp "" "-ss 2 -t 6"
 
-echo "==> extra IsaacLab tasks"
+echo "==> extra IsaacLab tasks (not in the grid)"
 encode stack_two_cube.mp4 gallery/stack-two-cube__isaaclab.webp
 encode place_banana.mp4   gallery/place-banana__isaaclab.webp
 
-echo "==> locomotion (33 s recordings, trimmed to a 6 s loop each)"
-encode g1-backflip.mp4   locomotion/g1-backflip.webp   "" "-ss 2 -t 6"
-encode g1_jump.mp4       locomotion/g1-jump.webp       "" "-ss 2 -t 6"
-encode g1_footstep.mp4   locomotion/g1-footstep.webp   "" "-ss 2 -t 6"
-encode g1_rough_jump.mp4 locomotion/g1-rough-jump.webp "" "-ss 2 -t 6"
+# Cells not yet recorded: MJLab across the board, and the locomotion tasks everywhere but
+# IsaacLab. A labelled tile keeps the grid rectangular and says which run is outstanding,
+# rather than a ragged table that reads as though the coverage were complete.
+echo "==> placeholders for unrecorded cells"
+for task in stack-cube insert-drawer lift-box dex-grasp; do
+    placeholder "gallery/${task}__mjlab.webp" "MJLab"
+done
+for task in g1-jump g1-backflip g1-footstep g1-rough-jump; do
+    placeholder "gallery/${task}__maniskill.webp" "ManiSkill"
+    placeholder "gallery/${task}__genesis.webp"   "Genesis"
+    placeholder "gallery/${task}__mjlab.webp"     "MJLab"
+done
 
 echo "==> docs site assets"
 DOCS="$ROOT/docs/public"
 mkdir -p "$DOCS"
-cp "$ROOT/assets/logo/harbor-mark.svg" "$DOCS/logo.svg"
+cp "$ROOT/assets/logo/harbor-mark.svg"      "$DOCS/logo.svg"
+cp "$ROOT/assets/logo/harbor-mark-dark.svg" "$DOCS/logo-dark.svg"
 cp "$ROOT/assets/logo/favicon.svg"     "$DOCS/favicon.svg"
 
 # One strip of all four tasks for the docs landing page. Each clip is looped to a common
@@ -135,4 +153,4 @@ cp "$OUT/social-preview.png" "$DOCS/social-preview.png"
 echo "    $(printf '%-34s' "assets/social-preview.png") $(du -h "$OUT/social-preview.png" | cut -f1)"
 
 echo
-echo "==> total committed: $(du -sh "$OUT" "$DOCS" | awk '{s=$1} END {print s}')"
+echo "==> total committed: $(du -sch "$OUT" "$DOCS" | tail -1 | cut -f1)"
