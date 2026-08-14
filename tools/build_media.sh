@@ -52,19 +52,25 @@ drawtext=fontfile=$FONT:text='recording pending':fontcolor=0x39424e:fontsize=14:
     echo "    $(printf '%-34s' "$1") placeholder"
 }
 
-# The 9-17 s beat of the narrated demo: the prompt on screen, the trained G1 already
-# jumping beside it. One loop that states the whole premise, so it leads the README.
-echo "==> hero"
-WIDTH_SAVE=$WIDTH; WIDTH=760
-encode demo.mp4 hero/prompt-to-policy.webp "" "-ss 9 -t 8"
-WIDTH=$WIDTH_SAVE
+# The whole narrated walkthrough as one autoplaying loop. A README animates images and
+# nothing else — a <video> there needs a click — so the full run has to be an animated WebP
+# to play on its own. 860px keeps the terminal text sharp (the point of a screencast); 6 fps
+# and q72 are what bring 3m45s down to a size worth putting above the fold. Downscaling
+# further is what would blur it, so the frame rate takes the cut instead.
+echo "==> hero: full walkthrough"
+WIDTH_SAVE=$WIDTH; Q_SAVE=$Q; FPS_SAVE=$FPS
+WIDTH=860; Q=72; FPS=6
+encode demo.mp4 hero/walkthrough.webp
+WIDTH=$WIDTH_SAVE; Q=$Q_SAVE; FPS=$FPS_SAVE
 
-# The narrated walkthrough, re-encoded so it can live in the repo. 1080p is kept rather than
-# downscaled: it is a screencast, and terminal text is the thing that has to stay readable.
-echo "==> full demo"
+# The same walkthrough as a real video, for narration and a scrubber. It lives under
+# docs/public so the site can autoplay it at full quality; the README links to this one copy
+# rather than the repo carrying 21 MB twice. 1080p is kept — downscaling costs the text.
+echo "==> full-quality walkthrough"
+mkdir -p "$ROOT/docs/public"
 ffmpeg -y -v error -i "$WORK/demo.mp4" -c:v libx264 -crf 30 -preset veryfast \
-    -c:a aac -b:a 96k -movflags +faststart "$OUT/demo.mp4"
-echo "    $(printf '%-34s' "assets/demo.mp4") $(du -h "$OUT/demo.mp4" | cut -f1)"
+    -c:a aac -b:a 96k -movflags +faststart "$ROOT/docs/public/demo.mp4"
+echo "    $(printf '%-34s' "docs/public/demo.mp4") $(du -h "$ROOT/docs/public/demo.mp4" | cut -f1)"
 
 echo "==> gallery: 8 tasks x 4 simulators"
 # IsaacLab. dex-grasp is recorded from far off and lasts 8 frames, so it is cropped to the

@@ -30,7 +30,16 @@ features:
     details: Isolated parallel trials cut iteration-heavy stages by roughly 6×, and an append-only experience ledger carries what worked into the next run — an 8× speedup on a repeated reward design.
 ---
 
-<div style="max-width: 860px; margin: 4rem auto 0; text-align: center;">
+<div style="max-width: 980px; margin: 4rem auto 0; text-align: center;">
+
+## One prompt, end to end
+
+A single request drives all six stages, from dependency setup to a trained policy. Unmute for the narration.
+
+<!-- Unlike the README, a docs page can autoplay a real video, so this is the full-quality
+     1080p encode rather than the animated WebP the README has to fall back to. -->
+<video src="/demo.mp4" autoplay muted loop playsinline controls
+       style="width: 100%; border-radius: 12px;"></video>
 
 ## One task, four simulators
 
