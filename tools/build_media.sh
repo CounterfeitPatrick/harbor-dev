@@ -52,20 +52,27 @@ drawtext=fontfile=$FONT:text='recording pending':fontcolor=0x39424e:fontsize=14:
     echo "    $(printf '%-34s' "$1") placeholder"
 }
 
-# The whole narrated walkthrough as one autoplaying loop. A README animates images and
-# nothing else — a <video> there needs a click — so the full run has to be an animated WebP
-# to play on its own. 860px keeps the terminal text sharp (the point of a screencast); 6 fps
-# and q72 are what bring 3m45s down to a size worth putting above the fold. Downscaling
-# further is what would blur it, so the frame rate takes the cut instead.
-echo "==> hero: full walkthrough"
-WIDTH_SAVE=$WIDTH; Q_SAVE=$Q; FPS_SAVE=$FPS
-WIDTH=860; Q=72; FPS=6
-encode demo.mp4 hero/walkthrough.webp
-WIDTH=$WIDTH_SAVE; Q=$Q_SAVE; FPS=$FPS_SAVE
+# Poster for the walkthrough: the 14 s beat where the prompt and the trained G1 are both on
+# screen, which states the whole premise in one frame. A still rather than a loop because the
+# video is the thing being linked to — an animation here would just compete with it, and cost
+# megabytes above the fold to do so.
+echo "==> hero poster"
+# The frame is dimmed and given a play triangle so it reads as a poster rather than as a
+# screenshot someone forgot to crop. DejaVu Sans carries U+25B6; the Mono face's version is
+# noticeably lighter, so the proportional face is the one to use here.
+GLYPH=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
+ffmpeg -y -v error -ss 14 -i "$WORK/demo.mp4" -vf "\
+scale=860:-2:flags=lanczos,\
+drawbox=x=0:y=0:w=iw:h=ih:color=0x0B1220@0.30:t=fill,\
+drawtext=fontfile=$GLYPH:text='▶':fontcolor=0x0B1220@0.55:fontsize=104:x=(w-tw)/2+5:y=(h-th)/2+5,\
+drawtext=fontfile=$GLYPH:text='▶':fontcolor=white@0.96:fontsize=104:x=(w-tw)/2:y=(h-th)/2" \
+    -frames:v 1 -c:v libwebp -q:v 86 "$OUT/hero/walkthrough-poster.webp"
+echo "    $(printf '%-34s' "assets/hero/walkthrough-poster.webp") $(du -h "$OUT/hero/walkthrough-poster.webp" | cut -f1)"
 
-# The same walkthrough as a real video, for narration and a scrubber. It lives under
-# docs/public so the site can autoplay it at full quality; the README links to this one copy
-# rather than the repo carrying 21 MB twice. 1080p is kept — downscaling costs the text.
+# The walkthrough itself, with narration and a scrubber. It lives under docs/public so the
+# site can serve it directly; the README links to that one copy rather than the repo carrying
+# 21 MB twice. 1080p is kept rather than downscaled — it is a screencast, and the terminal
+# text is the thing that has to stay readable.
 echo "==> full-quality walkthrough"
 mkdir -p "$ROOT/docs/public"
 ffmpeg -y -v error -i "$WORK/demo.mp4" -c:v libx264 -crf 30 -preset veryfast \
@@ -124,7 +131,8 @@ DOCS="$ROOT/docs/public"
 mkdir -p "$DOCS"
 cp "$ROOT/assets/logo/harbor-mark.svg"      "$DOCS/logo.svg"
 cp "$ROOT/assets/logo/harbor-mark-dark.svg" "$DOCS/logo-dark.svg"
-cp "$ROOT/assets/logo/favicon.svg"     "$DOCS/favicon.svg"
+cp "$ROOT/assets/logo/favicon.svg"          "$DOCS/favicon.svg"
+cp "$OUT/hero/walkthrough-poster.webp"      "$DOCS/walkthrough-poster.webp"
 
 # One strip of all four tasks for the docs landing page. Each clip is looped to a common
 # 4 s so hstack gets equal frame counts — without that the shortest clip truncates the row.

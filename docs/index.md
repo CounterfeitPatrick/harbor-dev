@@ -34,11 +34,12 @@ features:
 
 ## One prompt, end to end
 
-A single request drives all six stages, from dependency setup to a trained policy. Unmute for the narration.
+A single request drives all six stages, from dependency setup to a trained policy. Sound on for the narration.
 
-<!-- Unlike the README, a docs page can autoplay a real video, so this is the full-quality
-     1080p encode rather than the animated WebP the README has to fall back to. -->
-<video src="/demo.mp4" autoplay muted loop playsinline controls
+<!-- preload=metadata so a 21 MB file is not pulled down by every visitor who never presses
+     play; the poster carries the frame until they do. -->
+<video src="/demo.mp4" controls playsinline preload="metadata"
+       poster="/walkthrough-poster.webp"
        style="width: 100%; border-radius: 12px;"></video>
 
 ## One task, four simulators

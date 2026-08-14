@@ -21,9 +21,9 @@ trains the policy — and checks its own work at every step.
 
 <br>
 
-<img src="assets/hero/walkthrough.webp" alt="One prompt drives all six stages, from dependency setup to a trained G1 jumping policy" width="860">
+<a href="docs/public/demo.mp4"><img src="assets/hero/walkthrough-poster.webp" alt="Watch the full walkthrough: one prompt drives all six stages, from dependency setup to a trained G1 jumping policy" width="860"></a>
 
-<sub>The full run, start to finish. **[Same walkthrough with narration and a scrubber →](docs/public/demo.mp4)**</sub>
+**[▶ Watch the full 3:45 walkthrough](docs/public/demo.mp4)** — one prompt, all six stages, start to trained policy.
 
 </div>
 
