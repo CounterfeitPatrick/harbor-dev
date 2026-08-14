@@ -69,15 +69,22 @@ drawtext=fontfile=$GLYPH:text='▶':fontcolor=white@0.96:fontsize=104:x=(w-tw)/2
     -frames:v 1 -c:v libwebp -q:v 86 "$OUT/hero/walkthrough-poster.webp"
 echo "    $(printf '%-34s' "assets/hero/walkthrough-poster.webp") $(du -h "$OUT/hero/walkthrough-poster.webp" | cut -f1)"
 
-# The walkthrough itself, with narration and a scrubber. It lives under docs/public so the
-# site can serve it directly; the README links to that one copy rather than the repo carrying
-# 21 MB twice. 1080p is kept rather than downscaled — it is a screencast, and the terminal
-# text is the thing that has to stay readable.
-echo "==> full-quality walkthrough"
+# The walkthrough itself. Sized to clear GitHub's 10 MB attachment cap for video on free
+# plans, because the README embeds it through user-attachments — the only way to get an
+# inline player there — and that upload is what enforces the ceiling.
+#
+# The budget is spent on resolution, not frame rate: this is a screencast, so 1280px keeps
+# the terminal text sharp while 12 fps costs almost nothing perceptually. -tune stillimage
+# tells x264 the same thing. The result is visually indistinguishable from a 21 MB encode.
+# H.264 is what GitHub recommends for cross-browser playback.
+echo "==> walkthrough"
 mkdir -p "$ROOT/docs/public"
-ffmpeg -y -v error -i "$WORK/demo.mp4" -c:v libx264 -crf 30 -preset veryfast \
-    -c:a aac -b:a 96k -movflags +faststart "$ROOT/docs/public/demo.mp4"
+ffmpeg -y -v error -i "$WORK/demo.mp4" -vf "fps=12,scale=1280:-2:flags=lanczos" \
+    -c:v libx264 -crf 34 -preset slow -tune stillimage \
+    -c:a aac -b:a 64k -movflags +faststart "$ROOT/docs/public/demo.mp4"
+bytes=$(stat -c%s "$ROOT/docs/public/demo.mp4")
 echo "    $(printf '%-34s' "docs/public/demo.mp4") $(du -h "$ROOT/docs/public/demo.mp4" | cut -f1)"
+[ "$bytes" -lt 10485760 ] || echo "    WARNING: over GitHub's 10 MB video cap for free plans" >&2
 
 echo "==> gallery: 8 tasks x 4 simulators"
 # IsaacLab. dex-grasp is recorded from far off and lasts 8 frames, so it is cropped to the
