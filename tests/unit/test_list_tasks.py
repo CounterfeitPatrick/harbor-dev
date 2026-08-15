@@ -14,9 +14,31 @@ import json
 import subprocess
 import sys
 
+import pytest
+
 from _pluginmeta import ROOT
 
 SRC = ROOT / "scripts" / "benchmark-generator" / "list_tasks.py"
+
+
+def _importable(name):
+    try:
+        return importlib.util.find_spec(name) is not None
+    except (ImportError, ValueError):
+        return False
+
+
+# "Out of reach in CI" above is an assumption, not a guarantee. Run this suite with a benchmark
+# venv rather than a bare interpreter and the live listers DO import, so `_detect` takes a live
+# branch instead of falling back: gymnasium returns its own registry, and isaaclab is worse —
+# `_list_isaaclab` calls `AppLauncher(headless=True)` and imports `isaaclab_tasks` IN-PROCESS,
+# booting Isaac Sim inside pytest. It never returns, and leaves Kit subprocesses that outlive
+# the run. Skip rather than hang the suite.
+_LIVE_LISTERS = [n for n in ("isaaclab", "gymnasium", "dm_control") if _importable(n)]
+needs_bare_interpreter = pytest.mark.skipif(
+    bool(_LIVE_LISTERS),
+    reason=f"needs a bare interpreter; live listers importable: {', '.join(_LIVE_LISTERS)}",
+)
 
 
 def _mod():
@@ -110,12 +132,14 @@ def test_path_anchored_family_wins_over_the_generic_fallback(tmp_path):
     assert out["family"] == "bidexhands"
 
 
+@needs_bare_interpreter
 def test_detect_falls_back_to_spec_when_nothing_is_importable(tmp_path):
     repo = _spec_repo(tmp_path, [{"id": "Demo-A-v0"}])
     out = M._detect(repo)
     assert out["family"] == "spec_only" and out["tasks"][0]["id"] == "Demo-A-v0"
 
 
+@needs_bare_interpreter
 def test_every_result_carries_the_template_fields(tmp_path):
     """task_overview.md.template substitutes these directly; a missing key renders a hole."""
     for out in (M._detect(_bidex_repo(tmp_path)),
@@ -133,6 +157,7 @@ def test_cli_refuses_a_non_harbor_repo(tmp_path):
     assert "not a harbor benchmark repo" in r.stderr
 
 
+@needs_bare_interpreter
 def test_cli_writes_json_to_output_keeping_stdout_clean(tmp_path):
     """IsaacLab's Kit logs all over stdout, so --output is how the JSON stays parseable."""
     repo = _spec_repo(tmp_path, [{"id": "Demo-A-v0"}])
