@@ -266,8 +266,8 @@ def main(cfg: DictConfig):
     obs, _ = env.reset()
 
     # Position the viewer camera for a wide isometric view of the robot + workspace.
-    # Default eye=(2.5, 2.5, 1.6) m diagonal from the workspace, looking slightly down at
-    # target=(0.30, 0, 0.40). Override per-task via cfg.viewer_eye / cfg.viewer_target.
+    # Default eye=(1.35, 1.00, 0.75) m diagonal from the workspace, looking down at
+    # target=(0.35, 0, 0.10) just above the table surface. Override per-task via cfg.viewer_eye / cfg.viewer_target.
     #
     # For MOVING tasks (locomotion) also arm a follow-cam: once the tracked body drifts past
     # a small radius, track it every frame keeping this initial framing offset, so it stays
@@ -276,8 +276,8 @@ def main(cfg: DictConfig):
     camera_follow = bool(cfg.get("camera_follow", True))
     follow_cam: dict = {}
     try:
-        viewer_eye    = np.asarray(cfg.get("viewer_eye",    [2.5, 2.5, 1.6]), dtype=float)
-        viewer_target = np.asarray(cfg.get("viewer_target", [0.30, 0.0, 0.4]), dtype=float)
+        viewer_eye    = np.asarray(cfg.get("viewer_eye",    [1.35, 1.00, 0.75]), dtype=float)
+        viewer_target = np.asarray(cfg.get("viewer_target", [0.35, 0.0, 0.10]), dtype=float)
         env_origin = _env_origin_w(env)
         eye    = viewer_eye + env_origin
         target = viewer_target + env_origin

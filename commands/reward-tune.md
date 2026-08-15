@@ -1,7 +1,7 @@
 ---
 description: >-
   Iteratively tune the §6 reward of an EXISTING task with an ASYNC fixed-pool controller. A thin orchestrator: the main agent runs pre-flight + (standalone only) picks the design base, then dispatches `reward-tuning-agent`, which designs each candidate — a bounded §1–§5 task delta plus a complete reward — and dispatches one `reward-candidate-agent` per candidate to implement both, smoke every section touched, train + render, and score per-term curves + rendered frames → success_rate. Keeps `pool_size` candidates in flight (capped by `gpus` locally), loops until `success_rate ≥ success_threshold`, then promotes the winning design onto the source task. Isolation follows the effective pool: sequential over a base snapshot when it is 1, one slot clone per candidate when it is more. Use when the user types /harbor:reward-tune task=<id> [algorithm=<algo>] [pool_size=N] [gpus=N], or asks "tune the reward for task X".
-argument-hint: "task=<id> [algorithm=<ppo|sac|td3>] [wandb=<project>] [pool_size=N] [gpus=N] [success_threshold=0.5] [timesteps_per_iter=N] [seed=N] [monitor_early_stop=true|false] [monitor_interval=300]"
+argument-hint: "task=<id> [algorithm=<ppo|sac|td3>] [wandb=<project>] [pool_size=N] [gpus=N] [success_threshold=0.5] [timesteps_per_iter=N] [seed=N] [monitor_early_stop=true|false] [monitor_interval=240]"
 ---
 
 # /harbor:reward-tune — Async-Pool Reward Tuning
@@ -23,7 +23,7 @@ Dispatch depth is main → `reward-tuning-agent` → `reward-candidate-agent`, i
 
 | Arg | Notes |
 |---|---|
-| `task` | Task ID. `gym.make(<task>)` must succeed. Its §6 may be a placeholder or a real reward. |
+| `task` | Task ID. The task must build (see *Does the task build?*). Its §6 may be a placeholder or a real reward. |
 
 ## Optional arguments
 
@@ -47,7 +47,7 @@ logic, so their defaults always apply.
 | `n_frames` | `12` | Frames read per render. |
 | `prompt_every_n_stuck` | `5` | Ask the user after N non-improving completions. |
 | `monitor_early_stop` | `false` | Default `false` = train every candidate to full budget. `true` opts each candidate into the mid-run curve monitor that early-stops an unambiguously doomed run. |
-| `monitor_interval` | `300` | Seconds between monitor ticks. |
+| `monitor_interval` | `240` | Seconds between monitor ticks. Must stay UNDER the prompt-cache TTL (300 s for a subagent): a tick landing after expiry pays a full context rebuild instead of a cheap read, so rarer ticking is dearer, not cheaper. |
 | `monitor_soft_floor` | `0.5` | Budget fraction below which soft bad patterns are only watched, never killed; hard fails ignore it. |
 | `spec_section` | (none) | §6 code block (reproduce mode); seeds iter 0 verbatim. |
 
@@ -61,11 +61,15 @@ test -x .venv/bin/python                                   || exit 1
 test -f harbor/benchmark-generator/benchmark-spec.json     || exit 1
 test -f harbor/rl-integration-generator/rl-suite-spec.json || exit 1
 test -f harbor/create-task/task-implementation.md          || exit 1
-.venv/bin/python -c "import gymnasium as gym; gym.make('<task>'); print('build ok')" || exit 1
 command -v ffmpeg >/dev/null                               || exit 1
 grep -q "machine api.wandb.ai" ~/.netrc                    || { echo "run /harbor:wandb-setup"; exit 1; }
 [ "<mode>" = cluster ] && { command -v sbatch >/dev/null || exit 1; } || nvidia-smi -L || exit 1
 ```
+
+Then build `<task>` per *Does the task build?* in `agent-conventions.md`. A bare
+`gym.make('<task>')` is NOT a build check — it raises
+`TypeError: missing 1 required positional argument: 'cfg'` for every manager-based task,
+canonical ones included, so gating on it aborts the tune before it starts.
 
 **Nesting is a hard requirement, not a preference.** On Claude Code < 2.1.219 a subagent
 cannot dispatch its own subagent, so `reward-tuning-agent` would silently do the

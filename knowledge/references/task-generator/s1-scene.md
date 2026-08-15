@@ -220,3 +220,21 @@ stop, so §1 is the only place it can be caught before a policy finds it for you
   handle hole or a narrow slot with a single hull. Grepping the USD for the token proves the
   intent, not the result — only C6's measured solidity proves the result. This has already cost
   a full tune: nine reward candidates trained against a mug whose handle hole was filled in.
+- **A decomposed mesh needs a bigger PhysX broadphase.** Aggregate pairs scale with collider
+  prims × `num_envs`, so a CoACD asset (up to 32 prims per mesh) overruns the default and PhysX
+  silently drops contacts — which surfaces as a reward that will not converge, not as a config
+  error (HangMug: return 1416 → 2292, std ±1113 → ±10, on the same checkpoint).
+
+  ```python
+  def __post_init__(self):
+      super().__post_init__()
+      self.sim.physx.gpu_total_aggregate_pairs_capacity = 256 * 1024   # 64 * 1024 is undersized
+      self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
+  ```
+
+  Size above the MAX it asks for, not the first — the demand grows with contact activity
+  (HangMug peaked at 143360, so `128 * 1024` would still have been too small):
+
+  ```bash
+  grep -o "totalAggregatePairsCapacity to [0-9]*" <log> | awk '{print $NF}' | sort -n | tail -1
+  ```

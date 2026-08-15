@@ -42,7 +42,7 @@ Cloning is serialized in the caller (one clone at a time per repo), so registrat
 1. **Pre-flight** (in `repo`):
    ```bash
    test -x .venv/bin/python || exit 1
-   .venv/bin/python -c "import gymnasium as gym; gym.make('<source>'); print('source ok')" || exit 1
+   # <source> must build — see *Does the task build?* in agent-conventions.md.
    ```
    Validate `<dest>` is a legal gym id and differs from `<source>`. Reject a `#` or a suffix placed after `-vN`.
 
@@ -81,7 +81,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/task-cloner/clone_task.py" --op delete \
 Then confirm the source still builds (the running-sim check the script leaves to the caller):
 
 ```bash
-.venv/bin/python -c "import gymnasium as gym; gym.make('<source_from_manifest>'); print('source still ok')" || exit 1
+# <source_from_manifest> must still build — see *Does the task build?* in agent-conventions.md.
 ```
 
 Delete is idempotent — a missing manifest or already-removed files is a no-op success (the clone is gone either way).

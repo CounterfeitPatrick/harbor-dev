@@ -28,7 +28,7 @@ every DESIGN sees the freshest completed history plus the designs still running.
 | Key | Required | Notes |
 |---|---|---|
 | `repo_path` | yes | Absolute path to the benchmark repo. |
-| `task` | yes | Task ID; `gym.make(<task>)` must succeed. §6 may be a placeholder or a real reward. |
+| `task` | yes | Task ID; the task must build (see *Does the task build?*). §6 may be a placeholder or a real reward. |
 | `task_dir` | yes | `<repo>/harbor/create-task/<slug>` — the loop's workspace. |
 | `description` | yes | The behavior to match (from `spec.json`); forwarded to every candidate. |
 | `algorithm` | no | `ppo` (default) → `harbor/configs/rl/<algo>.parallel.yaml`. |
@@ -43,7 +43,7 @@ every DESIGN sees the freshest completed history plus the designs still running.
 | `n_frames` | no | Frames the candidate reads per render (default 12). |
 | `prompt_every_n_stuck` | no | Return `needs_decision` after N non-improving completions (default 5). |
 | `monitor_early_stop` | no | Forwarded to candidates (default **false** ⇒ train to full budget). |
-| `monitor_interval` / `monitor_soft_floor` | no | Forwarded; defaults **300** s / **0.5**. |
+| `monitor_interval` / `monitor_soft_floor` | no | Forwarded; defaults **240** s / **0.5**. |
 | `library_refs` | no | Task-library base(s) the caller already selected. Empty ⇒ pure creation. |
 | `spec_section` | no | §6 Code block (reproduce mode); seeds iter 0 verbatim. |
 
@@ -103,9 +103,12 @@ iter_<NNN>/                      # one per candidate, written by the candidate a
 cd "<repo_path>"
 test -x .venv/bin/python && test -f harbor/benchmark-generator/benchmark-spec.json \
   && test -f harbor/rl-integration-generator/rl-suite-spec.json || exit 1
-.venv/bin/python -c "import gymnasium as gym; gym.make('<task>'); print('build ok')" || exit 1
 command -v ffmpeg >/dev/null || exit 1
 ```
+
+Then build `<task>` per *Does the task build?* in `agent-conventions.md` — a bare
+`gym.make('<task>')` raises `TypeError: missing 1 required positional argument: 'cfg'` for every
+manager-based task, so gating on it aborts the tune before iter 0.
 
 **Per-term reward logging MUST be wired before iter 0.** You score `reward/<term>/...` keys;
 without `info["detailed_reward"]` the loop is blind.
@@ -135,7 +138,7 @@ rest. Else CREATE:
   "success_threshold": 0.5, "timesteps_per_iter": <N>,
   "seed": <the ONE seed pinned for this tune — drawn here if the caller gave none>,
   "library_refs": [...],
-  "monitor_early_stop": false, "monitor_interval": 300, "monitor_soft_floor": 0.5,
+  "monitor_early_stop": false, "monitor_interval": 240, "monitor_soft_floor": 0.5,
   "started_at": "<iso8601>", "next_iter": 0, "best_iter": null, "best_success_rate": null,
   "best_total_return": null, "consecutive_non_improving": 0,
   "slots": {}, "in_flight": [], "iters": [] }
@@ -310,26 +313,30 @@ The candidate writes `verdict.json` then `.done`. Wait on the **union** of in-fl
 candidates, never on one in particular — at `pool_size>1`, blocking on slot 0 while slot 3
 finishes wastes the whole point of the pool:
 
-**[MUST] Wait in the BACKGROUND — one call, not a poll loop.**
+**[MUST] Tick — never a foreground blocking wait, never a poll loop.** Follow *Waiting on long
+work* in `agent-conventions.md`. Your sentinel is the union of in-flight `.done` files; first to
+appear wins.
 
 ```
-Bash(run_in_background=true,
-     "until for d in <task_dir>/iter_007/.done <task_dir>/iter_009/.done; do \
-              [ -f \"$d\" ] && echo \"$d\" && break; \
-            done | grep -q .; do sleep 30; done")
+# one tick — give the Bash call an explicit timeout above the interval
+python3 -c "import time; time.sleep(240)"
+for d in <task_dir>/iter_007 <task_dir>/iter_009; do
+  [ -f "$d/.done" ] && echo "DONE $d" \
+    || echo "$d elapsed=$(( $(date +%s) - $(cat $d/started_at 2>/dev/null || date +%s) ))s"
+done
 ```
 
-A foreground Bash call caps at ~600 s while a candidate runs 35 min to 3 h, so waiting in the
-foreground becomes five-to-seven turns per candidate — and the prompt cache expires in each
-gap, so every one of them re-caches your ENTIRE context at full price. Measured on a
-10-candidate tune: 51 such turns burned **13.58M cache-write tokens, 94 % of this agent's
-total and ~31 % of the whole run**, to ask "is it done yet". Backgrounded, the job runs
-uncapped and the harness re-invokes you when it exits — you spend nothing while it waits.
+Measured before this rule: 51 foreground waits burned **13.58M cache-write tokens, 94 % of this
+agent's total and ~31 % of the whole run**, asking "is it done yet".
 
-The file is still the truth, so nothing about the contract changes: the wait is on the
-**union** of in-flight `.done` files, first to appear wins, and it survives a lost
-notification, a killed agent, and a resumed session. If you are re-invoked and no `.done`
-exists, re-issue the same backgrounded wait — that is the exception path, not the norm.
+A candidate runs 35 min to 3 h, above the ~50-minute crossover where one rebuild would be
+marginally cheaper than ticking. Tick anyway, per the shared rule: it survives a lost
+notification and surfaces a stuck candidate in minutes rather than hours. Your context is small
+by design — the noise lives in the candidate — so the premium is a rounding error against a hung
+pool.
+
+The file remains the truth: the wait survives a killed agent or a resumed session. If you are
+re-invoked and no `.done` exists, resume ticking.
 
 ### 2.4 — COLLECT
 

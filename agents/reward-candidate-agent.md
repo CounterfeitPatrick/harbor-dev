@@ -226,21 +226,61 @@ Launch per `mode`:
 - **`local`** — launch DETACHED so a harness-side process-group cleanup cannot kill a
   multi-hour trainer mid-run:
   `Bash(run_in_background=true, "setsid bash <iter_dir>/run.sh > <iter_dir>/run.log 2>&1 < /dev/null &")`,
-  then wait for it with **one BACKGROUNDED call — never a foreground poll loop**:
-  `Bash(run_in_background=true, "until [ -f <iter_dir>/run.done ]; do sleep 30; done")`.
-  (Without `setsid`, a real tune lost a candidate at ~58M steps.)
+  then wait on it with the **tick protocol** below. (Without `setsid`, a real tune lost a
+  candidate at ~58M steps.)
 
-  **Why backgrounded.** A foreground Bash call caps at ~600 s, so waiting in the foreground
-  turns one 50-minute trainer into five-to-seven turns, and the prompt cache expires in every
-  gap — each turn then re-caches your entire context at full price. Measured across ten
-  candidates: 48 such turns burned **6.16M cache-write tokens, 62 % of every candidate's
-  total**, on `tail`-ing a log that nobody had asked about. Backgrounded, the harness
-  re-invokes you when the job exits and the wait costs nothing.
+  Wait per *Waiting on long work* in `agent-conventions.md`. Both failure directions have been
+  paid for here: 48 foreground waits cost **6.16M cache-write tokens, 62 % of every candidate's
+  total**, and one candidate polling a background `.output` every ~3 s cost **439M cache-read,
+  96 % of its entire cost**.
 
-  **Do not inspect a running trial when `monitor_early_stop` is false** (the default). There is
-  no decision to make until it finishes: the run trains to its full budget either way, so a
-  progress `tail` buys nothing and costs a full re-cache. STEP 3b is the only reason to look
-  at a live trial, and it only exists when the request opts in.
+  **The tick is the default wait path — it is NOT gated by `monitor_early_stop`.** That flag adds
+  the curve-health *decision* (STEP 3b) to the tick body; it never controls whether you tick.
+  There is no un-ticked way to wait.
+
+  | phase | interval | until |
+  |---|---|---|
+  | 1 — startup | 60–120 s | the first `[train] iter=` line appears |
+  | 2 — steady | `monitor_interval` (**240 s**) | `run.done` exists |
+
+  At launch, stamp the start so every tick can compute elapsed:
+  `date +%s > <iter_dir>/started_at`.
+
+  ```bash
+  # ONE tick. <interval> = 60-120 (phase 1) or monitor_interval (phase 2, default 240).
+  # Give the Bash call an explicit timeout ABOVE <interval> — the default is 120 s.
+  python3 -c "import time; time.sleep(<interval>)"
+  D=<iter_dir>; L=$D/train.log                 # TRAINING output. run.log is only the wrapper.
+  echo "elapsed=$(( $(date +%s) - $(cat $D/started_at) ))s"
+  # run.done is a `touch` sentinel — EMPTY. rc surfaces in run.log as `[train] rc=` on failure.
+  if [ -f $D/run.done ]; then
+    echo DONE; grep -E '^\[' $D/run.log | tail -5   # wrapper lines: [sentinel], and
+                                                   # [train] rc= / [collect] MISSING on failure
+  else
+    pgrep -f "$D/run.sh" >/dev/null && echo ALIVE || echo DEAD   # scope to THIS iter_dir:
+                                                # bare `run.sh` matches a sibling candidate
+    PGID=$(ps -o pgid= -p $(pgrep -f "$D/run.sh" | head -1) 2>/dev/null | tr -d ' ')
+    echo "cpu=$(ps -o cputimes= -g ${PGID:-0} 2>/dev/null | awk '{s+=$1} END {printf "%d", s+0}')s"
+    if [ -f $L ]; then                          # absent on the first tick or two
+      echo "iters=$(grep -c '^\[train\] iter=' $L) bytes=$(stat -c %s $L)"
+      grep '^\[train\] iter=' $L | tail -1; tail -2 $L
+    else echo "iters=0 bytes=0 (train.log not created yet)"; fi
+  fi
+  ```
+
+  **Judge it yourself from the three signals — `iters` (progress), `cpu` (compute), `bytes`
+  (output).** Calibrate the cadence from the Δ between two ticks, and aim between the two failure
+  modes: killing a healthy run wastes an iteration and misleads the search, nursing a dead one
+  wastes an hour of GPU. Non-negotiable, because neither recovers: **flat `cpu` while alive** is
+  the one true hang, and **`return=nan` / `-inf`, or a dead process with no `run.done`**, fails
+  immediately.
+
+  **Hard timeout.** Past ~1.5× the expected budget, kill the process group and return
+  `train_failed` with the partial log. Ticking is what makes the wait survivable — it depends on
+  no completion notification, so a lost one costs one extra tick rather than hanging the tune.
+
+  Catching a dead launch at minute 3 instead of minute 97 is worth far more in GPU hours than
+  the ticks cost in tokens.
 - **`cluster`** — write the same body as `<iter_dir>/launch.sh` with SBATCH directives so
   train **and** render both run on the compute node (never render on a login node), submit
   with `sbatch`, write the jobid to `<iter_dir>/jobid.txt` (the designer needs it to
@@ -254,10 +294,13 @@ request opts in, kill an *unambiguously* doomed run early rather than burning th
 but only when confident. Early RL curves are noisy and non-monotonic; a dip at 20–40 % of
 budget routinely recovers. A merely underperforming run is not a kill.
 
-Each tick (~`monitor_interval`, default 300 s) while training is live. Put the wait INSIDE the
-tick and run the whole thing backgrounded — `Bash(run_in_background=true, "sleep
-<monitor_interval>; <the block below>")` — so a tick costs one turn instead of one turn plus a
-foreground wait that re-caches your context. Stop ticking once `<iter_dir>/run.done` exists:
+This adds a check to STEP 3's phase-2 tick, which runs either way — the flag buys the
+curve-health *decision*, not the ticking. Same cadence, same call, curve check appended to the
+tick body. Do **not** background the wait: a
+backgrounded `sleep` ends your turn, so the next request lands after the cache has expired and
+pays a full rebuild, whereas a foreground `python3 time.sleep(240)` returns inside the same turn
+with the cache still warm. That is the whole reason the default is 240 s and not 300: the TTL is
+300, and a tick must land *under* it. Stop ticking once `<iter_dir>/run.done` exists:
 
 ```bash
 trial=$(ls -dt harbor/outputs/<algo>_<task>_* | head -1)   # trial_dir.txt exists only at completion

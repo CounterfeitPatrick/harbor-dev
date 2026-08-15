@@ -38,9 +38,12 @@ The heavy reads live and die in the subagent's isolated context. The steps below
 ```bash
 test -f "<repo>/harbor/benchmark-generator/benchmark-spec.json"             || { echo "benchmark-spec.json missing — run benchmark-generator first"; exit 1; }
 test -x "<repo>/.venv/bin/python"                         || { echo ".venv/ missing — run /harbor:env-install-uv first"; exit 1; }
-"<repo>/.venv/bin/python" -c "import gymnasium as gym; gym.make('<task>'); print('build ok')" \
-                                                          || { echo "task '<task>' does not build via gym.make — refuse to probe"; exit 1; }
 ```
+
+Then build the task per *Does the task build?* in `agent-conventions.md`, and refuse to probe
+only if the family's real constructor fails. A bare `gym.make('<task>')` is NOT a build check —
+it raises `TypeError: missing 1 required positional argument: 'cfg'` for every manager-based
+task, so gating on it refuses healthy ones. Keep the printed spaces; step 4 needs them.
 
 ## Action
 
@@ -76,12 +79,10 @@ test -x "<repo>/.venv/bin/python"                         || { echo ".venv/ miss
    - **§7 DR**
      - `EventCfg`: every term with `mode != "reset"` (i.e. `startup` / `interval`). Function, params, ranges. If none, write `<no DR>`.
 
-4. **Run the §1 build smoke** (must already pass per pre-flight, but capture canonical stdout to bake into the spec):
-   ```bash
-   cd "<repo>"
-   .venv/bin/python -c "import gymnasium as gym; env = gym.make('<task>'); print(env.observation_space, env.action_space); env.close()"
-   ```
-   Paste literal stdout into the spec.
+4. **Capture the canonical build line.** Pre-flight already built the task and printed
+   `build ok <observation_space> <action_space>`; paste that literal line into the spec rather
+   than re-running it — a second app launch costs ~2 min and proves nothing new. Record the
+   `num_envs` it was measured at (the spaces are batched, so the leading dim is that number).
 
 5. **Render the doc** into a single self-contained markdown with this top-level structure:
    ```

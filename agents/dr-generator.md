@@ -96,9 +96,12 @@ Render to `<task_dir>/smokes/smoke_s7.py` substituting `{{TASK_ID}}`, `{{POINT_O
 cd "<repo_path>"
 test -x .venv/bin/python                                     || exit 1
 test -f harbor/create-task/task-implementation.md          || exit 1
-.venv/bin/python -c "import gymnasium as gym; gym.make('<task_id>'); print('build ok')" || exit 1
 mkdir -p "<task_dir>/smokes"
 ```
+
+Then build `<task_id>` per *Does the task build?* in `agent-conventions.md` — a bare
+`gym.make('<task_id>')` raises `TypeError: missing 1 required positional argument: 'cfg'` for
+every manager-based task, so gating on it refuses a task that is in fact fine.
 
 Detect **create vs edit**: if `<task_dir>/handoff-dr-generator.md` exists OR the EventCfg already has §7
 DR terms wired → **edit** mode (overwrite/extend the existing config and update the handoff). Else
