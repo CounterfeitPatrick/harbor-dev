@@ -60,8 +60,11 @@ Render to `<repo>/harbor/clones/_smoke/smoke_<dest_slug>.py` substituting `{{DES
 ```bash
 cd "<repo_path>"
 test -x .venv/bin/python || exit 1
-.venv/bin/python -c "import gymnasium as gym; gym.make('<source_id>'); print('source ok')" || exit 1
 ```
+
+Then confirm `<source_id>` builds, per *Does the task build?* in `agent-conventions.md` — a bare
+`gym.make('<source_id>')` raises `TypeError: missing 1 required positional argument: 'cfg'` for
+every manager-based task, so gating on it refuses to clone a healthy source.
 
 ## Workflow
 

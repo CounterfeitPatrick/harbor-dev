@@ -23,7 +23,7 @@ Dispatch depth is main → `reward-tuning-agent` → `reward-candidate-agent`, i
 
 | Arg | Notes |
 |---|---|
-| `task` | Task ID. `gym.make(<task>)` must succeed. Its §6 may be a placeholder or a real reward. |
+| `task` | Task ID. The task must build (see *Does the task build?*). Its §6 may be a placeholder or a real reward. |
 
 ## Optional arguments
 
@@ -61,11 +61,15 @@ test -x .venv/bin/python                                   || exit 1
 test -f harbor/benchmark-generator/benchmark-spec.json     || exit 1
 test -f harbor/rl-integration-generator/rl-suite-spec.json || exit 1
 test -f harbor/create-task/task-implementation.md          || exit 1
-.venv/bin/python -c "import gymnasium as gym; gym.make('<task>'); print('build ok')" || exit 1
 command -v ffmpeg >/dev/null                               || exit 1
 grep -q "machine api.wandb.ai" ~/.netrc                    || { echo "run /harbor:wandb-setup"; exit 1; }
 [ "<mode>" = cluster ] && { command -v sbatch >/dev/null || exit 1; } || nvidia-smi -L || exit 1
 ```
+
+Then build `<task>` per *Does the task build?* in `agent-conventions.md`. A bare
+`gym.make('<task>')` is NOT a build check — it raises
+`TypeError: missing 1 required positional argument: 'cfg'` for every manager-based task,
+canonical ones included, so gating on it aborts the tune before it starts.
 
 **Nesting is a hard requirement, not a preference.** On Claude Code < 2.1.219 a subagent
 cannot dispatch its own subagent, so `reward-tuning-agent` would silently do the

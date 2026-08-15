@@ -80,11 +80,7 @@ The spec is **ground truth** — subagents don't re-derive design choices, they 
 
 3. Mode-specific check:
    - **create**: refuse if `<name>` already exists in `harbor/benchmark-generator/benchmark-spec.json:tasks[].id`. Authoring a duplicate is out-of-scope.
-   - **edit**: verify `<name>` already builds:
-     ```bash
-     .venv/bin/python -c "import gymnasium as gym; gym.make('<name>'); print('build ok')"
-     ```
-     Refuse if it doesn't.
+   - **edit**: verify `<name>` already builds, per *Does the task build?* in `agent-conventions.md`; refuse if it doesn't. Not a bare `gym.make('<name>')` — that raises `TypeError: missing 1 required positional argument: 'cfg'` for every manager-based task, so it would refuse every edit on this family.
    - **reproduce**: refuse if `<name>` already exists. Parse the `from` spec and extract per-section Code blocks into `spec_sections = {"1": <code>, "2": <code>, ..., "7": <code>}` for downstream injection. If any requested section is absent from the spec (e.g. spec was emitted with a `WARN:` on §6), refuse and surface the WARN.
 
 ### Step 1 — Mint (or reuse) the per-task workspace

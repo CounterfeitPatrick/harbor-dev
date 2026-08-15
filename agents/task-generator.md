@@ -31,8 +31,8 @@ placeholder + empty DR slot so the env builds; edit mode does not touch them.
 
 | `sections` | Mode | Pre-flight |
 |---|---|---|
-| omitted, or `[1,2,3,4,5]` | **create** | `gym.make(<task_id>)` must FAIL |
-| strict subset (e.g. `[2,5]`) | **edit** | `gym.make(<task_id>)` must SUCCEED |
+| omitted, or `[1,2,3,4,5]` | **create** | `<task_id>` must NOT be registered (`gym.spec` raises) |
+| strict subset (e.g. `[2,5]`) | **edit** | `<task_id>` must build — see *Does the task build?* |
 
 ## Output
 

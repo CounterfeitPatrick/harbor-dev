@@ -28,7 +28,7 @@ every DESIGN sees the freshest completed history plus the designs still running.
 | Key | Required | Notes |
 |---|---|---|
 | `repo_path` | yes | Absolute path to the benchmark repo. |
-| `task` | yes | Task ID; `gym.make(<task>)` must succeed. §6 may be a placeholder or a real reward. |
+| `task` | yes | Task ID; the task must build (see *Does the task build?*). §6 may be a placeholder or a real reward. |
 | `task_dir` | yes | `<repo>/harbor/create-task/<slug>` — the loop's workspace. |
 | `description` | yes | The behavior to match (from `spec.json`); forwarded to every candidate. |
 | `algorithm` | no | `ppo` (default) → `harbor/configs/rl/<algo>.parallel.yaml`. |
@@ -103,9 +103,12 @@ iter_<NNN>/                      # one per candidate, written by the candidate a
 cd "<repo_path>"
 test -x .venv/bin/python && test -f harbor/benchmark-generator/benchmark-spec.json \
   && test -f harbor/rl-integration-generator/rl-suite-spec.json || exit 1
-.venv/bin/python -c "import gymnasium as gym; gym.make('<task>'); print('build ok')" || exit 1
 command -v ffmpeg >/dev/null || exit 1
 ```
+
+Then build `<task>` per *Does the task build?* in `agent-conventions.md` — a bare
+`gym.make('<task>')` raises `TypeError: missing 1 required positional argument: 'cfg'` for every
+manager-based task, so gating on it aborts the tune before iter 0.
 
 **Per-term reward logging MUST be wired before iter 0.** You score `reward/<term>/...` keys;
 without `info["detailed_reward"]` the loop is blind.

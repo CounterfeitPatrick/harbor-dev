@@ -63,7 +63,37 @@ Never silently rewrite env/config files to make a smoke pass; fix the actual cau
 particular, never make a smoke pass by weakening what it checks — a widened tolerance, a lowered
 threshold, or a shortened settle time is not a fix, it is the failure with the alarm turned off.
 
-## Waiting on long work
+## Does the task build?
+
+`gym.make("<task>")` on its own is **not** a build check. Manager-based families construct the
+env from a cfg object, so the bare call raises
+`TypeError: __init__() missing 1 required positional argument: 'cfg'` for EVERY task in the
+family — canonical ones included. Using it as a gate rejects healthy tasks.
+
+Build through the family's own constructor. For `isaaclab-manager-based` (the app must be up
+before the ids register):
+
+```bash
+.venv/bin/python -u - <<'PY' || exit 1
+import argparse, gymnasium as gym
+from isaaclab.app import AppLauncher
+_p = argparse.ArgumentParser(); AppLauncher.add_app_launcher_args(_p)
+_app = AppLauncher(_p.parse_args(["--headless"])).app
+import isaaclab_tasks                                  # registers the Isaac-* / <benchmark> ids
+from isaaclab_tasks.utils import parse_env_cfg
+env = gym.make("<task>", cfg=parse_env_cfg("<task>", num_envs=2))
+print("build ok", env.observation_space, env.action_space, flush=True)
+env.close(); _app.close()
+PY
+```
+
+`-u` **and** `flush=True` are both load-bearing: Kit's shutdown discards buffered stdout, so
+without them the check exits 0 having printed nothing — and the spaces on that line are the
+canonical build record. Same reason the smoke templates set `line_buffering`.
+
+Other families substitute their own construction call on the same contract: build it, print the
+spaces, close it. Budget ~2 min — a GPU-sim app launch is not free, so run this once per command
+invocation, never per iteration.
 
 Smokes, trainings and candidates all outlive a single turn. **Only an API request touches the
 prompt cache**, so how you wait decides what the wait costs:
