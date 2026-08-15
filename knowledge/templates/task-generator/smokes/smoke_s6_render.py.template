@@ -76,8 +76,8 @@ cfg = parse_env_cfg(TASK_ID, device="cuda:0", num_envs=NUM_ENVS, use_fabric=True
 # why the framing has to be set at all.)
 cfg.viewer.origin_type = "env"
 cfg.viewer.env_index   = 0
-cfg.viewer.eye         = (2.5, 2.5, 1.6)
-cfg.viewer.lookat      = (0.30, 0.0, 0.4)
+cfg.viewer.eye         = (1.35, 1.00, 0.75)
+cfg.viewer.lookat      = (0.35, 0.0, 0.10)
 
 # OPTIONAL override — leave EMPTY unless the scene genuinely cannot be judged from the
 # shared angle (e.g. a tall fixture the default framing crops). If you do override, say so
