@@ -49,7 +49,7 @@ returns `findings` instead; the designer is the single writer.
              "cuda_device": 1 },
   "description": "<the behavior to match — SCORE judges the rollout against this>",
   "n_frames": 12,
-  "monitor_early_stop": false, "monitor_interval": 300, "monitor_soft_floor": 0.5 }
+  "monitor_early_stop": false, "monitor_interval": 240, "monitor_soft_floor": 0.5 }
 ```
 
 `train` keys the caller did not set are absent; the candidate then leaves the config

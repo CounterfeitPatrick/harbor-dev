@@ -60,6 +60,7 @@ export default defineConfig({
           items: [
             { text: 'The harness', link: '/guide/harness' },
             { text: 'Gates', link: '/guide/gates' },
+            { text: 'Context economics', link: '/guide/context-economics' },
             { text: 'Your workspace', link: '/guide/workspace' },
           ],
         },

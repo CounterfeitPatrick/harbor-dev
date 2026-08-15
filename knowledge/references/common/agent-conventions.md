@@ -63,6 +63,54 @@ Never silently rewrite env/config files to make a smoke pass; fix the actual cau
 particular, never make a smoke pass by weakening what it checks — a widened tolerance, a lowered
 threshold, or a shortened settle time is not a fix, it is the failure with the alarm turned off.
 
+## Waiting on long work
+
+Smokes, trainings and candidates all outlive a single turn. **Only an API request touches the
+prompt cache**, so how you wait decides what the wait costs:
+
+- a gap longer than the cache TTL → the whole conversation is re-cached at **write** price (1.25×)
+- a tick inside the TTL → the conversation is a **read** (0.1×), 12.5× cheaper
+
+A subagent's TTL is **5 minutes** (the 1h allowlist is `repl_main_thread*` / `sdk` /
+`auto_mode` / `memdir_relevance`; subagents are not on it, and `ENABLE_PROMPT_CACHING_1H` must
+be set before the process starts, so no agent can change this for itself).
+
+**One protocol, everywhere:**
+
+1. **Launch detached** — `setsid`, output to a log, a sentinel file written last.
+   Without `setsid` a harness-side process-group cleanup can kill a multi-hour job mid-run.
+2. **Stamp the start** (`date +%s > <dir>/started_at`) so every tick knows `elapsed`.
+3. **Tick under the TTL** — 240 s is the default. Give the `Bash` call an explicit `timeout`
+   above the interval; the default is 120 s and would cut the sleep short. Use
+   `python3 -c "import time; time.sleep(N)"` — foreground `sleep` is neutered here and returns
+   instantly, which spins the loop.
+4. **Judge liveness by CPU, not output.** A computing process always accrues CPU; a frozen one
+   never does, whatever it is or isn't printing. Log silence is never a kill criterion — some
+   backends load assets or JIT-compile for minutes without emitting a line. Calibrate every
+   other threshold from what the run exhibits between two ticks; any hardcoded cadence is wrong
+   for some simulator.
+5. **Stop at ~1.5× the expected budget**, and fail immediately on a dead process with no
+   sentinel, or on non-finite metrics.
+
+**Three ways of waiting are forbidden:**
+
+| | why |
+|---|---|
+| foreground blocking call | caps at ~600 s, so a long job is killed mid-run *and* the gap re-caches |
+| one backgrounded `until [ -f ... ]` | clears the cap but leaves the API idle, so the cache dies anyway |
+| continuous polling (e.g. `Read`-ing a background task's `.output`) | keeps the cache warm at absurd cost — one candidate spent 439M cache-read tokens, 96 % of its total, watching a file that was not changing |
+
+Measured before this protocol existed: 13.58M, 6.16M and 5.93M cache-write tokens burned by
+three agents waiting the first two ways, and 439M cache-read by one waiting the third.
+
+**Above ~50 minutes of waiting, a single rebuild is marginally cheaper than ticking** (12.5
+ticks × 0.1 = 1.25). Tick anyway. The premium is small — and ticking is what makes the wait
+survive a lost notification, and what lets a dead job be caught in minutes instead of hours.
+Consistency and recoverability beat a marginal saving.
+
+Each agent keeps only its own specifics inline: the sentinel path, the progress signal to read,
+and any phase where a shorter interval is warranted.
+
 ## Process log (`*-history.md`)
 
 Agents that keep a workspace history file write it **append-only as work progresses** (not in

@@ -153,7 +153,17 @@ test -x .venv/bin/python                               || exit 1
 test -f harbor/benchmark-generator/benchmark-spec.json || exit 1
 test -f harbor/create-task/task-implementation.md      || exit 1
 mkdir -p "<task_dir>/smokes"
+
+# Smoke tick interval (see "Running a smoke" in Phase B): keep every gap under the
+# prompt-cache TTL. Subagents are NOT on the 1h allowlist, so the default is 5m.
+if [ -n "$ENABLE_PROMPT_CACHING_1H" ] && [ -z "$FORCE_PROMPT_CACHING_5M" ]; then TTL_S=3600; else TTL_S=300; fi
+POLL_S=$(( TTL_S * 4 / 5 ))
+[ "$POLL_S" -gt 480 ] && POLL_S=480          # stay clear of the foreground call cap
+echo "prompt-cache TTL=${TTL_S}s -> smoke tick POLL_S=${POLL_S}s"
 ```
+
+Carry the printed `POLL_S` into Phase B as a literal — shell state does not survive between
+`Bash` calls, so `$POLL_S` in a later call expands to empty and the sleep returns instantly.
 
 Run the mode-specific check (see Inputs). Read `task-implementation.md` and the canonical
 example; in edit mode also locate the existing task's env_cfg + `mdp/` tree.
@@ -198,7 +208,8 @@ for smoke in ordered:
     render template → <task_dir>/smokes/<file>.py
     stalls = 0
     for attempt in 1..10:                          # 10 is a backstop, not a budget
-        run <file>.py → stdout + <smoke>.verdict.json
+        run <file>.py  (launch detached + tick — see "Running a smoke" below)
+                       → stdout + <smoke>.verdict.json
         if pass: break
         diagnose (its section file's failure → diagnosis → fix table FIRST)
         apply the minimal surgical fix; re-render
@@ -207,6 +218,33 @@ for smoke in ordered:
     else:
         escalate
 ```
+
+**Running a smoke — launch detached, then tick**, per *Waiting on long work* in
+`agent-conventions.md`. Never run one as a plain foreground call: a smoke that outlives the cap
+is killed mid-run and re-attempted for nothing. (Measured on one §1–§5 run: nine ~608 s blocking
+waits rebuilt the context ~11×, ≈38% of that agent's cost, for zero work.)
+
+```bash
+S=<task_dir>/smokes/<name>                   # launch; setsid so teardown cannot orphan it
+rm -f $S.done; date +%s > $S.started_at
+setsid bash -c ".venv/bin/python -u $S.py > $S.log 2>&1; echo \$? > $S.done" < /dev/null &
+
+# tick until the sentinel lands — one API request per tick, which refreshes the cache
+python3 -c "import time; time.sleep(<POLL_S>)"
+if [ -f $S.done ]; then echo "DONE rc=$(cat $S.done)"; else
+  echo "RUNNING elapsed=$(( $(date +%s) - $(cat $S.started_at) ))s"
+  pgrep -f "$S.py" >/dev/null && echo ALIVE || echo "DEAD without sentinel"
+  tail -5 $S.log
+fi
+```
+
+`<POLL_S>` is the literal Step 0 printed — shell state does not survive between `Bash` calls.
+The sentinel here carries the exit code (`echo $? > $S.done`), and the progress signal is the
+smoke's own stdout. Everything else — explicit `timeout`, `python3 time.sleep`, why a single
+backgrounded wait is not a substitute — is in `agent-conventions.md`.
+
+Same launch-and-tick for any command that can outlive `POLL_S` — §1's COACD decomposition is the
+other common one.
 
 **The loop is bounded by progress, not attempts.** Each smoke reports a number, not just a
 verdict — S2.5's residual, C6's solidity, C7's overshoot, S6's frame-diff — and the verdict JSON
