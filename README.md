@@ -7,8 +7,8 @@
 
 ### Point it at a simulator. Describe a task. Get a trained policy.
 
-HARBOR turns robot reinforcement learning from an engineering project into a request.<br>
-It sets up the environment, writes the task, designs the reward, wires the algorithm,<br>
+HARBOR automates robot reinforcement learning from an engineering workflow into a request.<br>
+It sets up the simulation, writes the task, designs the reward, wires the algorithm,<br>
 trains the policy — and checks its own work at every step.
 
 [![arXiv](https://img.shields.io/badge/arXiv-2606.08610-b31b1b?style=flat-square&logo=arxiv&logoColor=white)](https://arxiv.org/abs/2606.08610)
@@ -17,7 +17,7 @@ trains the policy — and checks its own work at every step.
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-6C4BF6?style=flat-square)](https://claude.com/claude-code)
 [![Tests](https://img.shields.io/github/actions/workflow/status/supersglzc/harbor-dev/test.yml?style=flat-square&label=tests)](../../actions)
 
-**[Quickstart](#quickstart)** · **[Gallery](#eight-tasks-four-simulators)** · **[How it works](#how-it-works)** · **[Docs](https://supersglzc.github.io/harbor-dev)** · **[Paper](https://arxiv.org/abs/2606.08610)** · **[Cite](#citation)**
+**[Quickstart](#quickstart)** · **[Gallery](#gallery)** · **[Inside HARBOR](#inside-harbor)** · **[Docs](https://supersglzc.github.io/harbor-dev)** · **[Paper](https://arxiv.org/abs/2606.08610)** · **[Cite](#citation)**
 
 <br>
 
@@ -27,9 +27,7 @@ trains the policy — and checks its own work at every step.
 
 </div>
 
-<br>
-
-## What HARBOR is
+## What is HARBOR
 
 Reinforcement learning works. The pipeline around it is what costs weeks — building the task, shaping the reward, calibrating randomization, tuning hyperparameters, and re-doing all of it for the next simulator.
 
@@ -38,13 +36,15 @@ HARBOR is a **harness**: a structured execution environment that decomposes that
 The result is not a black box. Every stage writes inspectable artifacts — code, configs, logs, checkpoints, video — and pauses at a gate you can audit, correct, and resume from.
 
 ```
-your words ──▶ dependency ──▶ task ──▶ reward ──▶ RL integration ──▶ DR ──▶ training ──▶ policy
-                    │          │        │              │             │          │
-                    └──────────┴────────┴──────────────┴─────────────┴──────────┘
-                                    every arrow is a gate that can fail
+prompts ──▶ dependency ──▶ RL integration ──▶ task ──▶ reward ──▶ DR ──▶ training ──▶ policy
+                    │            │              │         │        │          │
+                    └────────────┴──────────────┴─────────┴────────┴──────────┘
+                                  every arrow is a gate that can fail
 ```
 
-## Eight tasks, four simulators
+<a id="gallery"></a>
+
+## One harness, different tasks · robots · simulators
 
 The same task descriptions, given to HARBOR against different simulator codebases. It adapts to each one's APIs, asset formats, and contact model while preserving the task and reward intent — and the harness is embodiment-agnostic, so whole-body locomotion goes through exactly the same pipeline as tabletop manipulation.
 
@@ -114,9 +114,9 @@ The same task descriptions, given to HARBOR against different simulator codebase
 </tr>
 </table>
 
-<sub>Labelled tiles are runs we have not recorded yet, not runs that failed.</sub>
+## Quickstart
 
-## Install
+### 1. Install
 
 HARBOR is a [Claude Code](https://claude.com/claude-code) plugin. It needs one host-side tool — [`uv`](https://docs.astral.sh/uv/) — plus an NVIDIA driver and, if your simulator builds CUDA extensions, the CUDA toolkit.
 
@@ -135,7 +135,7 @@ Then, inside Claude Code:
 
 `/harbor:help` lists the full surface. See the [installation guide](https://supersglzc.github.io/harbor-dev/guide/install) for the scripted path and troubleshooting.
 
-## Quickstart
+### 2. Ask HARBOR to build a task
 
 Point HARBOR at any Python GPU robotics repository and describe what you want. It handles the rest.
 
@@ -144,19 +144,6 @@ Set up the env for https://github.com/isaac-sim/IsaacLab, then create a task whe
 a Franka pushes a 5 cm block to a target marker. Success is block-to-marker
 distance under 5 cm.
 ```
-
-Or drive each stage yourself:
-
-```text
-/harbor:env-install-uv                     # probe deps, build .venv/, run the import smoke
-/harbor:task-create name=Isaac-Push-Block-Franka-v0 \
-    description="Franka pushes a 5 cm wooden block to a target marker; \
-                 success when xy distance < 5 cm; horizon 200 steps."
-/harbor:rl-run task=Isaac-Push-Block-Franka-v0 algorithm=ppo
-/harbor:rl-render checkpoint=harbor/outputs/ppo_Isaac-Push-Block-Franka-v0_.../checkpoint.pt
-```
-
-Everything HARBOR generates lands inside the target repository under `harbor/`, so a second benchmark is just the same pipeline run again.
 
 <details>
 <summary><b>What a full run produces</b></summary>
@@ -178,7 +165,41 @@ Every one of those files is meant to be read, edited, and re-run by hand.
 
 </details>
 
-## How it works
+### 3. Run the stages manually
+
+You can also drive each stage yourself:
+
+```text
+/harbor:env-install-uv                     # probe deps, build .venv/, run the import smoke
+/harbor:task-create name=Isaac-Push-Block-Franka-v0 \
+    description="Franka pushes a 5 cm wooden block to a target marker; \
+                 success when xy distance < 5 cm; horizon 200 steps."
+/harbor:rl-run task=Isaac-Push-Block-Franka-v0 algorithm=ppo
+/harbor:rl-render checkpoint=harbor/outputs/ppo_Isaac-Push-Block-Franka-v0_.../checkpoint.pt
+```
+
+Everything HARBOR generates lands inside the target repository under `harbor/`, so a second benchmark is just the same pipeline run again.
+
+## Inside HARBOR
+
+HARBOR is both an **end-to-end robot RL workflow** and a **structured agentic harness**. The first defines what it can do; the second defines how it does that work reliably.
+
+### Capabilities
+
+HARBOR covers the workflow from an existing simulator repository and a task request to a trained, evaluated policy.
+
+| Stage | What HARBOR handles |
+|:--|:--|
+| **Environment setup** | Probes the target repository, resolves dependencies, builds an isolated environment, and verifies that the simulator can import and run. |
+| **Task construction** | Turns a natural-language task description into simulator-native task code, observations, termination conditions, success criteria, and executable smoke tests. |
+| **Reward design** | Builds reward functions, trains candidate policies, inspects learning signals and rendered behavior, and iterates when the reward produces the wrong behavior. |
+| **RL integration** | Connects the task to a reproducible training stack with algorithm configs, wrappers, logging, checkpointing, evaluation, and rendering. |
+| **Domain randomization** | Adds and tunes simulation randomization while checking that the resulting task remains physically valid and learnable. |
+| **Training & tuning** | Runs training, diagnoses failures from metrics and rollouts, tunes rewards or RL settings, evaluates checkpoints, and renders final policies. |
+
+The same workflow applies across manipulation, dexterous control, and whole-body locomotion. You can ask HARBOR to run it end to end, or invoke individual stages and commands yourself.
+
+### Architecture
 
 HARBOR specializes a general agentic harness to robot RL as five interacting pieces:
 
@@ -190,11 +211,9 @@ HARBOR specializes a general agentic harness to robot RL as five interacting pie
 | **Gates** | Executable checks that decide whether a stage may advance — import checks, rollout shape checks, actuator tracking error, reward-composition assertions, frame-difference render checks. A failed gate returns a diagnosis, not a stack trace. |
 | **Knowledge** | Templates, references, and an append-only experience ledger that accumulates across runs, so the second task of a kind is much cheaper than the first. |
 
-The property that matters: HARBOR cannot guarantee your policy is semantically correct. What it does is **turn the common RL engineering failures into gate failures that surface before they propagate downstream** — which is the difference between a bug you find in ten minutes and one you find after a twelve-hour training run.
+The property that matters: HARBOR cannot guarantee your policy is semantically correct. What it does is **turn common RL engineering failures into gate failures that surface before they propagate downstream** — the difference between a bug caught early and one discovered after a long training run.
 
-HARBOR ships **23 commands** and **9 agents**. The full list of each — arguments, roles, tools, and links to the source that defines them — is generated from the plugin itself and lives on the documentation site:
-
-> **[Command reference →](https://supersglzc.github.io/harbor-dev/guide/commands)** &nbsp;·&nbsp; **[Agent reference →](https://supersglzc.github.io/harbor-dev/guide/agents)**
+HARBOR ships **23 commands** and **9 agents**. See the full **[command reference →](https://supersglzc.github.io/harbor-dev/guide/commands)** and **[agent reference →](https://supersglzc.github.io/harbor-dev/guide/agents)** for their arguments, roles, tools, and source definitions.
 
 ## Documentation
 
@@ -208,6 +227,10 @@ HARBOR ships **23 commands** and **9 agents**. The full list of each — argumen
 | [Tuning rewards](https://supersglzc.github.io/harbor-dev/guide/rewards) | How the candidate search works, and why it trains every candidate for real. |
 | [`CLAUDE.md`](CLAUDE.md) | The architecture in full: the six-layer model and where a new module belongs. |
 
+## Contributing
+
+Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). The fastest way to help is to run HARBOR on a simulator we have not covered and file what broke: the harness improves by accumulating exactly that kind of experience.
+
 ## Citation
 
 ```bibtex
@@ -220,15 +243,6 @@ HARBOR ships **23 commands** and **9 agents**. The full list of each — argumen
 }
 ```
 
-## Contributing
-
-Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). The fastest way to help is to run HARBOR on a simulator we have not covered and file what broke: the harness improves by accumulating exactly that kind of experience.
-
 ## License
 
 [Apache 2.0](LICENSE). Copyright 2026 The HARBOR Authors.
-
-<div align="center">
-<sub>TU Darmstadt · Honda Research Institute Europe · Columbia University · Tongji University<br>
-Shanghai Research Institute for Intelligent Autonomous Systems · University of Würzburg · Hessian.AI</sub>
-</div>
