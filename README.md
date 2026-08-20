@@ -54,63 +54,48 @@ The same task descriptions, given to HARBOR against different simulator codebase
   <th align="center">IsaacLab</th>
   <th align="center">ManiSkill</th>
   <th align="center">Genesis</th>
-  <th align="center">MJLab</th>
 </tr>
 <tr>
   <td><b>Stack&#8209;Cube</b><br><sub>long-horizon<br>composition</sub></td>
   <td><img src="assets/gallery/stack-cube__isaaclab.webp" width="180" alt="Stack-Cube in IsaacLab"></td>
   <td><img src="assets/gallery/stack-cube__maniskill.webp" width="180" alt="Stack-Cube in ManiSkill"></td>
   <td><img src="assets/gallery/stack-cube__genesis.webp" width="180" alt="Stack-Cube in Genesis"></td>
-  <td><img src="assets/gallery/stack-cube__mjlab.webp" width="180" alt="Stack-Cube in MJLab"></td>
 </tr>
 <tr>
   <td><b>Insert&#8209;Drawer</b><br><sub>articulated<br>interaction</sub></td>
   <td><img src="assets/gallery/insert-drawer__isaaclab.webp" width="180" alt="Insert-Drawer in IsaacLab"></td>
   <td><img src="assets/gallery/insert-drawer__maniskill.webp" width="180" alt="Insert-Drawer in ManiSkill"></td>
   <td><img src="assets/gallery/insert-drawer__genesis.webp" width="180" alt="Insert-Drawer in Genesis"></td>
-  <td><img src="assets/gallery/insert-drawer__mjlab.webp" width="180" alt="Insert-Drawer in MJLab"></td>
 </tr>
 <tr>
   <td><b>Lift&#8209;Box</b><br><sub>bimanual<br>coordination</sub></td>
   <td><img src="assets/gallery/lift-box__isaaclab.webp" width="180" alt="Lift-Box in IsaacLab"></td>
   <td><img src="assets/gallery/lift-box__maniskill.webp" width="180" alt="Lift-Box in ManiSkill"></td>
   <td><img src="assets/gallery/lift-box__genesis.webp" width="180" alt="Lift-Box in Genesis"></td>
-  <td><img src="assets/gallery/lift-box__mjlab.webp" width="180" alt="Lift-Box in MJLab"></td>
+</tr>
+<tr>
+  <td><b>Hang&#8209;Mug</b><br><sub>precise<br>placement</sub></td>
+  <td><img src="assets/gallery/hang-mug__isaaclab.webp" width="180" alt="Hang-Mug in IsaacLab"></td>
+  <td><img src="assets/gallery/hang-mug__maniskill.webp" width="180" alt="Hang-Mug in ManiSkill"></td>
+  <td><img src="assets/gallery/hang-mug__genesis.webp" width="180" alt="Hang-Mug in Genesis"></td>
 </tr>
 <tr>
   <td><b>Dex&#8209;Grasp</b><br><sub>dexterous<br>control</sub></td>
   <td><img src="assets/gallery/dex-grasp__isaaclab.webp" width="180" alt="Dex-Grasp in IsaacLab"></td>
   <td><img src="assets/gallery/dex-grasp__maniskill.webp" width="180" alt="Dex-Grasp in ManiSkill"></td>
   <td><img src="assets/gallery/dex-grasp__genesis.webp" width="180" alt="Dex-Grasp in Genesis"></td>
-  <td><img src="assets/gallery/dex-grasp__mjlab.webp" width="180" alt="Dex-Grasp in MJLab"></td>
 </tr>
 <tr>
   <td><b>G1&nbsp;Jump</b><br><sub>whole-body<br>dynamics</sub></td>
   <td><img src="assets/gallery/g1-jump__isaaclab.webp" width="180" alt="G1 Jump in IsaacLab"></td>
   <td><img src="assets/gallery/g1-jump__maniskill.webp" width="180" alt="G1 Jump in ManiSkill"></td>
   <td><img src="assets/gallery/g1-jump__genesis.webp" width="180" alt="G1 Jump in Genesis"></td>
-  <td><img src="assets/gallery/g1-jump__mjlab.webp" width="180" alt="G1 Jump in MJLab"></td>
-</tr>
-<tr>
-  <td><b>G1&nbsp;Backflip</b><br><sub>aggressive<br>maneuver</sub></td>
-  <td><img src="assets/gallery/g1-backflip__isaaclab.webp" width="180" alt="G1 Backflip in IsaacLab"></td>
-  <td><img src="assets/gallery/g1-backflip__maniskill.webp" width="180" alt="G1 Backflip in ManiSkill"></td>
-  <td><img src="assets/gallery/g1-backflip__genesis.webp" width="180" alt="G1 Backflip in Genesis"></td>
-  <td><img src="assets/gallery/g1-backflip__mjlab.webp" width="180" alt="G1 Backflip in MJLab"></td>
 </tr>
 <tr>
   <td><b>G1&nbsp;Footstep</b><br><sub>contact<br>scheduling</sub></td>
   <td><img src="assets/gallery/g1-footstep__isaaclab.webp" width="180" alt="G1 Footstep in IsaacLab"></td>
   <td><img src="assets/gallery/g1-footstep__maniskill.webp" width="180" alt="G1 Footstep in ManiSkill"></td>
   <td><img src="assets/gallery/g1-footstep__genesis.webp" width="180" alt="G1 Footstep in Genesis"></td>
-  <td><img src="assets/gallery/g1-footstep__mjlab.webp" width="180" alt="G1 Footstep in MJLab"></td>
-</tr>
-<tr>
-  <td><b>G1&nbsp;Rough&nbsp;Jump</b><br><sub>uneven<br>terrain</sub></td>
-  <td><img src="assets/gallery/g1-rough-jump__isaaclab.webp" width="180" alt="G1 Rough Jump in IsaacLab"></td>
-  <td><img src="assets/gallery/g1-rough-jump__maniskill.webp" width="180" alt="G1 Rough Jump in ManiSkill"></td>
-  <td><img src="assets/gallery/g1-rough-jump__genesis.webp" width="180" alt="G1 Rough Jump in Genesis"></td>
-  <td><img src="assets/gallery/g1-rough-jump__mjlab.webp" width="180" alt="G1 Rough Jump in MJLab"></td>
 </tr>
 </table>
 

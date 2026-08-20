@@ -41,17 +41,6 @@ encode() {
     echo "    $(printf '%-34s' "$2") $(du -h "$dest" | cut -f1)"
 }
 
-# A tile for a cell we cannot fill yet. Keeps the grid rectangular and says so honestly,
-# rather than silently shipping a 3-wide grid the results table describes as 4-wide.
-placeholder() {
-    local dest="$OUT/$1" label="$2"
-    ffmpeg -y -v error -f lavfi -i "color=c=0x11161d:s=${WIDTH}x270:d=1" \
-        -vf "drawtext=fontfile=$FONT:text='$label':fontcolor=0x5b6673:fontsize=22:x=(w-tw)/2:y=(h-th)/2-14,\
-drawtext=fontfile=$FONT:text='recording pending':fontcolor=0x39424e:fontsize=14:x=(w-tw)/2:y=(h-th)/2+18" \
-        -frames:v 1 -c:v libwebp -q:v 80 "$dest"
-    echo "    $(printf '%-34s' "$1") placeholder"
-}
-
 # The whole narrated walkthrough as one self-playing loop. A README animates images and
 # nothing else — a repo-relative <video> renders no player at all — so the full run has to be
 # an animated WebP to play on its own. 860px keeps the terminal text sharp, which is the point
@@ -95,12 +84,13 @@ bytes=$(stat -c%s "$ROOT/docs/public/demo.mp4")
 echo "    $(printf '%-34s' "docs/public/demo.mp4") $(du -h "$ROOT/docs/public/demo.mp4" | cut -f1)"
 [ "$bytes" -lt 10485760 ] || echo "    WARNING: over GitHub's 10 MB video cap for free plans" >&2
 
-echo "==> gallery: 8 tasks x 4 simulators"
+echo "==> gallery: 7 tasks x 3 simulators"
 # IsaacLab. dex-grasp is recorded from far off and lasts 8 frames, so it is cropped to the
 # workspace and motion-interpolated to a readable ~2 s loop instead of a 0.5 s twitch.
 encode stack_three_cube.mp4          gallery/stack-cube__isaaclab.webp
 encode insert_drawer.mp4             gallery/insert-drawer__isaaclab.webp
 encode lift_box.mp4                  gallery/lift-box__isaaclab.webp
+encode hang_mug.mp4                  gallery/hang-mug__isaaclab.webp
 encode dex-grasp.mp4                 gallery/dex-grasp__isaaclab.webp \
     "crop=889:500:176:170,setpts=4*PTS,minterpolate=fps=24:mi_mode=mci:mc_mode=aobmc:me_mode=bilat:vsbmc=1"
 
@@ -108,6 +98,7 @@ encode maniskill_stack_three_cube.mp4 gallery/stack-cube__maniskill.webp
 encode maniskill_insert_drawer.mp4    gallery/insert-drawer__maniskill.webp
 encode maniskill_lift_box.mp4         gallery/lift-box__maniskill.webp
 encode maniskill_dex_grasp.mp4        gallery/dex-grasp__maniskill.webp
+encode maniskill_hang_mug.mp4         gallery/hang-mug__maniskill.webp
 
 encode genesis_stack_three_cube.mp4   gallery/stack-cube__genesis.webp
 # The Genesis insert-drawer take runs 33 s where every other tile is 2-5 s; trimmed so the
@@ -115,32 +106,22 @@ encode genesis_stack_three_cube.mp4   gallery/stack-cube__genesis.webp
 encode genesis_insert_drawer.mp4      gallery/insert-drawer__genesis.webp "" "-ss 1 -t 6"
 encode genesis_lift_box.mp4           gallery/lift-box__genesis.webp
 encode genesis_dex_grasp.mp4          gallery/dex-grasp__genesis.webp
+encode genesis_hang_mug.mp4           gallery/hang-mug__genesis.webp
 
 # Locomotion sits in the same grid as manipulation: the harness is embodiment-agnostic, so
 # splitting them into two galleries would imply a distinction that does not exist. These
 # recordings run 33 s where the manipulation tiles are 2-5 s, so each is trimmed to a loop.
-echo "==> locomotion (IsaacLab, trimmed to a 6 s loop each)"
-encode g1_jump.mp4       gallery/g1-jump__isaaclab.webp       "" "-ss 2 -t 6"
-encode g1-backflip.mp4   gallery/g1-backflip__isaaclab.webp   "" "-ss 2 -t 6"
-encode g1_footstep.mp4   gallery/g1-footstep__isaaclab.webp   "" "-ss 2 -t 6"
-encode g1_rough_jump.mp4 gallery/g1-rough-jump__isaaclab.webp "" "-ss 2 -t 6"
+echo "==> locomotion (trimmed to a 6 s loop each)"
+encode g1_jump.mp4               gallery/g1-jump__isaaclab.webp       "" "-ss 2 -t 6"
+encode g1_footstep.mp4           gallery/g1-footstep__isaaclab.webp   "" "-ss 2 -t 6"
+encode maniskill_g1_jump.mp4     gallery/g1-jump__maniskill.webp      "" "-ss 2 -t 6"
+encode maniskill_g1_footstep.mp4 gallery/g1-footstep__maniskill.webp  "" "-ss 2 -t 6"
+encode genesis_g1_jump.mp4       gallery/g1-jump__genesis.webp        "" "-ss 2 -t 6"
+encode genesis_g1_footstep.mp4   gallery/g1-footstep__genesis.webp    "" "-ss 2 -t 6"
 
 echo "==> extra IsaacLab tasks (not in the grid)"
 encode stack_two_cube.mp4 gallery/stack-two-cube__isaaclab.webp
 encode place_banana.mp4   gallery/place-banana__isaaclab.webp
-
-# Cells not yet recorded: MJLab across the board, and the locomotion tasks everywhere but
-# IsaacLab. A labelled tile keeps the grid rectangular and says which run is outstanding,
-# rather than a ragged table that reads as though the coverage were complete.
-echo "==> placeholders for unrecorded cells"
-for task in stack-cube insert-drawer lift-box dex-grasp; do
-    placeholder "gallery/${task}__mjlab.webp" "MJLab"
-done
-for task in g1-jump g1-backflip g1-footstep g1-rough-jump; do
-    placeholder "gallery/${task}__maniskill.webp" "ManiSkill"
-    placeholder "gallery/${task}__genesis.webp"   "Genesis"
-    placeholder "gallery/${task}__mjlab.webp"     "MJLab"
-done
 
 echo "==> docs site assets"
 DOCS="$ROOT/docs/public"
