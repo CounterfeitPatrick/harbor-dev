@@ -102,3 +102,31 @@ def test_harbor_extras_include_every_downstream_dependency(tmp_path):
     for pkg in ("wandb", "tensorboardX", "imageio[ffmpeg]", "matplotlib",
                 "hydra-core", "omegaconf", "stable_baselines3[extra]", "coacd", "trimesh"):
         assert pkg in script, f"{pkg} missing from the harbor extras block"
+
+
+def test_uv_is_bootstrapped_rather_than_hard_failing(tmp_path):
+    """setup_uv.sh must install uv itself when it is missing.
+
+    uv is the one host-side tool the whole chain rests on, and nothing upstream of this
+    script installs it — so a hard failure here is the user's first experience of harbor.
+    The env-file source before the check matters as much as the install: a non-login shell
+    can lack ~/.local/bin on PATH while uv is already on disk, and reinstalling in that case
+    would hit the network for nothing.
+    """
+    repo = _repo(tmp_path, plan={"installation_steps": [{"kind": "shell", "cmd": "echo hi"}]})
+    script = _render(repo)
+    assert "astral.sh/uv/install.sh" in script, "no uv bootstrap in the generated script"
+    src_env = script.index('. "$HOME/.local/bin/env"')
+    assert src_env < script.index("astral.sh/uv/install.sh"), \
+        "PATH recovery must be attempted before falling back to a network install"
+    assert script.index("astral.sh/uv/install.sh") < script.index("uv venv"), \
+        "uv must be bootstrapped before the venv step uses it"
+
+
+def test_generated_script_is_valid_bash(tmp_path):
+    """The renderer emits shell that is executed unattended; a syntax error surfaces as a
+    broken install rather than as a renderer bug."""
+    repo = _repo(tmp_path, plan={"installation_steps": [{"kind": "shell", "cmd": "echo hi"}]})
+    out = M.render_setup_uv_sh(repo)
+    r = subprocess.run(["bash", "-n", str(out)], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr

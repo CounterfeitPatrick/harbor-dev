@@ -24,8 +24,9 @@ HARBOR is not a code generator with a robotics prompt. Three design choices sepa
 
 - A Python GPU robotics repository (IsaacLab, ManiSkill, Genesis, MJLab, Loco-MuJoCo, and others)
 - An NVIDIA GPU with a working driver
-- [`uv`](https://docs.astral.sh/uv/) on the host
 - Claude Code 2.1.219 or newer
+
+[`uv`](https://docs.astral.sh/uv/) is not on that list — HARBOR installs it on first use if the host lacks it.
 
 ## Next steps
 

@@ -1,17 +1,24 @@
 # Installation
 
-HARBOR needs one host-side tool of its own. Everything else it installs into the target repository's own virtual environment, so it never touches your system Python.
+HARBOR installs its one host-side tool itself. Everything else goes into the target repository's own virtual environment, so it never touches your system Python.
 
 ## Prerequisites
 
-| Requirement | Why | Sudo? |
+| Requirement | Why | You install it? |
 |---|---|:--:|
-| [`uv`](https://docs.astral.sh/uv/) | Drives the generated `setup_uv.sh` that builds each repo's `.venv/` | no |
-| NVIDIA driver | GPU simulation; `nvidia-smi` must print your device | — |
-| CUDA toolkit | Only if your simulator builds CUDA extensions | — |
-| Claude Code ≥ 2.1.219 | Nested agent dispatch, which reward tuning depends on | no |
+| Claude Code ≥ 2.1.219 | Nested agent dispatch, which reward tuning depends on | yes |
+| NVIDIA driver | GPU simulation; `nvidia-smi` must print your device | yes |
+| [`uv`](https://docs.astral.sh/uv/) | Drives the generated `setup_uv.sh` that builds each repo's `.venv/` | no — auto |
+| CUDA toolkit | Only if your simulator builds CUDA extensions | no — warned |
 
-## Install `uv`
+Only the first two are yours to arrange. The generated `setup_uv.sh` installs `uv` to
+`~/.local/bin` on first use when the host lacks it, and `dependency-generator` warns rather
+than failing when a host has the CUDA runtime but no compiler.
+
+## Install `uv` yourself (optional)
+
+The bootstrap covers this, but installing ahead of time is harmless and keeps the first run
+offline-free:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -19,10 +26,10 @@ exec $SHELL
 uv --version && nvidia-smi
 ```
 
-Both commands must print. If `uv` is not found after `exec $SHELL`, log out and back in so the PATH change takes effect.
+If `uv` is not found after `exec $SHELL`, log out and back in so the PATH change takes effect.
 
 ::: tip Scripted path
-On Ubuntu or Debian you can run the bundled installer instead, which also checks the driver:
+On Ubuntu or Debian you can run the bundled installer instead:
 
 ```bash
 git clone https://github.com/supersglzc/harbor-dev.git ~/harbor

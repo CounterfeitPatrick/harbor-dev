@@ -101,22 +101,16 @@ The same task descriptions, given to HARBOR against different simulator codebase
 
 ### 1. Install
 
-HARBOR is a [Claude Code](https://claude.com/claude-code) plugin. It needs one host-side tool — [`uv`](https://docs.astral.sh/uv/) — plus an NVIDIA driver and, if your simulator builds CUDA extensions, the CUDA toolkit.
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-exec $SHELL
-uv --version && nvidia-smi     # both should print
-```
-
-Then, inside Claude Code:
+HARBOR is a [Claude Code](https://claude.com/claude-code) plugin and needs Claude Code **≥ 2.1.219**. Inside Claude Code:
 
 ```text
 /plugin marketplace add supersglzc/harbor-dev
 /plugin install harbor@harbor
 ```
 
-`/harbor:help` lists the full surface. See the [installation guide](https://supersglzc.github.io/harbor-dev/guide/install) for the scripted path and troubleshooting.
+`/harbor:help` lists the full surface.
+
+That is the whole install. HARBOR installs [`uv`](https://docs.astral.sh/uv/) on first use if the host lacks it, and every Python dependency goes into the target repository's own `.venv/` — your system Python is never touched. See the [installation guide](https://supersglzc.github.io/harbor-dev/guide/install) for GPU driver requirements and troubleshooting.
 
 ### 2. Ask HARBOR to build a task
 

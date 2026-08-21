@@ -148,7 +148,7 @@ Pre-render check: scan `quirks` for `is_isaacgym` / `needs_vulkan_icd`. If eithe
 python "${CLAUDE_PLUGIN_ROOT}/scripts/dependency-generator/render_uv.py" <repo>
 ```
 
-Reads `probe.json` + `install_plan.json` (if present) and emits `<repo>/harbor/dependency-generator/setup_uv.sh` — a self-contained bash script that creates `<repo>/.venv` via `uv venv --python <PY>`, then translates each `installation_steps` entry into the host-side equivalent:
+Reads `probe.json` + `install_plan.json` (if present) and emits `<repo>/harbor/dependency-generator/setup_uv.sh` — a self-contained bash script that bootstraps `uv` itself if the host lacks it (sourcing `~/.local/bin/env` first, since a non-login shell can hide an already-installed uv), creates `<repo>/.venv` via `uv venv --python <PY>`, then translates each `installation_steps` entry into the host-side equivalent:
 
 | `kind` | Translation in setup_uv.sh |
 |--------|----------------------------|
