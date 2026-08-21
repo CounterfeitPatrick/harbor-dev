@@ -36,7 +36,7 @@ features:
 
 A single request drives all six stages, from dependency setup to a trained policy. Sound on for the narration.
 
-<!-- preload=metadata so a 21 MB file is not pulled down by every visitor who never presses
+<!-- preload=metadata so the file is not pulled down by every visitor who never presses
      play; the poster carries the frame until they do. -->
 <video src="/demo.mp4" controls playsinline preload="metadata"
        poster="/walkthrough-poster.webp"

@@ -69,14 +69,21 @@ drawtext=fontfile=$GLYPH:text='▶':fontcolor=white@0.96:fontsize=104:x=(w-tw)/2
     -frames:v 1 -c:v libwebp -q:v 86 "$OUT/hero/walkthrough-poster.webp"
 echo "    $(printf '%-34s' "assets/hero/walkthrough-poster.webp") $(du -h "$OUT/hero/walkthrough-poster.webp" | cut -f1)"
 
-# The walkthrough itself. Sized to clear GitHub's 10 MB attachment cap for video on free
-# plans, because the README embeds it through user-attachments — the only way to get an
-# inline player there — and that upload is what enforces the ceiling.
+# The walkthrough itself, and the only copy that carries the narration audio. Its sole
+# consumer is the docs site: docs/index.md plays it in a <video> element off GitHub Pages.
+# The README does NOT embed it — the hero WebP above the fold is the walkthrough there —
+# so no user-attachments upload happens and GitHub's 10 MB attachment cap does not apply.
+#
+# What does constrain it is repo weight: the file is committed (.gitignore un-ignores it
+# by name), so its size is permanent for everyone who clones. preload="metadata" on the
+# docs player means visitors only pay for it when they press play, so the ceiling below is
+# a repo-size budget rather than a platform limit — raise it deliberately if the quality
+# is worth the clone.
 #
 # The budget is spent on resolution, not frame rate: this is a screencast, so 1280px keeps
-# the terminal text sharp while 12 fps costs almost nothing perceptually. -tune stillimage
-# tells x264 the same thing. The result is visually indistinguishable from a 21 MB encode.
-# H.264 is what GitHub recommends for cross-browser playback.
+# the terminal text as sharp as the bitrate allows while 12 fps costs little perceptually.
+# -tune stillimage tells x264 the same thing. H.264 is what GitHub recommends for
+# cross-browser playback.
 echo "==> walkthrough"
 mkdir -p "$ROOT/docs/public"
 ffmpeg -y -v error -i "$WORK/demo.mp4" -vf "fps=12,scale=1280:-2:flags=lanczos" \
@@ -84,7 +91,7 @@ ffmpeg -y -v error -i "$WORK/demo.mp4" -vf "fps=12,scale=1280:-2:flags=lanczos" 
     -c:a aac -b:a 64k -movflags +faststart "$ROOT/docs/public/demo.mp4"
 bytes=$(stat -c%s "$ROOT/docs/public/demo.mp4")
 echo "    $(printf '%-34s' "docs/public/demo.mp4") $(du -h "$ROOT/docs/public/demo.mp4" | cut -f1)"
-[ "$bytes" -lt 10485760 ] || echo "    WARNING: over GitHub's 10 MB video cap for free plans" >&2
+[ "$bytes" -lt 10485760 ] || echo "    WARNING: over the 10 MB repo-weight budget for this file" >&2
 
 echo "==> gallery: 7 tasks x 3 simulators"
 # IsaacLab. dex-grasp is recorded from far off and lasts 8 frames, so it is cropped to the
