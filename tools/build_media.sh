@@ -44,11 +44,13 @@ encode() {
 # The whole narrated walkthrough as one self-playing loop. A README animates images and
 # nothing else — a repo-relative <video> renders no player at all — so the full run has to be
 # an animated WebP to play on its own. 860px keeps the terminal text sharp, which is the point
-# of a screencast; 6 fps and q72 are what bring 3m45s down to a size worth putting above the
-# fold. Downscaling is what would blur it, so the frame rate takes the cut instead.
+# of a screencast, and 24 fps matches the source so the scrolling reads as motion rather than
+# as a slideshow. Those two are the priority in that order; q72 is what keeps 3m45s of them
+# down to ~30 MB. This is the largest file in the repo — raising fps or width past here buys
+# less than it costs, since every clone and every README visitor pays for it.
 echo "==> hero: full walkthrough"
 WIDTH_SAVE=$WIDTH; Q_SAVE=$Q; FPS_SAVE=$FPS
-WIDTH=860; Q=72; FPS=6
+WIDTH=860; Q=72; FPS=24
 encode demo.mp4 hero/walkthrough.webp
 WIDTH=$WIDTH_SAVE; Q=$Q_SAVE; FPS=$FPS_SAVE
 

@@ -23,8 +23,6 @@ trains the policy — and checks its own work at every step.
 
 <img src="assets/hero/walkthrough.webp" alt="One prompt drives all six stages, from dependency setup to a trained G1 jumping policy" width="860">
 
-<sub>The full run, start to finish. **[Same walkthrough with narration and a scrubber →](docs/public/demo.mp4)**</sub>
-
 </div>
 
 ## What is HARBOR
