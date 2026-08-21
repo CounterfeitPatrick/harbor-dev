@@ -17,7 +17,10 @@ permissions:
 
 concurrency:
   group: pages-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel an in-flight deploy: a half-published Pages deployment is worse than a
+  # slightly stale one, and the cancelled run reports as a failed build. This matches
+  # GitHub's own Pages workflow template.
+  cancel-in-progress: false
 
 jobs:
   check-reference:
