@@ -253,7 +253,9 @@ knowledge/templates/
   rl-tricks/             <trick>/{manifest.yaml, patches.yaml, smoke.py, edits/*} — trick library read
                          by /harbor:rl-add-trick (obs_rms_jax, obs_rms_torch, reward_norm_jax,
                          value_clip_torch, value_norm_torch, distributional_critic_torch)
-  rl-sweep/              launch.sh{,.isaaclab}.template (SLURM trial launchers for /harbor:rl-sweep)
+  rl-sweep/              launch.sh{,.isaaclab}.template (SLURM trial launchers — shared by
+                         /harbor:rl-sweep and reward-tune's cluster mode, which renders one
+                         trial per candidate so both inherit the site's proxy + WANDB_API_KEY)
   plot/                  spec.example.yaml (example /harbor:plot spec)
 
 knowledge/references/

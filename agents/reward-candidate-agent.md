@@ -281,10 +281,24 @@ Launch per `mode`:
 
   Catching a dead launch at minute 3 instead of minute 97 is worth far more in GPU hours than
   the ticks cost in tokens.
-- **`cluster`** — write the same body as `<iter_dir>/launch.sh` with SBATCH directives so
-  train **and** render both run on the compute node (never render on a login node), submit
-  with `sbatch`, write the jobid to `<iter_dir>/jobid.txt` (the designer needs it to
-  `scancel` you on convergence — stopping the agent does not stop the SLURM job), and poll
+- **`cluster`** — render `<iter_dir>/launch.sh` from the **same launcher `/harbor:rl-sweep`
+  uses**, so a compute node gets the site environment that path already solved: pick
+  `${CLAUDE_PLUGIN_ROOT}/knowledge/templates/rl-sweep/launch.sh.isaaclab.template` when
+  `benchmark-spec.json:benchmark.name` is IsaacLab or `harbor/apptainer/isaaclab.def` exists,
+  else `launch.sh.template`. Substitutions are `/harbor:rl-sweep`'s, with a single trial:
+  `{{N_MINUS_1}}` = `0`, `{{SWEEP_ID}}` = `<tune_id>-iter<NNN>`, `{{TRIAL_IDS}}` =
+  `"iter_<NNN>"`, `{{TRIAL_COMMANDS}}` = your STEP 3 body (train **and** render — never render
+  on a login node), `{{WANDB_API_KEY}}` and `{{PROXY_DEFAULT}}` = empty so both inherit from
+  the submitting environment.
+
+  Do **not** hand-write the SBATCH body. The launcher carries the two things a compute node
+  needs and a login node hides — `WANDB_API_KEY` and `HTTP(S)_PROXY` — and without them
+  `DataLogger._init_wandb` burns its ten retries and then succeeds in **offline** mode, so
+  training completes, scoring works, and nothing ever reaches W&B. That is a silent failure,
+  not a loud one; sharing the file is what keeps the two cluster paths from drifting again.
+
+  Then submit with `sbatch`, write the jobid to `<iter_dir>/jobid.txt` (the designer needs it
+  to `scancel` you on convergence — stopping the agent does not stop the SLURM job), and poll
   `squeue -h -j $JOBID` until it clears. The sentinel watchdog still applies inside the job.
 
 ## STEP 3b — MONITOR (only when `monitor_early_stop` is set)
