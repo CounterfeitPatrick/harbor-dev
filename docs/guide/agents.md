@@ -4,21 +4,21 @@ Each agent owns one bounded stage of the workflow and runs in its own isolated c
 
 ## `benchmark-generator`
 
-Adds benchmark sanity scaffolding to a Python env that dependency-generator already built and verified (uv backend — host venv at `&lt;repo&gt;/.venv/`). Reads repo markdown for benchmark-level context, renders TWO scripts (random-action rollout + render-to-MP4), runs a 2-tier smoke (L1 random / L2 render), captures the suite spec into &lt;repo&gt;/harbor/benchmark-generator/benchmark-spec.json, and emits history.md + benchmark.md receipts. Does NOT generate train/eval scripts — that scaffolding is owned by rl-integration-generator. Does NOT modify the env config or dependencies — dependency-generator owns the environment, including the `imageio[ffmpeg]` extras line. The ONE deliberate env-source edit it makes is the IsaacLab dt-strip (Step 3.4): a single-line, idempotent reward-semantics normalization of the vendored `RewardManager.compute()`.
+Adds benchmark sanity scaffolding to a Python env that dependency-generator already built and verified (uv backend — host venv at `<repo>/.venv/`). Reads repo markdown for benchmark-level context, renders TWO scripts (random-action rollout + render-to-MP4), runs a 2-tier smoke (L1 random / L2 render), captures the suite spec into &lt;repo&gt;/harbor/benchmark-generator/benchmark-spec.json, and emits history.md + benchmark.md receipts. Does NOT generate train/eval scripts — that scaffolding is owned by rl-integration-generator. Does NOT modify the env config or dependencies — dependency-generator owns the environment, including the `imageio[ffmpeg]` extras line. The ONE deliberate env-source edit it makes is the IsaacLab dt-strip (Step 3.4): a single-line, idempotent reward-semantics normalization of the vendored `RewardManager.compute()`.
 
 **Tools** · Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion  
 **Source** · [`agents/benchmark-generator.md`](https://github.com/supersglzc/harbor-dev/blob/main/agents/benchmark-generator.md)
 
 ## `dependency-generator`
 
-ENTRY POINT for setting up a Python GPU repo via uv on the host. Probes the repo, reads README + markdown to build an InstallationPlan, renders `&lt;repo&gt;/harbor/dependency-generator/setup_uv.sh`, executes it (creates `&lt;repo&gt;/.venv/`), runs an import smoke test, and reports back to the main thread. Does NOT recursively dispatch to sub-subagents — the main thread orchestrates the next step (benchmark-generator).
+ENTRY POINT for setting up a Python GPU repo via uv on the host. Probes the repo, reads README + markdown to build an InstallationPlan, renders `<repo>/harbor/dependency-generator/setup_uv.sh`, executes it (creates `<repo>/.venv/`), runs an import smoke test, and reports back to the main thread. Does NOT recursively dispatch to sub-subagents — the main thread orchestrates the next step (benchmark-generator).
 
 **Tools** · Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion  
 **Source** · [`agents/dependency-generator.md`](https://github.com/supersglzc/harbor-dev/blob/main/agents/dependency-generator.md)
 
 ## `dr-generator`
 
-COMING SOON — not released, and never dispatched by /harbor:task-create in this version. Authors §7 (domain randomization) of a task in a benchmark repo across THREE groups — (1) robot, (2) object, (3) observation noise. Two modes — **create** (replace the empty DR slot left by task-generator) and **edit** (overwrite an existing DR config). Discovers every available randomization term per group, wires the requested/default ones once-per-episode-per-env (`mode="reset"`), then smoke-checks each effective term by exact value read-back at num_envs=16. Reads task-implementation.md as a per-benchmark migration aid; relies on its own contracts (smoke template + IsaacLab DR reference). Phase A authors DR (or skips per the 3-condition gate); Phase B renders + runs the §7 smoke. Iterates up to 2× on smoke failure; ambiguity batches into a single AskUserQuestion. Writes/updates a handoff at `&lt;task_dir&gt;/handoff-dr-generator.md` (under `harbor/create-task/&lt;slug&gt;/`, next to dr-history.md).
+COMING SOON — not released, and never dispatched by /harbor:task-create in this version. Authors §7 (domain randomization) of a task in a benchmark repo across THREE groups — (1) robot, (2) object, (3) observation noise. Two modes — **create** (replace the empty DR slot left by task-generator) and **edit** (overwrite an existing DR config). Discovers every available randomization term per group, wires the requested/default ones once-per-episode-per-env (`mode="reset"`), then smoke-checks each effective term by exact value read-back at num_envs=16. Reads task-implementation.md as a per-benchmark migration aid; relies on its own contracts (smoke template + IsaacLab DR reference). Phase A authors DR (or skips per the 3-condition gate); Phase B renders + runs the §7 smoke. Iterates up to 2× on smoke failure; ambiguity batches into a single AskUserQuestion. Writes/updates a handoff at `<task_dir>/handoff-dr-generator.md` (under `harbor/create-task/<slug>/`, next to dr-history.md).
 
 **Tools** · Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion  
 **Source** · [`agents/dr-generator.md`](https://github.com/supersglzc/harbor-dev/blob/main/agents/dr-generator.md)
@@ -39,7 +39,7 @@ Designs and drives the §6 tuning loop for ONE task. Each candidate it designs i
 
 ## `rl-integration-generator`
 
-Renders the RL training/eval/render scaffold (per-impl harbor/scripts/rl/&lt;slug&gt;/{train,eval,render,env_wrapper}.py + configs + rl-suite-spec + rl-integration.md receipt) into a benchmark repo whose base env (`&lt;repo&gt;/.venv/`) + benchmark-spec.json already exist. Three algorithm sources: `custom_torch` (a self-contained algorithm tree shipped with the plugin — no external RL-lib pip-install), `stable_baseline3` (SB3-backed), `local_implementation` (user-provided package path or github URL — thin shims).
+Renders the RL training/eval/render scaffold (per-impl harbor/scripts/rl/&lt;slug&gt;/{train,eval,render,env_wrapper}.py + configs + rl-suite-spec + rl-integration.md receipt) into a benchmark repo whose base env (`<repo>/.venv/`) + benchmark-spec.json already exist. Three algorithm sources: `custom_torch` (a self-contained algorithm tree shipped with the plugin — no external RL-lib pip-install), `stable_baseline3` (SB3-backed), `local_implementation` (user-provided package path or github URL — thin shims).
 
 **Tools** · Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion  
 **Source** · [`agents/rl-integration-generator.md`](https://github.com/supersglzc/harbor-dev/blob/main/agents/rl-integration-generator.md)
@@ -53,7 +53,7 @@ Open-ended hyperparameter tuning loop for ONE (algorithm, task) pair on an alrea
 
 ## `task-cloner`
 
-Clones an existing task into an isolated, independently-editable copy registered under a new suffixed gym id (SAME-REPO mode of the general /harbor:task-clone primitive; cross-benchmark/sim2sim migration is COMING SOON and refused in this release). Copies only the task's EDITABLE surface (env_cfg + the mdp modules the requested `surface` touches — default: reward), rewires the cloned cfg's imports to the copies, mirrors the source's registration mechanism for `&lt;dest&gt;`, then runs the clone smokes (build + rollout + per-term-logging). Writes a manifest listing every created file so the clone can be deleted cleanly. Callers include section A/B experiments and any flow needing an isolated task variant.
+Clones an existing task into an isolated, independently-editable copy registered under a new suffixed gym id (SAME-REPO mode of the general /harbor:task-clone primitive; cross-benchmark/sim2sim migration is COMING SOON and refused in this release). Copies only the task's EDITABLE surface (env_cfg + the mdp modules the requested `surface` touches — default: reward), rewires the cloned cfg's imports to the copies, mirrors the source's registration mechanism for `<dest>`, then runs the clone smokes (build + rollout + per-term-logging). Writes a manifest listing every created file so the clone can be deleted cleanly. Callers include section A/B experiments and any flow needing an isolated task variant.
 
 **Tools** · Read, Write, Edit, Bash, Glob, Grep  
 **Source** · [`agents/task-cloner.md`](https://github.com/supersglzc/harbor-dev/blob/main/agents/task-cloner.md)

@@ -64,8 +64,18 @@ def first_sentence(desc):
 def prose(text):
     """VitePress compiles rendered markdown as a Vue template, so the `<repo>` and
     `<path>` placeholders these descriptions are full of parse as unclosed HTML tags and
-    fail the build. Escape them wherever the text lands outside a code span."""
-    return text.replace("<", "&lt;").replace(">", "&gt;")
+    fail the build.
+
+    Escape them OUTSIDE code spans only. Markdown already renders a code span literally, so
+    escaping inside one puts the entity itself on the page — `<task-slug>` displayed as
+    `&lt;task-slug&gt;`. Splitting on the backtick keeps both halves correct: prose is
+    escaped for Vue, code spans are left for markdown to handle.
+    """
+    parts = text.split("`")
+    return "`".join(
+        seg if i % 2 else seg.replace("<", "&lt;").replace(">", "&gt;")
+        for i, seg in enumerate(parts)
+    )
 
 
 def cell(text):
