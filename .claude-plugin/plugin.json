@@ -1,13 +1,13 @@
 {
   "name": "harbor",
-  "description": "Set up Python GPU robotics repos with uv, scaffold the RL stack (train / eval / render / sweep / tune), and author tasks end-to-end (scene → reward → DR). Includes dependency-generator + benchmark/rl-integration/task/reward/dr generator subagents and lifecycle hooks.",
+  "description": "Set up Python GPU robotics repos with uv, scaffold the RL stack (train / eval / render / sweep / tune), and author tasks end-to-end (scene → actions → reset → termination → observation → reward), with every stage gated by an executable check. Includes the dependency, benchmark, rl-integration, task and reward generator subagents and lifecycle hooks.",
   "version": "0.2.0",
   "author": {
     "name": "Steven Li",
     "url": "https://github.com/supersglzc"
   },
-  "homepage": "https://github.com/supersglzc/harbor",
-  "repository": "https://github.com/supersglzc/harbor",
+  "homepage": "https://github.com/supersglzc/harbor-dev",
+  "repository": "https://github.com/supersglzc/harbor-dev",
   "license": "Apache-2.0",
   "keywords": [
     "robotics",

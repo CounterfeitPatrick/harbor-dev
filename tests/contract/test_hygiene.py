@@ -55,3 +55,33 @@ def test_no_identity_leaks(path):
     text = _PUBLISHER_URL_RE.sub("", path.read_text(encoding="utf-8", errors="ignore"))
     hits = {m.group(0) for m in _IDENTITY_RE.finditer(text)}
     assert not hits, f"{path.relative_to(ROOT)}: identity token(s): {sorted(hits)}"
+
+
+def test_published_repo_name_is_consistent():
+    """Every place that names the repo must name the SAME repo.
+
+    The manifest said `supersglzc/harbor` while the repository is `harbor-dev`, and the
+    bundled installer printed `/plugin marketplace add supersglzc/harbor` — an instruction
+    that resolves to nothing. The denylist above could not catch it: it allows both spellings,
+    because both are the publisher's handle. What is wrong is the disagreement, not the name.
+    """
+    import json
+    import re
+
+    expected = "supersglzc/harbor-dev"
+    wrong = []
+
+    manifest = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())
+    for key in ("homepage", "repository"):
+        if expected not in manifest.get(key, ""):
+            wrong.append(f".claude-plugin/plugin.json:{key} = {manifest.get(key)!r}")
+
+    # Anywhere the handle appears with a repo path, it must be the real one.
+    for rel in ("README.md", "docs/guide/install.md", "CITATION.cff",
+                "scripts/install/install_prerequisites.sh"):
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        for m in re.findall(r"supersglzc/harbor[A-Za-z0-9._-]*", text):
+            if m.rstrip(".git").rstrip("/") != expected:
+                wrong.append(f"{rel}: {m}")
+
+    assert not wrong, "repo name disagrees with " + expected + ":\n  " + "\n  ".join(wrong)

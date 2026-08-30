@@ -8,9 +8,9 @@ algorithms, backend, and config_patches. This script just enumerates them.
 Usage:
     python list_tricks.py [--plugin-root <path>]
 
-By default we look up the plugin root via the CLAUDE_PLUGIN_ROOT env var
-(set by Claude Code when running a slash command). Falls back to the script's
-parent of parent.
+The plugin root is resolved from this file's own location. CLAUDE_PLUGIN_ROOT is
+deliberately not consulted — see `_plugin_root` for why. Pass --plugin-root to
+point at a different tree.
 """
 from __future__ import annotations
 
