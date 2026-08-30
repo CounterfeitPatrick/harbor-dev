@@ -30,13 +30,53 @@ export default defineConfig({
     logo: { light: '/logo.svg', dark: '/logo-dark.svg' },
     siteTitle: 'HARBOR',
 
+    // One entry per sidebar section, each a dropdown of that section's pages. The sidebar
+    // is still the full map; the nav exists so a reader landing mid-site can jump straight
+    // to a section without scrolling the sidebar to find where they are.
     nav: [
-      { text: 'Guide', link: '/guide/', activeMatch: '/guide/' },
+      {
+        text: 'Getting started',
+        activeMatch: '^/guide/(install|first-benchmark)?$',
+        items: [
+          { text: 'What is HARBOR?', link: '/guide/' },
+          { text: 'Installation', link: '/guide/install' },
+          { text: 'Your first benchmark', link: '/guide/first-benchmark' },
+        ],
+      },
+      {
+        text: 'Workflows',
+        activeMatch: '^/guide/(end-to-end|tasks|rewards|training)$',
+        items: [
+          { text: 'End-to-end workflow', link: '/guide/end-to-end' },
+          { text: 'Authoring tasks', link: '/guide/tasks' },
+          { text: 'Tuning rewards', link: '/guide/rewards' },
+          { text: 'Training and tuning', link: '/guide/training' },
+        ],
+      },
+      {
+        text: 'Concepts',
+        activeMatch: '^/guide/(harness|gates|semantic-correctness|context-economics|workspace)$',
+        items: [
+          { text: 'The harness', link: '/guide/harness' },
+          { text: 'Gates', link: '/guide/gates' },
+          { text: 'Semantic correctness', link: '/guide/semantic-correctness' },
+          { text: 'Context economics', link: '/guide/context-economics' },
+          { text: 'Your workspace', link: '/guide/workspace' },
+        ],
+      },
+      {
+        text: 'Reference',
+        activeMatch: '^/guide/(commands|agents)$',
+        items: [
+          { text: 'Commands', link: '/guide/commands' },
+          { text: 'Agents', link: '/guide/agents' },
+        ],
+      },
       { text: 'Paper', link: 'https://arxiv.org/abs/2606.08610' },
     ],
 
-    // One section. Concepts and the generated reference live under /guide/ too, so the
-    // sidebar is the whole map of the site and nothing hides behind a second nav entry.
+    // The sidebar mirrors the nav one-for-one, so the two never disagree about which
+    // section a page belongs to.
     sidebar: {
       '/guide/': [
         {
@@ -50,6 +90,7 @@ export default defineConfig({
         {
           text: 'Workflows',
           items: [
+            { text: 'End-to-end workflow', link: '/guide/end-to-end' },
             { text: 'Authoring tasks', link: '/guide/tasks' },
             { text: 'Tuning rewards', link: '/guide/rewards' },
             { text: 'Training and tuning', link: '/guide/training' },
@@ -60,6 +101,7 @@ export default defineConfig({
           items: [
             { text: 'The harness', link: '/guide/harness' },
             { text: 'Gates', link: '/guide/gates' },
+            { text: 'Semantic correctness', link: '/guide/semantic-correctness' },
             { text: 'Context economics', link: '/guide/context-economics' },
             { text: 'Your workspace', link: '/guide/workspace' },
           ],

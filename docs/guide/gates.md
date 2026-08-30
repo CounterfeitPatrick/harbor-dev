@@ -2,7 +2,7 @@
 
 A gate is an executable check that decides whether a stage may advance. Gates are the reason HARBOR is more reliable than a capable agent working without one: removing them from the pipeline makes it *faster* and drops success from 48/50 to 41/50, while letting a silent render-path defect ship undetected.
 
-Gates come in two kinds. **Hard interface checks** verify that something is structurally correct — an import resolves, a shape matches, a value reads back. **Semantic checks** verify that something behaved — a rollout produced finite rewards, a controller tracked its command, rendered frames actually changed.
+Gates come in two kinds. **Hard interface checks** verify that something is structurally correct — an import resolves, a shape matches, a value reads back. **Semantic checks** verify that something behaved — a rollout produced finite rewards, a controller tracked its command, rendered frames actually changed. The strongest of them end in a judgement the agent makes by looking at rendered frames; see [semantic correctness](/guide/semantic-correctness).
 
 ## The catalogue
 

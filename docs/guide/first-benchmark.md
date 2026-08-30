@@ -78,4 +78,4 @@ Everything is plain Python and YAML, meant to be read and edited. See [your work
 
 ## Next
 
-[Author a task →](/guide/tasks)
+[See the whole workflow end to end →](/guide/end-to-end)
