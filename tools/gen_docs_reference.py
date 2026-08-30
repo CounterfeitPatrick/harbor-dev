@@ -45,7 +45,9 @@ def parse_frontmatter(text):
         m = re.match(r"^(\w[\w-]*):\s*(.*)$", line)
         if m and not line.startswith((" ", "\t")):
             key, val = m.group(1), m.group(2).strip()
-            fields[key] = "" if val == "|" else val
+            # `|`, `|-`, `>`, `>-`, `>+` … are block-scalar indicators, not content. Treating
+            # only `|` as one left `>-` sitting at the head of three command descriptions.
+            fields[key] = "" if re.fullmatch(r"[|>][-+]?\d*", val) else val
         elif key:
             fields[key] = (fields[key] + " " + line.strip()).strip()
     return fields, body
@@ -72,6 +74,58 @@ def cell(text):
     return prose(text).replace("|", "\\|")
 
 
+def split_args(hint):
+    """Split an argument hint into its top-level options.
+
+    Splitting on whitespace alone would tear `description="<spec>"` and
+    `[assets=<path1,path2,...>]` apart, so brackets, parens, angles and quotes each hold the
+    token open. A top-level `|` separates whole invocation forms (task-clone's create vs
+    delete) and becomes its own line, since that is a choice between commands rather than
+    another option.
+    """
+    out, buf, depth, quote = [], "", 0, None
+    for ch in hint:
+        if quote:
+            buf += ch
+            if ch == quote:
+                quote = None
+            continue
+        if ch in "\"'":
+            quote, buf = ch, buf + ch
+            continue
+        if ch in "[(<":
+            depth += 1
+        elif ch in "])>":
+            depth = max(0, depth - 1)
+        if depth == 0 and ch == "|":
+            if buf.strip():
+                out.append(buf.strip())
+            out.append("|")
+            buf = ""
+            continue
+        if ch.isspace() and depth == 0:
+            if buf.strip():
+                out.append(buf.strip())
+            buf = ""
+            continue
+        buf += ch
+    if buf.strip():
+        out.append(buf.strip())
+    return out
+
+
+def arg_cell(hint):
+    """One option per line. A single run-on string is unreadable at the width these hints
+    reach — task-create's is seven options long — and the reference exists to be scanned."""
+    hint = hint.strip().strip("\"'")
+    if not hint:
+        return "—"
+    parts = []
+    for tok in split_args(hint):
+        parts.append("or" if tok == "|" else "`" + tok.replace("|", "\\|") + "`")
+    return "<br>".join(parts)
+
+
 def render_commands():
     files = sorted((ROOT / "commands").glob("*.md"))
     claimed, lines = set(), []
@@ -94,7 +148,7 @@ def render_commands():
             hint = fm.get("argument-hint", "").strip().strip('"')
             lines.append(
                 f"| [`{p.stem}`]({REPO_URL}/blob/main/commands/{p.name}) "
-                f"| {'`' + cell(hint) + '`' if hint else '—'} "
+                f"| {arg_cell(hint)} "
                 f"| {cell(first_sentence(fm.get('description', '')))} |"
             )
         lines.append("")

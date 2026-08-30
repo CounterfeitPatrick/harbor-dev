@@ -18,7 +18,11 @@ HARBOR is not a code generator with a robotics prompt. Three design choices sepa
 
 **It is gated.** Each stage ends in an executable check that uses RL's own signals: does the environment import, do observations have the right shape, does the commanded pose match the achieved pose, does the reward decompose into terms that sum back to itself, do rendered frames actually differ from one another. A stage that cannot prove it worked does not advance.
 
+The effect is measurable rather than assumed. Removing the gates makes the pipeline *faster* and drops success from 48/50 to 41/50, while letting a silent render-path defect ship undetected.
+
 **It is centralized in planning, decentralized in execution.** Iterative stages fan out into isolated parallel trials, so ten reward candidates can train simultaneously without any of their tracebacks reaching the context that decides what to try next.
+
+And it accumulates. Append-only experience ledgers plus a library of 52 task specifications mean a new task is adapted from the closest prior one rather than designed from nothing — measured at an 8× speedup on a repeated reward design.
 
 ## What you need
 

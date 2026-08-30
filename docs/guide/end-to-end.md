@@ -27,6 +27,8 @@ distance under 5 cm. Then train PPO on it.
 
 HARBOR walks the chain and stops at the first gate that fails, leaving the workspace intact so you can inspect what happened and resume from there.
 
+`/harbor:task-create` runs its own pre-flight over stages 1–3 and dispatches whatever is missing, so pointing it at a fresh checkout works — you do not have to run the setup stages first, only to know that they happened.
+
 ## The explicit path
 
 ### 1. Environment
@@ -65,6 +67,8 @@ It is what makes the next stage benchmark-agnostic. Task authoring reads this fi
 
 **Gate:** none — the output is a guide, not an executable artifact. It is validated indirectly, by the section smokes that follow.
 
+Run it once per benchmark, not per task. Every task authored in that repository reads the same guide.
+
 ### 5. Author the task (§1–§5)
 
 ```text
@@ -76,6 +80,8 @@ It is what makes the next stage benchmark-agnostic. Task authoring reads this fi
 `task-generator` authors scene, actions, reset, termination, and observation, running that section's behavioral smoke after each and looping until it passes.
 
 **Gate:** one per section — collision solidity, actuator tracking, reset layout, one check/validation pair per success predicate, observation shape and finiteness. Several end in a [visual judgement](/guide/semantic-correctness).
+
+Before authoring anything, the orchestrator searches the task library for the closest prior task and passes it down as the design base. That is its only design act — §1–§5 decisions belong to the authoring agent, not to the thing dispatching it. Starting from the nearest of 52 existing task specifications is why a new task rarely starts from a blank file.
 
 Details in [authoring tasks](/guide/tasks).
 
@@ -90,6 +96,8 @@ The same command continues into the reward loop, or run it standalone against an
 `reward-tuning-agent` designs candidates — each a bounded §1–§5 task delta plus a complete reward — and dispatches one `reward-candidate-agent` per candidate to implement, smoke, train, render, and score it.
 
 **Gate:** `success_rate ≥ success_threshold`, measured by actual training rather than by inspection. The winning design is then promoted onto the source task and re-verified with its own smoke set.
+
+This is the only stage whose gate costs GPU hours, which is why everything before it is gated cheaply: each earlier check exists to keep a defect from being discovered here, where it looks like a reward problem and costs a training run to find.
 
 Details in [tuning rewards](/guide/rewards).
 
@@ -117,6 +125,8 @@ Artifacts land in `harbor/outputs/<algo>_<task>_<timestamp>/`: checkpoint, `metr
 
 One `rl-tuning-agent` per (task, algorithm) cell, each running an open-ended loop: default-config baseline, then a tricks pass, then log-driven hyperparameter edits, stopping when the running best is not beaten for N consecutive iterations. `/harbor:rl-sweep` is the fixed-grid alternative when you already know what you want to compare.
 
+`/harbor:rl-sweep` is the fixed-grid alternative — use it when you already know the comparison you want; use `rl-tune` when you do not.
+
 Details in [training and tuning](/guide/training).
 
 ## Resuming
@@ -124,6 +134,8 @@ Details in [training and tuning](/guide/training).
 Every stage writes its state to disk before advancing, so a chain that stops at stage 6 does not cost you stages 1–5. Re-running a completed stage is safe: `setup_uv.sh` is idempotent, and `/harbor:task-create` with `sections=` re-authors only what you name.
 
 This is what [artifact-centric](/guide/harness) means in practice — the workflow survives a killed agent, a resumed session, or a twelve-hour training job, because none of its state lives in a conversation.
+
+One asymmetry to keep in mind: killing the agent does not kill work it has already handed to something else. A submitted SLURM job outlives the agent that submitted it, which is why the jobid is written to disk — so it can be cancelled deliberately rather than orphaned.
 
 ## Next
 

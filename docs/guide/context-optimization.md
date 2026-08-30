@@ -53,6 +53,8 @@ Per-request usage is normally reported alongside each response, and that is all 
 
 Every principle below is a corollary of one of these.
 
+The two laws pull in opposite directions, which is why neither alone is a strategy. The carry law says read less; the wait law says do not go quiet. An agent that minimizes reads but sleeps through the cache TTL pays more than one that read too much and kept ticking — and the reverse is equally true. What the numbers below settle is *where* the crossover sits.
+
 ## Context management
 
 **Delegate to isolate context, not to parallelize.** HARBOR's `reward-tuning-agent` designs rewards but never implements them:
@@ -179,3 +181,19 @@ Note what is *absent*: the agent's own instructions are 12,342 tokens — 2% of 
 Roughly **3.5×**, with no change to what any agent decides, trains, or verifies — the same 28 checks, the same reward, the same policy. The candidate figure comes from replacing 1,723 polls with ~30 ticks; the task-generator figure from ticking its smokes and splitting §1–§5 into per-section contexts so §5 stops re-reading §1's debugging.
 
 The right-hand column is a projection, not a measurement — the polling and tick changes are in, the per-section split is not. And underneath it all sits a floor that no context work touches: 655k output tokens, the cost of actually thinking.
+
+## Where this shows up in the rest of the pipeline
+
+The laws are not advice held separately from the design; most of HARBOR's structural choices are them in another form.
+
+| Mechanism | Which law | What it buys |
+|---|---|---|
+| `reward-tuning-agent` never writing reward code | carry | Tracebacks and log tails stay in the candidate's context, not the designer's |
+| `task-analysis.md` split out of `task-history.md` | carry | Reward design reads the rationale without the validation tables — a third of the file |
+| One reference file per task section | carry | An agent authoring actions never loads the observation guide |
+| `<smoke>.verdict.json` | carry | A result is re-read as a small object rather than re-derived from the full output |
+| Rendering templates on disk | carry | ~200 tokens instead of ~50,000, for text no decision is made from |
+| Sentinel files + backgrounded waits | wait | A multi-hour run costs ticks, not a context rebuild per check |
+| `tune-state.json` checkpointing | wait | An interrupted loop resumes from disk instead of reconstructing itself |
+
+Read that list in reverse and it is also the answer to "why is this system built out of files": the artifact-centric design in [the harness](/guide/harness) is what makes the cheap option available. You cannot hand an agent a small view of state that only exists in its own transcript.

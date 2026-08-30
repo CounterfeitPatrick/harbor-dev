@@ -30,6 +30,8 @@ Visual judgement is not a final review pass. It is wired into the stages where a
 | Reward candidate | `render.mp4` → extracted `frames/` | What the trained policy *actually does*, written into the verdict as `behavior` |
 | Checkpoint render | `/harbor:rl-render` | Inference moved, and consecutive frames differ |
 
+Two properties make the table hold together. The frames come from a **fixed shared camera** — `smoke_s3_render`, `smoke_s6_render` and `render.py` all use the same framing on purpose, so layouts from different tasks, different attempts, and different reward candidates are comparable by eye rather than each inventing an angle. And the numeric half always runs first: a visual pass on a scene that failed its asserts is judging a broken simulation.
+
 The reward loop is where this matters most. A candidate's scorer owns every number — success rate, per-term curves, peak detection. What it cannot compute is what the robot is doing, so the candidate agent extracts frames from its own rollout and reports behavior in those terms. "Reward went up" is not a behavior. "The arm reaches the cube and hovers, gripper never closes" is — and it tells the designer that the next candidate needs a grasp term, which no curve would have said.
 
 ## "Looks correct" is not a validation
@@ -42,11 +44,23 @@ A visual pass ends in a written judgement, and the agents are required to record
 
 The distinction is enforceable. A specific claim can be contradicted by the frame it describes; a vague one cannot be wrong, which makes it worthless as evidence. This is the same reason [verdicts are machine truth](/guide/gates) — a check whose result cannot be disputed later is not a check.
 
+## What it costs
+
+Almost nothing, which is why it is everywhere rather than reserved for a final review. The frames are a by-product of a render the pipeline already performs, the extraction is `ffmpeg`, and the judgement is a handful of images the agent already has the ability to read.
+
+The expensive version of this check is the one that does not exist: discovering after a twelve-hour training run that the mug spawned inside the rack. §3's visual pass costs a few seconds and removes that class of failure before any GPU time is spent.
+
 ## Why the agent is the judge
 
 Frame differencing catches a frozen scene, and a scalar threshold catches a predicate that never fires. Neither can catch a scene that moves incorrectly, or a predicate that fires on the wrong state. That judgement needs a model that can look at a picture of a robot and say whether it is doing the task — which is precisely what a vision-capable agent is for, and is the one check in the pipeline with no deterministic substitute.
 
 Two rules keep it honest. The agent must open the images itself rather than infer from the numeric verdict beside them — a green assertion next to a wrong-looking frame means the assertion is measuring the wrong thing, and that is a finding, not a pass. And when a training run peaked and collapsed, the rendered checkpoint is the best one rather than the last, so the behavior report has to say which policy was actually watched. Conflating them misreports what the reward produced.
+
+## Where it does not apply
+
+The video is one environment — env 0, with a follow-cam for locomotion — so nothing about cross-episode variance is observable from it. A question like "does this succeed in most episodes or one in ten?" belongs to `success_rate`, computed from `metrics.jsonl` across every environment, not to the frames. Asking the visual pass for it would produce a confident guess, which is the one output this check must never generate.
+
+That boundary is why the analysis schema accepts explicit uncertainty. "Unclear: only the arm is in frame" is a valid answer, and a schema with no way to say it would manufacture something worse.
 
 ## Related
 

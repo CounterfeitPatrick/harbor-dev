@@ -1,7 +1,7 @@
 ---
 description: >-
   Author a NEW task or surgically edit an EXISTING task in a benchmark repo. Pre-flight verifies the dependency-generator → benchmark-generator → rl-integration-generator chain in sequence and dispatches any missing stage first (rl-integration defaults to the custom_torch algorithm source unless the user specifies one). Then reads <repo>/harbor/create-task/task-implementation.md and orchestrates: task-generator (§1–§5, per-section smokes) → the /harbor:reward-tune training loop for §6 (reward-tuning-agent iterations validated by ACTUAL training until success_rate ≥ threshold) §7 DR is COMING SOON — dr-generator is never dispatched in this release. Also supports REPRODUCE mode via `from=<path>` (a per-task spec emitted by /harbor:probe-task) — rebuilds the task identically including reward / DR / observation / action code (reproduce §6 is pasted verbatim at iter 0 of the same reward-tune loop, then validated by actual training like any other reward). Use when the user types /harbor:task-create name=<TaskID> description="..." [sections=<list>] [assets=<paths>] | /harbor:task-create name=<TaskID> from=<path>, or asks "create a new task", "scaffold a task called X", "reproduce task Y from this spec", "edit only the action/reward/observation of task X".
-argument-hint: 'name=<TaskID> (description="<spec>" | from=<spec.md>) [sections=<comma-list of 1..7>] [assets=<path1,path2,...>] [algorithm=<ppo|sac|td3>] [timesteps_per_iter=N] [success_threshold=0.5]'
+argument-hint: 'name=<TaskID> (description="<spec>" | from=<spec.md>) [sections=<comma-list of 1..6>] [assets=<path1,path2,...>] [algorithm=<ppo|sac|td3>] [timesteps_per_iter=N] [success_threshold=0.5]'
 ---
 
 # /harbor:task-create — Author or Edit a Task
