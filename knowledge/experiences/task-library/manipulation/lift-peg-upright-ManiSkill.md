@@ -2,6 +2,8 @@
 
 - robot: Franka Panda (default; Fetch also supported)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: two-color box peg, table
+- bimanual: false
 
 ManiSkill task: move a peg lying flat on the table into an upright orientation. Subclasses `mani_skill.envs.sapien_env.BaseEnv`; registered with `@register_env("LiftPegUpright-v1", max_episode_steps=50)`. Robots supported: `panda` (default), `fetch`.
 
@@ -333,10 +335,3 @@ def is_grasping(self, object: Actor, min_force=0.5, max_angle=85):
 
 ---
 
-## Source files (relative to source_repo)
-
-- `mani_skill/envs/tasks/tabletop/lift_peg_upright.py:1-145` — full task (registration, scene, reset, evaluate, obs, reward)
-- `mani_skill/utils/building/actors/common.py:230-261` — `build_twocolor_peg`
-- `mani_skill/agents/robots/panda/panda.py:16-265` — Panda controller configs, keyframe, `is_grasping`
-- `mani_skill/envs/sapien_env.py:195-309,389-390` — default obs_mode/control_mode resolution + `_default_sim_config = SimConfig()`
-- `mani_skill/utils/structs/types.py:SimConfig` — default `sim_freq=100`, `control_freq=20`

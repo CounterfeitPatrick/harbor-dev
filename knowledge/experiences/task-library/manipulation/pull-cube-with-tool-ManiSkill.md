@@ -2,6 +2,8 @@
 
 - robot: Franka Panda (default; Fetch also supported)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: cube, L-shaped tool, table
+- bimanual: false
 
 ---
 
@@ -408,11 +410,3 @@ No `startup`/`interval` randomization (no SAPIEN equivalent of an IsaacLab `Even
 
 ---
 
-## Source files (relative to source_repo)
-- `mani_skill/envs/tasks/tabletop/pull_cube_tool.py:1-283`  # entire task env (registration, scene, reset, evaluate, obs, reward)
-- `mani_skill/envs/sapien_env.py`                            # BaseEnv (obs_mode/control_mode/reward_mode plumbing, robot loading from robot_uids)
-- `mani_skill/agents/robots/panda/panda.py`                  # Panda agent: controller configs (pd_joint_delta_pos default), tcp, is_grasping
-- `mani_skill/utils/scene_builder/table/table_scene_builder.py`  # TableSceneBuilder (table + robot home qpos + qpos noise)
-- `mani_skill/utils/building/actors/common.py`               # actors.build_cube (re-exported via mani_skill.utils.building.actors)
-- `mani_skill/envs/utils/randomization/pose.py`              # random_quaternions (re-exported via mani_skill.envs.utils.randomization)
-- `mani_skill/agents/base_agent.py`                          # is_grasping (base agent method, inherited by Panda/Fetch)

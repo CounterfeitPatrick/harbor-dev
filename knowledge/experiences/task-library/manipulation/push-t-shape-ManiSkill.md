@@ -2,6 +2,8 @@
 
 - robot: Franka Panda with stick end-effector (`panda_stick`)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: T-shaped block, T target marker, white table
+- bimanual: false
 
 A simulated version of the real-world push-T task from Diffusion Policy. The robot uses a stick end-effector (`panda_stick`) to precisely push a T-shaped block so that it covers ≥90% of a fixed target-T region on the table. Success is coverage-only (the "PushT-easy" variant — the ee end-zone return is not enforced by `evaluate()`).
 
@@ -579,7 +581,3 @@ Expected: finite scalar reward in roughly `[0, 1.05]` (3.0 only on success).
 
 ---
 
-## Source files (relative to source_repo)
-- `mani_skill/envs/tasks/tabletop/push_t.py:1-539` — full env: registration, `WhiteTableSceneBuilder`, scene, controllers-via-default, reset, evaluate, pseudo-render, obs, reward.
-- `mani_skill/agents/robots/panda/panda_stick.py:1-180` — `PandaStick` agent: urdf, rest keyframe, arm joints, `_controller_configs` (default `pd_joint_delta_pos`), `tcp = panda_hand_tcp`.
-- `mani_skill/utils/scene_builder/table/__init__.py` (via `TableSceneBuilder`) — base table/floor/lights that `WhiteTableSceneBuilder` extends.

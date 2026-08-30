@@ -2,6 +2,8 @@
 
 - robot: Franka Panda (default; Fetch / xArm6-Robotiq / SO100 / WidowXAI also supported)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: red cube, green goal sphere, table
+- bimanual: false
 
 > ManiSkill maps the IsaacLab §1..§7 sections onto methods of a single `BaseEnv` subclass (`PickCubeEnv`) rather than onto manager Cfg dataclasses. The mapping used below:
 > - §1 = `@register_env` + `SUPPORTED_ROBOTS` + `__init__`/cfg + `_load_agent` + `_load_scene` + sim/scene/camera config
@@ -464,11 +466,3 @@ No physical-property / actuator / mass / friction domain randomization. The only
 
 ---
 
-## Source files (relative to source_repo)
-- `mani_skill/envs/tasks/tabletop/pick_cube.py:33-191` — `PickCubeEnv` (§1 register/scene, §3 reset, §4 evaluate, §5 obs, §6 reward)
-- `mani_skill/envs/tasks/tabletop/pick_cube_cfgs.py:6-70` — `PICK_CUBE_CONFIGS` per-robot geometry/camera (§1)
-- `mani_skill/agents/robots/panda/panda.py:16-289` — Panda agent: controllers (§2), `is_grasping`/`is_static` (§4), `tcp_pose` (§5/§6)
-- `mani_skill/agents/base_agent.py:339-347` — default proprioception obs (§5)
-- `mani_skill/envs/sapien_env.py:286-308,546-560` — default obs_mode/control_mode resolution + `_get_obs_state_dict`/`_get_obs_agent` (§5)
-- `mani_skill/envs/utils/randomization/pose.py:13-34` — `random_quaternions` (§3)
-- `mani_skill/utils/scene_builder/table/scene_builder.py:16-57` — TableSceneBuilder (table top z=0, robot reset) (§1/§3)

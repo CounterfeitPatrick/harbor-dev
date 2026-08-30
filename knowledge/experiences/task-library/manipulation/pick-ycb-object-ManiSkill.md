@@ -2,6 +2,8 @@
 
 - robot: Franka Panda with wrist camera (`panda_wristcam`; Panda / Fetch also supported)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: random YCB object, green goal sphere, table
+- bimanual: false
 
 ---
 
@@ -411,14 +413,6 @@ Helpers used: `info["is_grasped"]`, `info["is_obj_placed"]`, `info["success"]` (
 No physics-parameter / friction / mass / observation-noise randomization is configured.
 
 ---
-
-## Source files (relative to source_repo)
-
-- `mani_skill/envs/tasks/tabletop/pick_single_ycb.py:1-260`  — full env (§1 registration+scene, §3 reset, §4 evaluate, §5 obs, §6 reward).
-- `mani_skill/agents/robots/panda/panda.py:53-218`  — Panda joint names, gains, `keyframes.rest`, controller configs (§2).
-- `mani_skill/agents/robots/panda/panda_wristcam.py:1-31`  — `panda_wristcam` uid + URDF + wrist camera (§1 default robot).
-- `mani_skill/agents/base_agent.py:109-115,339-346`  — default control mode = first controller key; `get_proprioception` = qpos+qvel(+controller state) (§2/§5).
-- `mani_skill/envs/sapien_env.py:124,287,655-669`  — `SUPPORTED_OBS_MODES` default `state`; reward-mode dispatch to `compute_*_dense_reward` (§5/§6).
 
 ## Reproduce
 

@@ -2,6 +2,8 @@
 
 - robot: Franka Emika Panda (7 DoF arm + parallel gripper)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: cabinet with drawers, table
+- bimanual: false
 
 Manager-based RL task: a Franka Panda arm must reach, align with, grasp, and pull open the **top drawer** of an articulated Sektion cabinet. The manipulated object is an `ArticulationCfg` (the cabinet) whose `drawer_top_joint` is the controlled DOF; `FrameTransformerCfg`s track the gripper TCP/fingertips and the drawer handle. Reward is a 9-term sum implementing a staged approach → align → grasp → open curriculum.
 
@@ -718,18 +720,3 @@ Domain randomization is limited to **startup** physics-material randomization on
 
 ---
 
-## Source files (relative to source_repo)
-
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/cabinet/config/franka/__init__.py:18-28`  # §1 gym.register
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/cabinet/config/franka/joint_pos_env_cfg.py:23-82`  # §1 robot+ee_frame, §2 actions, §6 reward param overrides
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/cabinet/cabinet_env_cfg.py:33-279`  # §1 scene+env, §2 ActionsCfg, §3 reset, §4 termination, §5 obs, §6 RewardsCfg, §7 DR
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/cabinet/mdp/rewards.py:1-164`  # §6 all reward funcs (verbatim)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/cabinet/mdp/observations.py:28-33`  # §5 rel_ee_drawer_distance
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/cabinet/mdp/__init__.py:8-11`  # inherits isaaclab.envs.mdp.* (joint_pos_rel, last_action, action_rate_l2, time_out, reset_*, randomize_rigid_body_material)
-- `source/isaaclab_assets/isaaclab_assets/robots/franka.py:26-72`  # FRANKA_PANDA_CFG
-
-### Asset paths (remote NVIDIA Nucleus — not on local disk; resolved by env at boot)
-- Robot USD: `{ISAACLAB_NUCLEUS_DIR}/Robots/FrankaEmika/panda_instanceable.usd`
-- Cabinet USD: `{ISAAC_NUCLEUS_DIR}/Props/Sektion_Cabinet/sektion_cabinet_instanceable.usd`
-
-WARN: §1 build smoke not captured this run (`pxr`/Isaac Sim core not importable in `.venv`); `observation_space`/`action_space` shapes (31 / 8) are analytically resolved from the obs term dims and action joint groups, not from a live `gym.make`.

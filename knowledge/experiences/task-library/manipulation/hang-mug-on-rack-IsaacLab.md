@@ -1,15 +1,11 @@
 # IsaacLab-Franka-HangMug — Implementation Spec
 
-- benchmark_family: `isaaclab-manager-based`
-- source_repo: `IsaacLab`
-- probed_from_commit: `090aed18163b2194d5551c7919f7539283677743`
-- probed_at: `2026-08-15T22:05:26+02:00`
-- canonical_build: `obs=Dict('policy': Box(-inf, inf, (2, 32), float32))  act=Box(-inf, inf, (2, 4), float32)` (measured at `num_envs=2`; obs dim = 32, action dim = 4)
+- robot: Franka Emika Panda (7 DoF arm + parallel gripper)
+- simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: mug, single-peg mug rack, lab table
+- bimanual: false
 
-> **NOTE — the build smoke in `/harbor:probe-task` is wrong for this family.**
-> `gym.make('<task>')` with no `cfg` fails with `TypeError: ManagerBasedRLEnv.__init__() missing 1 required positional argument: 'cfg'` for **every** IsaacLab manager-based task, including the canonical `Isaac-Cartpole-v0`. Use the `parse_env_cfg` form below instead.
-
-Correct build form:
+Build form — `gym.make('<task>')` with no `cfg` raises `TypeError: ManagerBasedRLEnv.__init__() missing 1 required positional argument: 'cfg'` for every IsaacLab manager-based task, so build through `parse_env_cfg`:
 
 ```python
 from isaaclab_tasks.utils import parse_env_cfg
@@ -17,9 +13,6 @@ from isaaclab_tasks.utils import parse_env_cfg
 cfg = parse_env_cfg("IsaacLab-Franka-HangMug", device="cuda:0", num_envs=2)
 env = gym.make("IsaacLab-Franka-HangMug", cfg=cfg)
 ```
-
-> **NOTE — this task is NOT listed in `harbor/benchmark-generator/benchmark-spec.json:tasks[]`.**
-> That file currently lists only `Isaac-Cartpole-v0` (it was captured before this task existed). `IsaacLab-Franka-HangMug` builds and trains regardless — registration is by the `isaaclab_tasks` package walker, not by the spec file. Do not treat the absence as a missing task.
 
 > **NOTE — the repo carries a modified `RewardManager`.** `source/isaaclab/isaaclab/managers/reward_manager.py` has harbor's dt-strip applied: `value = func(...) * weight` (no `* dt`) and `_step_reward[:, i] = value` (no `/ dt`). **All §6 weights below are nominal PER-STEP magnitudes, not per-second.** Reproducing §6 on a stock IsaacLab (`* dt`, dt = 0.05) divides every term by 20 and destroys the ladder's calibration against the sparse landmarks. Apply the dt-strip or multiply every weight by 20.
 
@@ -1747,31 +1740,3 @@ The hook for a future §7 is already wired: `ObservationsCfg.PolicyCfg.__post_in
 
 ---
 
-## Source files (relative to source_repo)
-
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/hang_mug/__init__.py:1-3` — package init, re-exports `mdp`
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/hang_mug/hang_mug_env_cfg.py:1-226` — SceneCfg, ActionsCfg, ObservationsCfg, EventCfg, RewardsCfg, TerminationsCfg, EnvCfg (§1–§6)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/hang_mug/config/__init__.py:1` — per-robot package docstring
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/hang_mug/config/franka/__init__.py:1-19` — `gym.register` for both task ids (§1)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/hang_mug/config/franka/joint_pos_env_cfg.py:1-218` — Franka articulation, mug, rack, frame transformers, action stack, `TABLE_SURFACE_Z` (§1, §2)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/hang_mug/mdp/__init__.py:1-9` — star-imports stock `isaaclab.envs.mdp` + the task-local modules
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/hang_mug/mdp/geometry.py:1-109` — baked mug/rack constants + frame helpers (§1, feeds §4/§5/§6)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/hang_mug/mdp/actions.py:1-123` — `EMACumulativeDeltaPositionAction` (§2)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/hang_mug/mdp/actions_cfg.py:1-31` — its cfg (§2)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/hang_mug/mdp/terminations.py:1-122` — `mug_on_peg`, `gripper_clear_of_mug`, `hung_but_gripper_holding`, `hang_success` (§4)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/hang_mug/mdp/observations.py:1-106` — the five task-local obs funcs (§5)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/hang_mug/mdp/rewards.py:1-235` — latch buffers, helpers, 9 reward funcs (§6)
-- `source/isaaclab/isaaclab/managers/reward_manager.py:147-160` — harbor dt-strip (uncommitted working-tree change; see the top-level NOTE)
-- `harbor/assets/mug_rack/prepare_meshes.py:1-126` — the mesh bake; `MUG_SCALE=0.80`, `RACK_SCALE=1.15` (overridden to 1.0 on the command line)
-- `harbor/assets/mug_rack/geometry.json` — measured geometry of the shipped bake (reproduced verbatim in §1)
-- `harbor/assets/mug_rack/{mug,rack}.coacd.json` — CoACD params, source sha256, part lists
-- `harbor/assets/mug_rack/{mug,rack}.build.json` — USD build receipts (`parts`, `collider_prims`, `approximations`)
-- `harbor/assets/mug_rack/{mug,rack}.usd`, `{mug,rack}.obj`, `{mug,rack}_coacd/part_*.obj` — the shipped assets (binary/geometry; paths only)
-- `harbor/assets/table/lab_table_instanceable_colored_rotated.usd` — the shared table (path only)
-- `harbor/create-task/isaaclab-franka-hangmug/task-history.md:160-236` — §1 analysis, scale-selection rationale, home-pose derivation
-- `harbor/create-task/isaaclab-franka-hangmug/iter_000/design.json` — the §6 design + `budget_rationale` (quoted verbatim in §6)
-- `harbor/create-task/isaaclab-franka-hangmug/spec.json` — phase receipts, reward-tune verdict, `post_hoc_physics_check` A/B
-- `harbor/create-task/isaaclab-franka-hangmug/test-checklist.md` — all 28 checks that ran, with verdicts
-- `harbor/create-task/isaaclab-franka-hangmug/smokes/*.py` + `*.verdict.json` — §1–§5 smokes and their passing stdout
-- `harbor/create-task/isaaclab-franka-hangmug/iter_000/smokes/smoke_s6.py` + `.verdict.json` — the §6 reward-decomposition smoke
-- `harbor/create-task/isaaclab-franka-hangmug/base/**` — pre-reward-tune snapshot of the task tree (reference only; the live task is under `source/`)

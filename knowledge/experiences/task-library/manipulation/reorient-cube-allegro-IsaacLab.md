@@ -2,6 +2,8 @@
 
 - robot: Allegro hand (16 DoF, fixed in air, no arm)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: cube, goal-pose cube marker
+- bimanual: false
 
 This is the **in-hand cube reorientation** task: a *fixed* Allegro hand (16-DoF, gravity disabled on the hand bodies) must reorient a free-floating cube resting in its palm to a commanded goal orientation. There is no arm and no base — the hand never translates. The goal is an orientation-only command (constant position, sampled quaternion); on each success the goal is immediately resampled, so a single episode chains many consecutive reorientations. The task has rich domain randomization (friction, mass, actuator gains) and Gaussian observation noise.
 
@@ -24,7 +26,7 @@ Registers `Isaac-Repose-Cube-Allegro-v0` (and `-Play-v0`, `-NoVelObs-v0`, `-NoVe
 - Sim: `dt = 1/120`, `decimation = 4` (control @ 30 Hz), `episode_length_s = 20.0`, `render_interval = decimation`. PhysX `bounce_threshold_velocity=0.2`, `gpu_max_rigid_contact_count=2**20`, `gpu_max_rigid_patch_count=2**23`. Default scene material: static/dynamic friction = 1.0.
 - Viewer eye `(2.0, 2.0, 2.0)`.
 
-### Resolved asset paths (relative to source_repo)
+### Resolved asset paths
 - Robot USD: `{ISAAC_NUCLEUS_DIR}/Robots/WonikRobotics/AllegroHand/allegro_hand_instanceable.usd` where `ISAAC_NUCLEUS_DIR = {NUCLEUS_ASSET_ROOT_DIR}/Isaac` (remote Nucleus / S3 asset root — not on local disk; resolved at runtime).
 - Cube USD: `{ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd` (remote Nucleus).
 - Goal marker USD: same DexCube USD (used as a visualization-only marker, see §4).
@@ -936,22 +938,3 @@ Per the §7 contract: build env once with DR ON and once with all startup DR ter
 
 ---
 
-## Source files (relative to source_repo)
-
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/inhand/config/allegro_hand/__init__.py:18-28` — `gym.register` for `Isaac-Repose-Cube-Allegro-v0` (+ Play / NoVelObs variants).
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/inhand/config/allegro_hand/allegro_env_cfg.py:16-25` — `AllegroCubeEnvCfg` (robot swap to Allegro, clone_in_fabric).
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/inhand/inhand_env_cfg.py:33-347` — abstract base: SceneCfg, CommandsCfg, ActionsCfg, ObservationsCfg, EventCfg (reset + startup DR), RewardsCfg, TerminationsCfg, InHandObjectEnvCfg.
-- `source/isaaclab_assets/isaaclab_assets/robots/allegro.py:29-67` — `ALLEGRO_HAND_CFG`.
-- `source/isaaclab/isaaclab/envs/mdp/actions/actions_cfg.py:110-152` — `JointPositionToLimitsActionCfg` / `EMAJointPositionToLimitsActionCfg`.
-- `source/isaaclab/isaaclab/envs/mdp/actions/joint_actions_to_limits.py:29-293` — `JointPositionToLimitsAction` / `EMAJointPositionToLimitsAction`.
-- `source/isaaclab_tasks/.../inhand/mdp/events.py:22-185` — `reset_joints_within_limits_range`.
-- `source/isaaclab_tasks/.../inhand/mdp/commands/commands_cfg.py:17-67` — `InHandReOrientationCommandCfg`.
-- `source/isaaclab_tasks/.../inhand/mdp/commands/orientation_command.py:26-146` — `InHandReOrientationCommand`.
-- `source/isaaclab_tasks/.../inhand/mdp/rewards.py:21-97` — `success_bonus`, `track_pos_l2`, `track_orientation_inv_l2`.
-- `source/isaaclab_tasks/.../inhand/mdp/observations.py:21-39` — `goal_quat_diff`.
-- `source/isaaclab_tasks/.../inhand/mdp/terminations.py:19-84` — `max_consecutive_success`, `object_away_from_goal`, `object_away_from_robot`.
-- `source/isaaclab_tasks/.../inhand/mdp/__init__.py:1-15` — re-exports stock isaaclab mdp + task-local commands/events/observations/rewards/terminations.
-
-### Notes / WARN
-- `canonical_build` was not captured live: the IsaacLab app booted headless and progressed through scene construction, but the build-smoke print was not reached within the probe's Isaac-boot budget. Dims are analytically resolved from the obs/action term definitions (72 / 16) and are reliable. Re-run the §1 smoke against a GPU to capture the literal `observation_space` / `action_space` line.
-- Robot and goal-marker USDs live on the remote Isaac Nucleus/S3 asset root (`ISAAC_NUCLEUS_DIR`), not on local disk — they resolve at runtime, so no local path check was possible.

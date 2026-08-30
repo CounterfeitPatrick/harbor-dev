@@ -2,6 +2,8 @@
 
 - robot: Unitree G1 bipedal humanoid (37 DoF, hand-equipped)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: none (flat terrain)
+- bimanual: false
 
 > **CAVEAT:** All dims / counts below are **ANALYTIC** from reading the source (not build-verified here).
 > This captures the DESIGN for reproduction / adaptation, not a runtime trace.

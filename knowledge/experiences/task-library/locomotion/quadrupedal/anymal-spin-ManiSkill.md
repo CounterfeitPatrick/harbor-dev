@@ -2,6 +2,8 @@
 
 - robot: ANYbotics ANYmal-C quadruped (12 DoF)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: none (flat ground plane)
+- bimanual: false
 
 ManiSkill task: the Anymal-C quadruped (12 leg DoF) must spin in place about its vertical (yaw/z) axis as fast as possible. Reward is the base yaw angular velocity, minus stability/control penalties; a large terminal penalty applies if the body falls.
 
@@ -366,8 +368,3 @@ Expected: `True` (reward finite); composer = sum (after asset download).
 
 ---
 
-## Source files (relative to source_repo)
-- `mani_skill/envs/tasks/quadruped/quadruped_spin.py:1-149` — `QuadrupedSpinEnv` base + `@register_env("AnymalC-Spin-v1")` `AnymalCSpinEnv` (scene, sim cfg, reset, evaluate, obs_extra, reward).
-- `mani_skill/agents/robots/anymal/anymal_c.py:1-116` — `ANYmalC` agent: URDF path, 12 joint names, standing keyframe, `_controller_configs` (pd_joint_delta_pos / pd_joint_pos), `is_fallen` / `is_standing`.
-- `mani_skill/envs/sapien_env.py:124,128,546-560` — `SUPPORTED_OBS_MODES` / `SUPPORTED_REWARD_MODES`, `_get_obs_state_dict` / `_get_obs_agent` / base `_get_obs_extra`.
-- `mani_skill/agents/base_agent.py:339-347` — `get_proprioception` (qpos + qvel + optional controller state).

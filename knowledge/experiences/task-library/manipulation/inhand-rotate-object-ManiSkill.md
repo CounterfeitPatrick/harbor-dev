@@ -2,6 +2,8 @@
 
 - robot: Allegro right hand with FSR touch links (16 DoF, fixed base)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: single dynamic object (cube or YCB object by level), table
+- bimanual: false
 
 > **One env class, 4 levels.** `RotateSingleObjectInHand(BaseEnv)` is the shared base. The four registered ids (`Level0..3-v1`) are thin subclasses that pass a single `difficulty_level` int (0/1/2/3) and otherwise share identical noise (`robot_init_qpos_noise=0.02`, `obj_init_pos_noise=0.02`). **Level1 sets `difficulty_level=1`**, which selects a *size-randomized white box* (each parallel env gets an independently sampled half-size). Everything else below is the shared base behavior; per-level deltas are called out inline.
 
@@ -497,13 +499,6 @@ Expected: `True`.
 `<no DR>` — there are no `startup` / `interval` randomization hooks. The only per-episode variation is in `_initialize_episode` (reset-time): object position Gaussian noise (`obj_init_pos_noise=0.02`), `TableSceneBuilder`'s `robot_init_qpos_noise=0.02`, and — the defining Level1 feature — per-env box half-size randomization (`(randn()*0.1+1)*0.04`) sampled once at build via `_batched_episode_rng`. No friction/mass/gravity/visual randomization, no observation noise (`obs_mode="state"`, no noise terms).
 
 ---
-
-## Source files (relative to source_repo = ManiSkill)
-- `mani_skill/envs/tasks/dexterity/rotate_single_object_in_hand.py:24-387` — base env + 4 level subclasses (all sections).
-- `mani_skill/agents/robots/allegro_hand/allegro.py:16-156` — AllegroHandRight (joints, gains, controllers, proprioception).
-- `mani_skill/agents/robots/allegro_hand/allegro_touch.py:17-155` — AllegroHandRightTouch (FSR touch links, `fsr_impulse` obs).
-- `mani_skill/envs/sapien_env.py:121-313` — BaseEnv defaults (SUPPORTED_OBS_MODES, default obs/control mode selection).
-- `mani_skill/utils/structs/types.py:84-87` — default `sim_freq=100`, `control_freq=20`.
 
 ## Self-verification
 - §1 build smoke PASSED on this host: `OBS Box(-inf, inf, (1, 105), float32)`, `ACT Box(-1.0, 1.0, (16,), float32)`.

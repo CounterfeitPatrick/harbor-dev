@@ -2,6 +2,8 @@
 
 - robot: Two Franka Panda arms with wrist cameras (`panda_wristcam` x2, multi-agent)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: blue cubeA, green cubeB, target marker, table
+- bimanual: true
 
 > Family note: ManiSkill tasks subclass `mani_skill.envs.sapien_env.BaseEnv` and self-register via `@register_env(id, max_episode_steps=...)`. There is **no** IsaacLab manager-based `*Cfg` split (no `ActionsCfg`/`ObservationsCfg`/`RewardsCfg`/`EventCfg`). All seven sections map onto `BaseEnv` method overrides:
 > - §1 → `@register_env` + `SUPPORTED_ROBOTS` + `_load_agent` + `_load_scene` + `_default_sim_config`/`_default_sensor_configs`
@@ -99,7 +101,7 @@ class TwoRobotStackCube(BaseEnv):
         return self.agent.agents[1]
 ```
 
-**Asset paths (resolved, relative to source_repo).**
+**Asset paths (resolved).**
 - Table mesh: `mani_skill/utils/scene_builder/table/assets/table.glb` (built via `TableSceneBuilder`; top surface at z=0, `add_box_collision`).
 - Panda URDF: `<PACKAGE_ASSET_DIR>/robots/panda/panda_v3.urdf` (per `PandaWristCam.urdf_path`).
 - Cubes + target: procedurally built (no external mesh) via `mani_skill.utils.building.actors.build_cube` / `build_red_white_target`.
@@ -430,14 +432,3 @@ Expected: finite reward in ≈ [0, 1] (normalized).
 
 ---
 
-## Source files (relative to source_repo)
-
-- `mani_skill/envs/tasks/tabletop/two_robot_stack_cube.py:21-296` — full env (registration, scene, reset, evaluate, obs, reward).
-- `mani_skill/agents/multi_agent.py:57-93` — `MultiAgent` controller/action-space aggregation (Dict keyed by uid).
-- `mani_skill/agents/robots/panda/panda.py:18,186-217,237` — Panda `uid`, controller registry (`pd_joint_delta_pos` default), `is_grasping`.
-- `mani_skill/agents/robots/panda/panda_wristcam.py:11-40` — `PandaWristCam` (uid `panda_wristcam`, `panda_v3.urdf`, hand_camera).
-- `mani_skill/agents/base_agent.py:109-114,251-257` — default-control-mode resolution (first controller key).
-- `mani_skill/envs/sapien_env.py:300-310` — reward/control-mode init; `control_mode="*"` unsupported.
-- `mani_skill/utils/scene_builder/table/scene_builder.py:17-42` — `TableSceneBuilder` (table.glb, top at z=0).
-- `mani_skill/utils/building/actors/common.py:70,169` — `build_cube`, `build_red_white_target`.
-- `mani_skill/envs/utils/randomization/pose.py:13` — `random_quaternions`.

@@ -2,6 +2,8 @@
 
 - robot: Unitree G1 bipedal humanoid (37 DoF, hand-equipped)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: none (flat terrain)
+- bimanual: false
 
 This is an UPSTREAM IsaacLab manager-based **bipedal locomotion** task: Unitree **G1** humanoid tracking a commanded base velocity (`lin_vel_x`, `lin_vel_y`, `ang_vel_z`) on **flat** ground. `G1FlatEnvCfg` subclasses `G1RoughEnvCfg` (config/g1/flat_env_cfg.py), which subclasses the abstract `LocomotionVelocityRoughEnvCfg` (velocity_env_cfg.py). The flat subclass swaps terrain to a plane, removes the height scanner + height-scan obs + terrain curriculum, and retunes a few reward weights / command ranges.
 
@@ -696,15 +698,3 @@ G1 DR disables (rough_env_cfg.py:115-130, inherited by flat):
 
 ---
 
-## Source files (relative to source_repo)
-
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/g1/__init__.py:38-59`  # Flat-G1 gym.register
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/g1/flat_env_cfg.py:1-57`  # G1FlatEnvCfg: flat terrain, reward/command overrides
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/g1/rough_env_cfg.py:1-182`  # G1Rewards + G1RoughEnvCfg (scene/reset/DR/term overrides)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/velocity_env_cfg.py:1-330`  # abstract base: Scene/Commands/Actions/Obs/Events/Rewards/Terminations/EnvCfg
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/mdp/rewards.py:27-119`  # task-local reward funcs (biped air-time, feet_slide, yaw-frame trackers)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/mdp/__init__.py:1-13`  # re-exports isaaclab.envs.mdp.* + local rewards/terminations/curriculums
-- `source/isaaclab/isaaclab/envs/mdp/rewards.py:37,77,84,91,137,168,180,189,252,267`  # builtin reward funcs
-- `source/isaaclab/isaaclab/envs/mdp/terminations.py:31,154`  # time_out, illegal_contact
-- `source/isaaclab_assets/isaaclab_assets/robots/unitree.py:272-385`  # G1_CFG / G1_MINIMAL_CFG ArticulationCfg
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/g1/agents/rsl_rl_ppo_cfg.py:12-47`  # G1FlatPPORunnerCfg (24 steps/env, 1500 iters)

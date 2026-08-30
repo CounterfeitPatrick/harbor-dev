@@ -2,6 +2,8 @@
 
 - robot: Franka Emika Panda (gripper forced closed, used as a flat pusher)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: block, target marker, lab table
+- bimanual: false
 
 This is a **non-prehensile planar push** task. A Franka Panda (gripper forced closed, used as a flat pusher) must push a small DexCube block across a table to a commanded 2-D goal position. Absolute joint-position control on the 7 arm joints; the goal is a `UniformPoseCommand` resampled every 4 s; success = block within 5 cm of the goal (logging-only). Modeled on `manipulation/lift` but planar (no lift gate, no `ee_frame` FrameTransformer).
 
@@ -608,12 +610,3 @@ def block_at_goal(
 
 ---
 
-## Source files (relative to source_repo)
-
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/push/config/franka/__init__.py:1-33` — gym.register (§1)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/push/config/franka/joint_pos_env_cfg.py:1-77` — robot/object/action/command wiring + Play variant (§1/§2/§4)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/push/push_env_cfg.py:1-271` — SceneCfg, CommandsCfg, ActionsCfg, ObservationsCfg, EventCfg (reset + DR), RewardsCfg, TerminationsCfg, EnvCfg (§1/§3/§4/§5/§6/§7)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/push/mdp/rewards.py:1-88` — object_ee_distance_body, block_to_goal_distance, block_at_goal (§6)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/push/mdp/observations.py:1-31` — object_position_in_robot_root_frame (§5)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/push/mdp/__init__.py:1-12` — re-exports `isaaclab.envs.mdp.*` + local observations/rewards
-- `source/isaaclab_assets/isaaclab_assets/robots/franka.py:26-72` — FRANKA_PANDA_CFG (§1)

@@ -2,6 +2,8 @@
 
 - robot: Bimanual UF850 arms + dual Allegro hands (44 DoF)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: drawer, rigid object, table
+- bimanual: true
 
 This spec captures the design of bimanual_suite `InsertDrawerEnv-v0`. This InsertDrawer is the original from which IsaacLab's `dex_grasp` / `dex_pickplace` tasks were vendored (the right-robot half: USD, init pose, actuator gain groups, EMA cumulative-relative action).
 

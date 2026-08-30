@@ -2,6 +2,8 @@
 
 - robot: Franka Panda
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: ball, goal region, table
+- bimanual: false
 
 > ManiSkill maps to the §1..§7 sections as: §1 = `@register_env` + `SUPPORTED_ROBOTS` + `_load_agent` + `_load_scene` + sim cfg; §2 = controller / control_mode + action space; §3 = `_initialize_episode`; §4 = `evaluate()` + `max_episode_steps`; §5 = `_get_obs_extra` + obs modes; §6 = `compute_dense_reward` / `compute_normalized_dense_reward`; §7 = domain randomization.
 
@@ -334,10 +336,3 @@ The only stochasticity is episode-initialization randomization (§3): ball xy an
 
 ---
 
-## Source files (relative to source_repo)
-
-- `mani_skill/envs/tasks/tabletop/roll_ball.py:1-182` — full `RollBallEnv` (registration, scene, reset, evaluate, obs, reward).
-- `mani_skill/envs/sapien_env.py` — `BaseEnv` (obs assembly, control_mode resolution, obs_mode_struct).
-- `mani_skill/utils/scene_builder/table/__init__.py` — `TableSceneBuilder` (table + floor; z=0 surface).
-- `mani_skill/agents/robots/panda` — Panda agent (controller configs → `pd_joint_delta_pos`, tcp link).
-- `mani_skill/utils/building/actors.py` — `build_sphere`, `build_red_white_target`.

@@ -68,12 +68,16 @@ If the user's text already opens with a bold gist, keep it; otherwise synthesize
 
 ### B1 — Validate it's a probe-task spec
 
-The file MUST look like a probe-task implementation spec:
+The file MUST look like an implementation spec:
 - first heading matches `# <TaskID> — Implementation Spec`
-- has a `- benchmark_family:` line and a `- source_repo:` line
+- carries the four metadata lines: `- robot:`, `- simulator:`, `- objects:`, `- bimanual:`
 - has `## §1` … `## §6` section anchors
 
-If any is missing, refuse: "not a probe-task implementation spec — generate one with `/harbor:probe-task` first." Do not copy.
+If any is missing, refuse: "not an implementation spec — generate one with `/harbor:probe-task` first." Do not copy.
+
+Every entry in the library states those four fields identically, because they are what a
+search across the library matches on. A spec that omits one is filed inconsistently and
+stops being findable.
 
 ### B2 — Classify embodiment (pick the destination folder)
 
@@ -93,8 +97,9 @@ Base path: `${CLAUDE_PLUGIN_ROOT}/knowledge/experiences/task-library/<destinatio
 
 The filename is what `task-generator` / `reward-tuning-agent` grep when searching for relevant prior tasks, so it must be **short but accurate** — describe the task, not the gym id verbatim.
 
-- Form: `<short-task-slug>-<source_repo>.md`.
-- `<source_repo>` comes from the spec's `- source_repo:` line (e.g. `IsaacLab`).
+- Form: `<short-task-slug>-<simulator>.md`.
+- `<simulator>` is the simulator name from the spec's `- simulator:` line, without its
+  parenthetical (`IsaacLab (Isaac Sim, manager-based)` → `IsaacLab`).
 - `<short-task-slug>`: a concise kebab-case description of what the task DOES, ≤ ~4 words. Derive from the Task summary, not a mechanical lowercase of the TaskID. Examples (TaskID → slug):
   - `Isaac-Dex-Grasp` → `dexterous-grasp` → `dexterous-grasp-IsaacLab.md`
   - `IsaacLab-Franka-StackCube` (stacks three cubes) → `stack-three-cube` → `stack-three-cube-IsaacLab.md`
@@ -104,7 +109,7 @@ The filename is what `task-generator` / `reward-tuning-agent` grep when searchin
 
 ```bash
 dest_dir="${CLAUDE_PLUGIN_ROOT}/knowledge/experiences/task-library/<destination>"
-base="<short-task-slug>-<source_repo>"
+base="<short-task-slug>-<simulator>"
 name="${base}.md"
 n=2
 while [ -e "${dest_dir}/${name}" ]; do name="${base}-v${n}.md"; n=$((n+1)); done

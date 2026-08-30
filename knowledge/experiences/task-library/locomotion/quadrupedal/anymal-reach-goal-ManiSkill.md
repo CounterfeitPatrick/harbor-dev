@@ -2,6 +2,8 @@
 
 - robot: ANYbotics ANYmal-C quadruped (12 DoF)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: none (flat ground; commanded goal position)
+- bimanual: false
 
 > Task type: **goal-directed quadruped locomotion**. The Anymal-C quadruped must walk to a target sphere placed ~2.5 m in front of it (within ±0.5 m fwd, ±1 m lateral) and stop within 0.35 m of it without falling over. This is NOT velocity-command tracking — there is no commanded base velocity; the agent is rewarded purely on shrinking distance-to-goal plus stability penalties. The same env class (`QuadrupedReachEnv`) backs both `AnymalC-Reach-v1` (anymal_c) and `UnitreeGo2-Reach-v1` (go2); this spec documents the AnymalC subclass.
 
@@ -367,11 +369,3 @@ def compute_normalized_dense_reward(self, obs: Any, action: torch.Tensor, info: 
 
 ---
 
-## Source files (relative to source_repo)
-
-- `mani_skill/envs/tasks/quadruped/quadruped_reach.py:1-199` — `QuadrupedReachEnv` base + `AnymalCReachEnv` registration; scene, reset, evaluate, obs_extra, reward (§1,§3,§4,§5,§6,§7)
-- `mani_skill/agents/robots/anymal/anymal_c.py:1-116` — `ANYmalC` agent: URDF path, 12 joint_names, standing keyframe, `_controller_configs` (§2), `is_fallen` (§4)
-- `mani_skill/agents/base_agent.py:339-347` — `get_proprioception` (qpos+qvel) (§5)
-- `mani_skill/envs/sapien_env.py:124,287,546-556` — `SUPPORTED_OBS_MODES`, default obs_mode, `_get_obs_state_dict`/`_get_obs_agent` (§5)
-- `mani_skill/utils/building/ground.py:18` — `build_ground` (§1)
-- Asset (referenced, not embedded): `${ASSET_DIR}/robots/anymal_c/urdf/anymal.urdf` — download via `python -m mani_skill.utils.download_asset anymal_c`

@@ -2,6 +2,8 @@
 
 - robot: Unitree G1 humanoid, simplified upper body + head camera, bimanual (25 DoF, fixed base)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: box, two tables
+- bimanual: true
 
 ManiSkill tasks are SAPIEN `BaseEnv` subclasses decorated with `@register_env`. There is no IsaacLab-style manager-based config tree: scene / actions / reset / termination / observation / reward are all *methods* on the env class. The §1..§7 mapping below adapts the Harbor section model onto these methods.
 
@@ -132,7 +134,7 @@ class TransportBoxEnv(BaseEnv):
         self.box = builder.build(name="box")
 ```
 
-**Resolved asset paths (relative to source_repo).**
+**Resolved asset paths (relative to the package root).**
 - Table: `mani_skill/utils/scene_builder/table/assets/table.glb` — EXISTS.
 - Box visual: `mani_skill/envs/tasks/humanoid/assets/cardboard_box/textured.obj` — EXISTS.
 - Robot URDF: `mani_skill/assets/robots/g1_humanoid/g1_simplified_upper_body.urdf` (`PACKAGE_ASSET_DIR` = `mani_skill/assets`) — present in package asset dir.
@@ -445,9 +447,3 @@ Expected stdout: `Box(-inf, inf, (1, 77), float32) Box(-1.0, 1.0, (25,), float32
 
 ---
 
-## Source files (relative to source_repo)
-
-- `mani_skill/envs/tasks/humanoid/transport_box.py:24-312` — full env: registration, ctor, sim/sensor cfg, `_load_agent`, `_load_scene`, `_initialize_episode`, `evaluate`, grasp-point props, `_get_obs_extra`, `compute_dense_reward`, `compute_normalized_dense_reward`.
-- `mani_skill/agents/robots/unitree_g1/g1_upper_body.py:16-309` — `UnitreeG1UpperBody` (URDF, `body_joints`, `_controller_configs`, `_after_init`, grasp helpers) and `UnitreeG1UpperBodyWithHeadCamera:292-309` (head camera sensor).
-- `mani_skill/envs/sapien_env.py:124,192-309` — `BaseEnv` defaults: `SUPPORTED_OBS_MODES` (default `state`), control-mode resolution (default = first controller key `pd_joint_delta_pos`), proprioception assembly.
-- Assets: `mani_skill/utils/scene_builder/table/assets/table.glb`, `mani_skill/envs/tasks/humanoid/assets/cardboard_box/textured.obj`, `mani_skill/assets/robots/g1_humanoid/g1_simplified_upper_body.urdf`.

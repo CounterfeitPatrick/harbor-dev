@@ -2,6 +2,8 @@
 
 - robot: Bimanual UF850 arms + dual Allegro hands (44 DoF)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: two DexCubes, tote bin, table
+- bimanual: true
 
 > Source package name anonymized as `bimanual_suite`. This task comes from an internal
 > bimanual manipulation suite rather than a public repo; the design below is otherwise verbatim.

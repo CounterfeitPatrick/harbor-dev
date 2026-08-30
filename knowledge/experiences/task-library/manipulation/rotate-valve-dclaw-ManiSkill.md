@@ -2,6 +2,8 @@
 
 - robot: D'Claw three-finger hand (9 DoF, fixed base)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: three-spoke valve, table
+- bimanual: false
 
 > NOTE: All five `RotateValveLevel{0..4}-v1` ids are registered on subclasses of one base `RotateValveEnv`. Behaviour differs only through `self.difficulty_level`, which gates (a) `success_threshold`, (b) the valve-head angle sampling in `_load_articulations`, (c) valve radius randomization (level ≥ 3), and (d) the rotation direction (level 4 randomizes sign). This spec captures the full base design and annotates exactly what Level1 selects.
 
@@ -345,14 +347,6 @@ Helper `self.agent.tip_poses` (DClaw): stacks the 3 fingertip 7-D poses → `(b,
 `<no DR>` — there are no `startup`/`interval` randomization events. ManiSkill has no `EventCfg`; all stochasticity lives in `_initialize_episode` (reset-time): valve XY/yaw jitter, valve initial angle, and `robot_init_qpos_noise=0.02`. (Level ≥ 3 additionally randomizes valve radius scales at scene-load; Level1 does not.) No per-step / startup domain randomization.
 
 ---
-
-## Source files (relative to source_repo)
-
-- `mani_skill/envs/tasks/dexterity/rotate_valve.py:1-313` — env class `RotateValveEnv` (§1 scene/sim, §3 reset, §4 evaluate, §5 obs, §6 reward), the 5 `@register_env` Level0..4 subclasses, and `sample_valve_angles`.
-- `mani_skill/agents/robots/dclaw/dclaw.py:1-123` — `DClaw` agent: URDF path, joint names, gains, tip materials, `_controller_configs` (§2), `tip_poses`/`get_proprioception` (§5/§6).
-- `mani_skill/utils/building/articulations/robel.py:1-103` — `build_robel_valve` procedural valve articulation (§1).
-- `mani_skill/envs/sapien_env.py` — `BaseEnv` defaults: `SUPPORTED_OBS_MODES`, `SUPPORTED_REWARD_MODES`, sim freqs, default obs/reward/control-mode resolution.
-- `mani_skill/utils/structs/types.py:78-87` — `SimConfig` defaults (`sim_freq=100`, `control_freq=20`, `spacing=5`).
 
 ## Reproduce
 `/harbor:task-create name=<new_task_id> from=<ManiSkill-repo>/harbor/create-task/rotatevalvelevel1-v1-implementation.md`

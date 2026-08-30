@@ -2,6 +2,8 @@
 
 - robot: Franka FR3 arm + Franka hand (single arm)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: DexCube, drawer cabinet, lab table
+- bimanual: false
 
 Task summary: Franka FR3 (single arm) starts with a drawer ALREADY OPEN (joint pos = 0.30 m). The policy must (1) pick up a small DexCube from the table, (2) lift it above the drawer rim, (3) place it inside the open drawer, (4) retract the gripper out of the drawer interior, and (5) push the drawer closed. Episode ends on either time-out (9 s @ 20 Hz = 180 steps) or task success (cube inside + drawer joint pos < 0.10 m). Composer = sum, 8 active reward terms with monotonically-increasing per-step magnitudes (`reach < lift < align < retract < close < cube_inside_latch < success_bonus`).
 
@@ -885,19 +887,6 @@ print('reward smoke OK')
 ```
 
 ---
-
-## Source files (relative to source_repo)
-
-| File | Lines | What was read |
-|---|---|---|
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/insert_drawer/config/franka/__init__.py` | 1–30 | gym.register block (§1) |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/insert_drawer/config/franka/joint_pos_env_cfg.py` | 1–376 | Franka cfg + cube + drawer + frame transformers + workspace clamp (§1, §2) |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/insert_drawer/insert_drawer_env_cfg.py` | 1–387 | Abstract Scene/Actions/Obs/Event(reset)/Reward/Termination cfgs + EnvCfg.__post_init__ (§1, §3, §4, §5, §6) |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/insert_drawer/mdp/actions.py` | 1–184 | EMACumulativeDeltaPositionAction class (§2) |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/insert_drawer/mdp/actions_cfg.py` | 1–32 | EMACumulativeDeltaPositionActionCfg (§2) |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/insert_drawer/mdp/observations.py` | 1–96 | 3 obs helpers (§5) |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/insert_drawer/mdp/rewards.py` | 1–295 | 8 reward funcs + latch buffer (§6) |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/insert_drawer/mdp/terminations.py` | 1–37 | success_termination (§4) |
 
 ## Reproduce
 

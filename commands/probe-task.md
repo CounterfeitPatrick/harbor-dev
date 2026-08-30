@@ -43,7 +43,7 @@ test -x "<repo>/.venv/bin/python"                         || { echo ".venv/ miss
 Then build the task per *Does the task build?* in `agent-conventions.md`, and refuse to probe
 only if the family's real constructor fails. A bare `gym.make('<task>')` is NOT a build check —
 it raises `TypeError: missing 1 required positional argument: 'cfg'` for every manager-based
-task, so gating on it refuses healthy ones. Keep the printed spaces; step 4 needs them.
+task, so gating on it refuses healthy ones.
 
 ## Action
 
@@ -79,20 +79,19 @@ task, so gating on it refuses healthy ones. Keep the printed spaces; step 4 need
    - **§7 DR**
      - `EventCfg`: every term with `mode != "reset"` (i.e. `startup` / `interval`). Function, params, ranges. If none, write `<no DR>`.
 
-4. **Capture the canonical build line.** Pre-flight already built the task and printed
-   `build ok <observation_space> <action_space>`; paste that literal line into the spec rather
-   than re-running it — a second app launch costs ~2 min and proves nothing new. Record the
-   `num_envs` it was measured at (the spaces are batched, so the leading dim is that number).
+4. **Fill the metadata block.** `robot` and `objects` come from the §1 scene you just read;
+   `bimanual` is true when the scene holds two arms the policy drives independently. These four
+   fields are what the task-library is searched on, so they are stated the same way for every
+   entry.
 
 5. **Render the doc** into a single self-contained markdown with this top-level structure:
    ```
    # <task_id> — Implementation Spec
 
-   - benchmark_family: <family>
-   - source_repo: <name>
-   - probed_from_commit: <sha>            # `git rev-parse HEAD` in repo
-   - probed_at: <iso8601>
-   - canonical_build: <observation_space + action_space line from step 4>
+   - robot: <make/model + DoF, and end-effector if any>
+   - simulator: <simulator + its API shape, e.g. `IsaacLab (Isaac Sim, manager-based)`>
+   - objects: <the scene's manipulable + goal objects, or `none (<terrain>)` for locomotion>
+   - bimanual: <true|false>
 
    ## §1 Registration + Scene
    ...
@@ -108,9 +107,6 @@ task, so gating on it refuses healthy ones. Keep the printed spaces; step 4 need
    ...
    ## §7 DR
    ...
-
-   ## Source files (relative to source_repo)
-   - <path>:<line-range>  # what was read here
    ```
 
    Within each section, include subblocks:
@@ -138,8 +134,8 @@ task, so gating on it refuses healthy ones. Keep the printed spaces; step 4 need
 ## Hard rules
 
 - **Verbatim code, not paraphrased.** Every reward / observation / action function in §6 / §5 / §2 is pasted as-is. The spec must be self-contained enough that a downstream agent can recreate the file without re-reading the source repo.
-- **Resolve asset paths.** Where the env_cfg uses `Path(__file__).resolve().parents[N] / "..."`, resolve to the actual path (relative to `<source_repo>`) so the downstream agent can locate equivalent assets in the destination repo.
-- **No machine-specific or absolute paths.** The spec must be self-contained: every path is relative to `<source_repo>` or a clearly-marked `<placeholder>`. Never emit a personal home path (`/home/...`, `/Users/...`) — a reader on another machine must be able to follow the spec verbatim.
+- **Resolve asset paths.** Where the env_cfg uses `Path(__file__).resolve().parents[N] / "..."`, resolve to the actual path (relative to the simulator package root) so the downstream agent can locate equivalent assets in the destination repo.
+- **No machine-specific or absolute paths.** The spec must be self-contained: every path is relative to the simulator package root or a clearly-marked `<placeholder>`. Never emit a personal home path (`/home/...`, `/Users/...`) — a reader on another machine must be able to follow the spec verbatim.
 - **English-only.**
 - **Read-only.** probe-task never modifies the source repo — it only reads + writes the output file.
 

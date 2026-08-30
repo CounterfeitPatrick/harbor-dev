@@ -2,6 +2,8 @@
 
 - robot: Franka Emika Panda (7 DoF arm, no gripper action)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: none (commanded goal pose), lab table
+- bimanual: false
 
 This is a manager-based reaching task: a Franka Emika Panda arm must drive its `panda_hand`
 end-effector to a randomly commanded 6-DoF pose (position + orientation) in the workspace.
@@ -527,12 +529,3 @@ vel, §5) is applied but is an observation-noise feature, not an EventCfg DR ter
 
 ---
 
-## Source files (relative to source_repo)
-
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/reach/config/franka/__init__.py:18-40`  # registration (v0 + Play-v0)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/reach/config/franka/joint_pos_env_cfg.py:24-57`  # FrankaReachEnvCfg: robot, arm_action, command body/pitch, reward body names, PLAY
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/reach/reach_env_cfg.py:35-230`  # abstract scene/actions/obs/events/rewards/terminations/commands/curriculum + ReachEnvCfg.__post_init__
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/reach/mdp/rewards.py:20-70`  # task-local reward funcs (position/tanh/orientation)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/reach/mdp/__init__.py:8-10`  # re-exports isaaclab.envs.mdp + local rewards
-- `source/isaaclab_assets/isaaclab_assets/robots/franka.py:26-72`  # FRANKA_PANDA_CFG
-- `source/isaaclab/isaaclab/envs/mdp/rewards.py:156-165,252-254`  # joint_vel_l2, action_rate_l2 (shared)

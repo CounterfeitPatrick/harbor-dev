@@ -2,6 +2,8 @@
 
 - robot: Unitree H1 humanoid, simplified (19 DoF, floating base)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: none (flat ground plane)
+- bimanual: false
 
 > NOTE: This is a SAPIEN ManiSkill task, NOT an IsaacLab manager-based task. There is no `mdp/` tree, no `RewardsCfg`/`ObservationsCfg`/`EventCfg` managers. All §1..§7 wiring lives directly on the `BaseEnv` subclass (`HumanoidStandEnv` / `UnitreeH1StandEnv`) and its agent (`UnitreeH1Simplified`). Sections below map the IsaacLab §1..§7 contract onto ManiSkill's hook methods.
 
@@ -344,8 +346,3 @@ Expected: `True` and reward value in {0., 1.} (per env).
 
 ---
 
-## Source files (relative to source_repo `ManiSkill`)
-- `mani_skill/envs/tasks/humanoid/humanoid_stand.py:1-97`  # env class, registration, scene, reset, evaluate, obs, sparse reward
-- `mani_skill/agents/robots/unitree_h1/h1.py:1-121`         # H1 agent: keyframes, body_joints (19 DoF), controllers, is_standing/is_fallen
-- `mani_skill/envs/sapien_env.py:546-561`                   # _get_obs_state_dict / _get_obs_agent / _get_obs_extra base wiring
-- `mani_skill/agents/base_agent.py:339-347`                 # get_proprioception (qpos + qvel)

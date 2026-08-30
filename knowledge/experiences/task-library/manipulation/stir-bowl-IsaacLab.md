@@ -2,6 +2,8 @@
 
 - robot: Bimanual UF850 arms + dual Allegro hands (44 DoF)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: egg-beater tool, bowl, five rigid objects (object_0..4), table
+- bimanual: true
 
 > Source package name anonymized as `bimanual_suite`. This task comes from an internal
 > bimanual manipulation suite rather than a public repo; the design below is otherwise verbatim.

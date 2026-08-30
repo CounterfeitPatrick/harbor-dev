@@ -2,6 +2,8 @@
 
 - robot: Fourier GR1T2 bimanual humanoid (two 7-DoF arms + dexterous hands)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: steering wheel, packing table
+- bimanual: true
 
 > **CAVEAT (teleop / IL task).** This is the absolute-IK (`-Abs`) Pink-IK pipeline used for OpenXR/Manus-Vive teleoperation + robomimic BC (imitation learning). `rewards = None`, `commands = None`, `curriculum = None` in the env_cfg. **There is no shaped RL reward (§6 is absent).** Success is a binary termination term only. The reusable value of this spec is the **bimanual scene / 36-D dual-arm absolute-pose action / Dict observation / success-termination** structure (§1–§5). To use as an RL task, a §6 reward must be authored from scratch.
 
@@ -536,18 +538,3 @@ To turn this into an RL task you must author §6 from scratch — e.g. a dense r
 
 ---
 
-## Source files (relative to source_repo IsaacLab)
-
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/pick_place/__init__.py:10-18` — gym.register (§1)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/pick_place/pickplace_gr1t2_env_cfg.py:41-111` — SceneCfg (§1)
-- `…/pickplace_gr1t2_env_cfg.py:117-221` — ActionsCfg / Pink IK (§2)
-- `…/pickplace_gr1t2_env_cfg.py:280-297` — EventCfg reset terms (§3)
-- `…/pickplace_gr1t2_env_cfg.py:267-277` — TerminationsCfg (§4)
-- `…/pickplace_gr1t2_env_cfg.py:224-264` — ObservationsCfg (§5)
-- `…/pickplace_gr1t2_env_cfg.py:300-421` — EnvCfg (rewards=None, idle_action, __post_init__, teleop devices)
-- `…/pick_place/mdp/observations.py:16-87` — obs helpers (§5)
-- `…/pick_place/mdp/terminations.py:25-87` — task_done_pick_place (§4)
-- `…/pick_place/mdp/__init__.py:8-12` — mdp re-export (base mdp + task-local)
-- `source/isaaclab_assets/isaaclab_assets/robots/fourier.py:29-164` — GR1T2_CFG / GR1T2_HIGH_PD_CFG (§1)
-- `source/isaaclab/isaaclab/envs/mdp/actions/pink_task_space_actions.py:142-149` — action_dim derivation (§2)
-- `source/isaaclab/isaaclab/utils/assets.py:30-39` — ISAAC_NUCLEUS_DIR / ISAACLAB_NUCLEUS_DIR (§1 asset path resolution)

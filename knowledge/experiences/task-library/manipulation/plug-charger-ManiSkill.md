@@ -2,6 +2,8 @@
 
 - robot: Franka Panda with wrist camera (`panda_wristcam`)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: charger, receptacle, table
+- bimanual: false
 
 A precision two-prong insertion task: the robot must grasp a wall-charger (a base block with two thin metal prongs) and plug it into a matching wall receptacle (a kinematic socket with two prong holes). Success requires the charger to reach the goal pose (receptacle pose rotated 180° about z) within a very tight `5e-3 m` position tolerance AND `0.2 rad` orientation tolerance. Both charger and receptacle are procedurally built from primitive boxes (no external assets); prong clearance is `5e-4 m` single-sided. The receptacle is kinematic. **This env is sparse-only** — it declares `SUPPORTED_REWARD_MODES = ["none", "sparse"]` and provides no dense reward; staging (grasp→align→insert) must be supplied externally if dense shaping is desired.
 
@@ -419,10 +421,3 @@ Reward verified by source read. Runtime check at reproduction time: build with `
 
 ---
 
-## Source files (relative to source_repo)
-- `mani_skill/envs/tasks/tabletop/plug_charger.py:1-283`   # full env: registration, scene (charger + receptacle builders), reset, evaluate, obs; NO reward override
-- `mani_skill/envs/sapien_env.py:124,128,287,301,644-707`  # BaseEnv obs/reward mode defaults, get_reward, compute_sparse_reward, compute_dense_reward (raises)
-- `mani_skill/agents/robots/panda/panda.py`               # Panda joints, gains, controller configs (default = pd_joint_delta_pos)
-- `mani_skill/agents/robots/panda/panda_wristcam.py`      # PandaWristCam(Panda) — the SUPPORTED_ROBOT
-- `mani_skill/agents/base_agent.py:108-118,253`           # _default_control_mode = supported_control_modes[0]
-- `mani_skill/utils/structs/types.py`                     # SimConfig defaults: sim_freq=100, control_freq=20

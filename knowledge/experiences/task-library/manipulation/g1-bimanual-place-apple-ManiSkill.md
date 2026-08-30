@@ -2,6 +2,8 @@
 
 - robot: Unitree G1 humanoid, simplified upper body, bimanual (25 DoF, fixed base)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: apple, bowl, kitchen counter
+- bimanual: true
 
 **Task:** Control the humanoid Unitree G1 (simplified upper body, fixed/seated base) to grasp an apple with its RIGHT arm and place it in a bowl beside it. Bimanual-capable robot (both arms + both 6-DoF hands actuated) but only the right side is used by the reward/success logic.
 
@@ -27,7 +29,7 @@ A `@register_env` leaf class binds the task id to `max_episode_steps=100` and th
 - `SUPPORTED_REWARD_MODES = ["normalized_dense", "dense", "sparse", "none"]`.
 - `_load_agent`: G1 spawned at `sapien.Pose(p=[0, 0, 1])` (base class), then repositioned at reset.
 
-### Resolved asset paths (relative to source_repo `ManiSkill/`)
+### Resolved asset paths (relative to the `ManiSkill/` package root)
 - `mani_skill/envs/tasks/humanoid/assets/frl_apartment_bowl_07.ply` (bowl collision)
 - `mani_skill/envs/tasks/humanoid/assets/frl_apartment_bowl_07.glb` (bowl visual)
 - `mani_skill/envs/tasks/humanoid/assets/apple_1.ply` (apple collision)
@@ -410,9 +412,3 @@ There are no `startup` / `interval` domain-randomization events. All randomizati
 
 ---
 
-## Source files (relative to source_repo `ManiSkill/`)
-- `mani_skill/envs/tasks/humanoid/humanoid_pick_place.py:1-277` — base scene env, `HumanoidPlaceAppleInBowl` (scene/evaluate/obs/reward), `@register_env` leaf (robot wiring, sim cfg, episode init).
-- `mani_skill/agents/robots/unitree_g1/g1_upper_body.py:1-308` — `UnitreeG1UpperBody` (body_joints, controllers, grasp helpers) and `UnitreeG1UpperBodyWithHeadCamera` (the actual robot used).
-- `mani_skill/envs/tasks/humanoid/assets/{apple_1,frl_apartment_bowl_07}.{ply,glb}` — apple + bowl meshes (verified present on disk).
-- `mani_skill/assets/robots/g1_humanoid/g1_simplified_upper_body.urdf` — G1 URDF (verified present on disk).
-- `mani_skill/utils/scene_builder/kitchen_counter/` — `KitchenCounterSceneBuilder` (table/counter).

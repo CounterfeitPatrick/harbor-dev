@@ -2,6 +2,8 @@
 
 - robot: Fetch mobile manipulator
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: PartnetMobility cabinet (target door), ground
+- bimanual: false
 
 > **Class hierarchy note.** `OpenCabinetDoor-v1` is a *thin subclass* of `OpenCabinetDrawerEnv`. It overrides only `TRAIN_JSON` (door cabinets instead of drawer cabinets) and `handle_types = ["revolute", "revolute_unwrapped"]` (door = revolute joint vs. drawer = prismatic). Every other method (`_load_agent`, `_load_scene`, `_load_cabinets`, `_initialize_episode`, `evaluate`, `_get_obs_extra`, `compute_dense_reward`, `compute_normalized_dense_reward`) is inherited verbatim from `OpenCabinetDrawerEnv`. All code below is the inherited implementation unless noted.
 
@@ -411,14 +413,6 @@ Reward is finite and non-constant across a random rollout; for the normalized va
 `<no DR>` — there is no `startup`/`interval`-mode randomization (no friction/mass/visual randomization). The only per-episode variation is the *task-level* randomization in `_initialize_episode` / `_load_cabinets` (cabinet model sampled from the door-cabinet set, door link sampled, robot base pose 1.6–1.8 m on a ring with ±9° yaw jitter). These are reset-time scene sampling, not physical-parameter DR.
 
 ---
-
-## Source files (relative to source_repo `ManiSkill`)
-- `mani_skill/envs/tasks/mobile_manipulation/open_cabinet_drawer.py:1-367` — `OpenCabinetDrawerEnv` (§1 scene/sim, §3 reset, §4 evaluate, §5 obs-extra, §6 reward) + `OpenCabinetDoorEnv` subclass (lines 361-367: TRAIN_JSON + handle_types overrides).
-- `mani_skill/agents/robots/fetch/fetch.py:26-432` — Fetch agent: DoF layout (§1), `_controller_configs` (§2), tcp/finger links.
-- `mani_skill/agents/controllers/pd_joint_pos.py:129-260` — `PDJointPosMimicController(Config)` (gripper 2→1 action dim, §2).
-- `mani_skill/agents/controllers/pd_base_vel.py:39-73` — `PDBaseForwardVelController(Config)` (base 2-dim forward-vel action, §2).
-- `mani_skill/agents/base_agent.py:339-347` — `get_proprioception` (qpos+qvel = 30, §5).
-- `mani_skill/envs/sapien_env.py:546-560` — obs state-dict composition (§5).
 
 ## WARNINGs
 - Cabinet asset (`partnet_mobility_cabinet`) not downloaded at probe time → `gym.make` raises; all spaces/dims/smokes derived analytically from source. Run `python -m mani_skill.utils.download_asset partnet_mobility_cabinet` before reproducing.
