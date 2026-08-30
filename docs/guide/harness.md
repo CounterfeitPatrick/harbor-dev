@@ -54,7 +54,7 @@ It splits three ways:
 
 **References** are decision aids an agent loads only when it needs them. Twenty-five files, organized so an agent authoring the action space reads `s2-actions.md` and not the observation guide. Each task-section reference carries the same six headings — what it authors, the decisions to resolve, API pointers, its smoke, failure → diagnosis → fix, and traps — so an agent knows where to look inside a file it has never read.
 
-**Experiences** are append-only ledgers that accumulate across runs: one per authoring agent, plus a task library of 52 self-contained task specifications indexed by embodiment. The library is what a new task is adapted *from* — a task-design search runs before any design work begins, so a new task starts from the closest prior one rather than from nothing.
+**Experiences** are append-only ledgers that accumulate across runs: one per authoring agent, plus a task library of self-contained task specifications indexed by embodiment. The library is what a new task is adapted *from* — a task-design search runs before any design work begins, so a new task starts from the closest prior one rather than from nothing.
 
 Beneath all three sits the tool layer: 27 deterministic scripts invoked with plain Bash rather than through a server, because the heavy operations are backgrounded GPU jobs whose state must survive a killed agent. Files and exit codes give you that; an in-process server does not.
 

@@ -2,12 +2,10 @@
 
 Every task HARBOR has authored or reproduced, kept as a self-contained implementation spec — scene, actions, reset, termination, observation, reward and DR, with verbatim code. Together they are what a new task is adapted *from*: authoring runs a search over this library first, so a new task starts from the closest prior one rather than from a blank file.
 
-**52 tasks** today — 41 manipulation, 6 humanoid locomotion, 5 quadrupedal locomotion.
-
 Each entry is reproducible with [`/harbor:task-create`](/guide/commands) `from=<spec>`.
 
 <details>
-<summary><b>Manipulation</b> — 41 tasks</summary>
+<summary><b>Manipulation</b></summary>
 
 Arms and hands acting on objects — reaching, grasping, placing, inserting, stacking, and in-hand reorientation.
 
@@ -58,7 +56,7 @@ Arms and hands acting on objects — reaching, grasping, placing, inserting, sta
 </details>
 
 <details>
-<summary><b>Humanoid locomotion</b> — 6 tasks</summary>
+<summary><b>Humanoid locomotion</b></summary>
 
 Bipedal whole-body control: standing, velocity tracking, and footstep following.
 
@@ -74,7 +72,7 @@ Bipedal whole-body control: standing, velocity tracking, and footstep following.
 </details>
 
 <details>
-<summary><b>Quadrupedal locomotion</b> — 5 tasks</summary>
+<summary><b>Quadrupedal locomotion</b></summary>
 
 Four-legged velocity tracking and goal-reaching over flat and rough terrain.
 

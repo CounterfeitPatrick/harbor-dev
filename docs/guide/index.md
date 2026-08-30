@@ -22,7 +22,7 @@ The effect is measurable rather than assumed. Removing the gates makes the pipel
 
 **It is centralized in planning, decentralized in execution.** Iterative stages fan out into isolated parallel trials, so ten reward candidates can train simultaneously without any of their tracebacks reaching the context that decides what to try next.
 
-And it accumulates. Append-only experience ledgers plus a library of 52 task specifications mean a new task is adapted from the closest prior one rather than designed from nothing — measured at an 8× speedup on a repeated reward design.
+And it accumulates. Append-only experience ledgers plus a library of task specifications mean a new task is adapted from the closest prior one rather than designed from nothing — measured at an 8× speedup on a repeated reward design.
 
 ## What you need
 

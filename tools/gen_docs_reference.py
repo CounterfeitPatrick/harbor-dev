@@ -210,16 +210,14 @@ def render_task_library():
              "from the closest prior one rather than from a blank file.", "",
              "Each entry is reproducible with "
              "[`/harbor:task-create`](/guide/commands) `from=<spec>`.", ""]
-    counts = []
-    total = 0
+
     for subdir, title, blurb in LIBRARY_GROUPS:
         entries = sorted((root / subdir).glob("*.md"))
         entries = [e for e in entries if e.name != "README.md"]
         if not entries:
             continue
-        total += len(entries)
-        counts.append((title, len(entries)))
-        lines += [f"<details>", f"<summary><b>{title}</b> — {len(entries)} tasks</summary>",
+
+        lines += [f"<details>", f"<summary><b>{title}</b></summary>",
                   "", blurb, "",
                   "| Task | Robot | Simulator | What it does |", "|---|---|---|---|"]
         for e in entries:
@@ -236,10 +234,6 @@ def render_task_library():
                 f"| {cell(fm.get('summary', '—'))} |"
             )
         lines += ["", "</details>", ""]
-    if total:
-        breakdown = ", ".join(f"{n} {t.lower()}" for t, n in counts)
-        lines.insert(4, f"**{total} tasks** today — {breakdown}.")
-        lines.insert(5, "")
     return "\n".join(lines).rstrip("\n") + "\n"
 
 
