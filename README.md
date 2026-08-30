@@ -8,8 +8,7 @@
 ### Point it at a simulator. Describe a task. Get a trained policy.
 
 HARBOR automates robot reinforcement learning from an engineering workflow into a request.<br>
-It sets up the simulation, writes the task, designs the reward, wires the algorithm,<br>
-trains the policy — and checks its own work at every step.
+Set up simulation · Write the task · Design the reward · Wire the algorithms · Train the policy
 
 [![arXiv](https://img.shields.io/badge/arXiv-2606.08610-b31b1b?style=flat-square&logo=arxiv&logoColor=white)](https://arxiv.org/abs/2606.08610)
 [![Docs](https://img.shields.io/badge/docs-online-0FB6C9?style=flat-square)](https://supersglzc.github.io/harbor-dev)
