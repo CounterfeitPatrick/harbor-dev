@@ -48,9 +48,6 @@ jobs:
         with:
           python-version: '3.11'
       - run: npm install
-      # The landing page shows the full gallery. The tiles live once, in assets/;
-      # copying them at build time keeps ~4.8 MB from being committed twice.
-      - run: mkdir -p docs/public/gallery && cp assets/gallery/*.webp docs/public/gallery/
       - run: npm run docs:build
       - uses: actions/configure-pages@v5
         if: github.ref == 'refs/heads/main'

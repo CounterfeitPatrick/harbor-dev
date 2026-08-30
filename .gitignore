@@ -23,7 +23,5 @@ plot_output/
 
 # docs site
 node_modules/
-# copied from assets/ at build time by `npm run docs:gallery`
-docs/public/gallery/
 docs/.vitepress/dist/
 docs/.vitepress/cache/

@@ -149,24 +149,41 @@ cp "$ROOT/assets/logo/harbor-mark-dark.svg" "$DOCS/logo-dark.svg"
 cp "$ROOT/assets/logo/favicon.svg"          "$DOCS/favicon.svg"
 cp "$OUT/hero/walkthrough-poster.webp"      "$DOCS/walkthrough-poster.webp"
 
-# The docs landing page renders the same gallery grid as the README. The tiles are copied
-# rather than duplicated in git — package.json and the docs workflow do the same before a
-# build, and docs/public/gallery/ is gitignored.
-mkdir -p "$DOCS/gallery"
-cp "$OUT"/gallery/*.webp "$DOCS/gallery/"
-
-# One strip of all four tasks for the docs landing page. Each clip is looped to a common
-# 4 s so hstack gets equal frame counts — without that the shortest clip truncates the row.
-strip_in=()
-for f in stack_three_cube insert_drawer lift_box dex-grasp; do
-    strip_in+=(-stream_loop -1 -t 4 -i "$WORK/$f.mp4")
-done
-ffmpeg -y -v error "${strip_in[@]}" -filter_complex \
-    "[0:v]scale=240:135[a];[1:v]scale=240:135[b];[2:v]scale=240:135[c];\
-     [3:v]crop=889:500:176:170,scale=240:135[d];\
-     [a][b][c][d]hstack=inputs=4,fps=$FPS[o]" \
-    -map "[o]" -c:v libwebp_anim -q:v 70 -loop 0 -an "$DOCS/gallery-strip.webp"
-echo "    $(printf '%-34s' "docs/public/gallery-strip.webp") $(du -h "$DOCS/gallery-strip.webp" | cut -f1)"
+# The docs landing page shows one montage of every tile rather than the README's labelled
+# grid — no task names, no simulator column headers, just the runs. Tiles are looped to a
+# common frame count; the short final row is centred so it reads as deliberate. WebP rather
+# than GIF: same content, 1.8 MB against 5.8 MB.
+echo "==> docs gallery montage"
+ROOT="$ROOT" python3 - <<'PYMONT'
+from PIL import Image
+import os, pathlib, subprocess, tempfile
+ROOT = os.environ["ROOT"]
+G = pathlib.Path(ROOT) / "assets" / "gallery"
+TASKS = ["stack-cube","insert-drawer","lift-box","hang-mug","dex-grasp",
+         "g1-jump","g1-footstep","g1-bridge-cross","g1-kick-ball"]
+SIMS = ["isaaclab","maniskill","genesis"]
+TW, TH, COLS, ROWS, NF = 240, 135, 6, 5, 48
+seqs = []
+for t in TASKS:
+    for s in SIMS:
+        im = Image.open(G / f"{t}__{s}.webp"); fr = []
+        for i in range(im.n_frames):
+            im.seek(i); fr.append(im.convert("RGB").resize((TW, TH), Image.LANCZOS))
+        seqs.append(fr)
+full_rows, leftover = divmod(len(seqs), COLS)
+x_off = (COLS - leftover) * TW // 2
+with tempfile.TemporaryDirectory() as d:
+    for f in range(NF):
+        canvas = Image.new("RGB", (COLS*TW, ROWS*TH), (11, 18, 32))
+        for idx, fr in enumerate(seqs):
+            r, c = divmod(idx, COLS)
+            canvas.paste(fr[f % len(fr)], (c*TW + (x_off if r == full_rows else 0), r*TH))
+        canvas.save(f"{d}/f{f:03d}.png")
+    subprocess.run(["ffmpeg","-y","-v","error","-framerate","12","-i",f"{d}/f%03d.png",
+                    "-c:v","libwebp_anim","-lossless","0","-q:v","70","-loop","0",
+                    f"{ROOT}/docs/public/gallery.webp"], check=True)
+PYMONT
+echo "    $(printf '%-34s' "docs/public/gallery.webp") $(du -h "$DOCS/gallery.webp" | cut -f1)"
 
 # GitHub link unfurl and the docs og:image. 1280x640 is the ratio both platforms crop to.
 # Stills are extracted first: selecting a frame inside the compose graph gives the overlay
