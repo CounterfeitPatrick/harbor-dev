@@ -34,7 +34,7 @@ features:
 
 ## One prompt, End-to-end workflow
 
-It sets up the simulation, writes the task, designs the reward, wires the algorithms, trains the policy — and checks its own work at every step.
+Set up simulation · Write the task · Design the reward · Wire the algorithms · Train the policy
 
 <!-- preload=metadata so the file is not pulled down by every visitor who never presses
      play; the poster carries the frame until they do. -->

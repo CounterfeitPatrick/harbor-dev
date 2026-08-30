@@ -20,7 +20,7 @@ The order is not a matter of taste. Each stage consumes an artifact the previous
 You do not have to run these individually. Point Claude Code at a repository and describe what you want:
 
 ```text
-Set up the env for https://github.com/isaac-sim/IsaacLab, then create a task where
+/harbor:task-create Set up the env for https://github.com/isaac-sim/IsaacLab, then create a task where
 a Franka pushes a 5 cm block to a target marker. Success is block-to-marker
 distance under 5 cm. Then train PPO on it.
 ```

@@ -117,7 +117,7 @@ That is the whole install. HARBOR installs [`uv`](https://docs.astral.sh/uv/) on
 Point HARBOR at any Python GPU robotics repository and describe what you want. It handles the rest.
 
 ```text
-Set up the env for https://github.com/isaac-sim/IsaacLab, then create a task where
+/harbor:task-create Set up the env for https://github.com/isaac-sim/IsaacLab, then create a task where
 a Franka pushes a 5 cm block to a target marker. Success is block-to-marker
 distance under 5 cm.
 ```
