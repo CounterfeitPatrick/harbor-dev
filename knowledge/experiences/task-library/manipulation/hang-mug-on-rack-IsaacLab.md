@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: mug, single-peg mug rack, lab table
 - bimanual: false
+- summary: Pick up a mug and hang it by its handle on a peg rack.
 
 Build form — `gym.make('<task>')` with no `cfg` raises `TypeError: ManagerBasedRLEnv.__init__() missing 1 required positional argument: 'cfg'` for every IsaacLab manager-based task, so build through `parse_env_cfg`:
 

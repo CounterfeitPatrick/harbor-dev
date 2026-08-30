@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: none (flat terrain)
 - bimanual: false
+- summary: Track a commanded base velocity while trotting on flat ground.
 
 This is a **quadruped velocity-command tracking** task. The ANYmal-C robot must track a commanded base linear velocity (x, y) and yaw angular velocity on **flat ground**, with a rich shaped reward (exponential velocity tracking + many regularization penalties) and substantial domain randomization (startup friction/mass/CoM, reset pose/joint scale, interval velocity pushes).
 

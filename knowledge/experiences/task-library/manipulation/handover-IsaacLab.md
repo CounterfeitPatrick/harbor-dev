@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: orange bottle, table
 - bimanual: true
+- summary: Grasp a bottle with one hand, lift it to a mid-air handover pose, and transfer it to the other hand.
 
 > Source package name anonymized as `bimanual_suite`. This task comes from an internal
 > bimanual manipulation suite rather than a public repo; the design below is otherwise verbatim.

@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: none (flat terrain)
 - bimanual: false
+- summary: Track a commanded base velocity while walking on flat ground.
 
 This is an UPSTREAM IsaacLab manager-based **bipedal locomotion** task: Unitree **G1** humanoid tracking a commanded base velocity (`lin_vel_x`, `lin_vel_y`, `ang_vel_z`) on **flat** ground. `G1FlatEnvCfg` subclasses `G1RoughEnvCfg` (config/g1/flat_env_cfg.py), which subclasses the abstract `LocomotionVelocityRoughEnvCfg` (velocity_env_cfg.py). The flat subclass swaps terrain to a plane, removes the height scanner + height-scan obs + terrain curriculum, and retunes a few reward weights / command ranges.
 

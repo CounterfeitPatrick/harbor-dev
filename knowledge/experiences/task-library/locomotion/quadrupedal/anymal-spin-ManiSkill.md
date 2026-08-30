@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: none (flat ground plane)
 - bimanual: false
+- summary: Spin in place about the vertical axis as fast as possible without falling.
 
 ManiSkill task: the Anymal-C quadruped (12 leg DoF) must spin in place about its vertical (yaw/z) axis as fast as possible. Reward is the base yaw angular velocity, minus stability/control penalties; a large terminal penalty applies if the body falls.
 

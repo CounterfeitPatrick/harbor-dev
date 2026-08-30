@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: single dynamic object (cube or YCB object by level), table
 - bimanual: false
+- summary: Rotate an object in-hand to a target orientation without dropping it.
 
 > **One env class, 4 levels.** `RotateSingleObjectInHand(BaseEnv)` is the shared base. The four registered ids (`Level0..3-v1`) are thin subclasses that pass a single `difficulty_level` int (0/1/2/3) and otherwise share identical noise (`robot_init_qpos_noise=0.02`, `obj_init_pos_noise=0.02`). **Level1 sets `difficulty_level=1`**, which selects a *size-randomized white box* (each parallel env gets an independently sampled half-size). Everything else below is the shared base behavior; per-level deltas are called out inline.
 

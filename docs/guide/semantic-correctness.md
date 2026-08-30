@@ -44,6 +44,24 @@ A visual pass ends in a written judgement, and the agents are required to record
 
 The distinction is enforceable. A specific claim can be contradicted by the frame it describes; a vague one cannot be wrong, which makes it worthless as evidence. This is the same reason [verdicts are machine truth](/guide/gates) — a check whose result cannot be disputed later is not a check.
 
+In the reward loop this is not left to discipline. A candidate's render analysis is a **checklist with a fixed set of aspects**, each answered from the frames, and the scorer refuses to grade a candidate whose checklist has a hole:
+
+| Aspect | What it answers |
+|---|---|
+| `checkpoint_watched` | `peak` or `final` — on a collapsed run these are different policies |
+| `frames_usable` | is the subject actually in frame; if not, every answer below is void |
+| `behavior` | what the policy does, against the requested description |
+| `stage_reached` | the furthest rung of the term ladder, and where it stalls |
+| `time_allocation` | where the frames cluster — "reaches at frame 2, hovers 3–11" |
+| `reward_hacking` | a term being farmed instead of progressed |
+| `physical_validity` | penetration, sinking, jitter, explosion |
+| `termination` | fires as intended, never, constantly, or on a wrong-looking state |
+| `actuation_quality` | jitter, oscillation, saturation |
+
+Coverage is the half a machine can judge. It cannot tell whether "the gripper never closes" is true, but it can tell that nobody addressed `termination` — and an unanswered aspect is the common way a rollout analysis misleads the search. So a missing key, an unknown key (a typo would otherwise leave an aspect unanswered while the checklist looks full), and placeholder answers like `"clean"` or `"ok"` are all refused outright.
+
+The aspects are not interchangeable. `physical_validity` routes to §1–§3 while every other answer points at the reward, so getting that one wrong sends the next iteration to repair the wrong layer entirely.
+
 ## What it costs
 
 Almost nothing, which is why it is everywhere rather than reserved for a final review. The frames are a by-product of a render the pipeline already performs, the extraction is `ffmpeg`, and the judgement is a handful of images the agent already has the ability to read.

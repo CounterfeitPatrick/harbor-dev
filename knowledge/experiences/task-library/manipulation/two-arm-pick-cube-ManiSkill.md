@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: red cube, green goal sphere, table
 - bimanual: true
+- summary: Two arms cooperate to pick a cube and move it to a goal sphere.
 
 ---
 

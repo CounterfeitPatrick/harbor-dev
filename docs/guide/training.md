@@ -40,6 +40,16 @@ The best/final split exists because it bit: runs routinely peak mid-training and
 
 `rl-eval` infers task and algorithm from the config saved beside the checkpoint, so a path is usually the only argument you need.
 
+The three answer different questions, and it is worth being deliberate about which you reach for:
+
+**`rl-eval`** gives you the number. It runs the policy without exploration noise and writes `metrics.json` beside the checkpoint — the unbiased success rate and return, which is what you cite.
+
+**`rl-render`** gives you the rollout as a file. It runs the policy and writes `render.mp4` to the checkpoint's directory, so the behavior becomes something you can scrub through, attach to an issue, or hand to an agent to read frame by frame. This is the one the pipeline itself uses: every training run renders on success, and reward candidates extract frames from exactly this output to describe what their policy did.
+
+**`rl-visualize`** gives you the behavior live. It opens a headed GLFW window and steps the policy in front of you on the CPU backend, which is the only one of the three that lets you change viewing angle, follow the robot, and watch a failure develop in real time. It needs `$DISPLAY`, so it is a workstation tool — over SSH without X forwarding, or on a compute node, use `rl-render` instead.
+
+A rough rule: `rl-eval` to know whether it worked, `rl-render` to keep evidence of what it did, `rl-visualize` to understand why.
+
 `rl-render` carries two sanity checks, and both exist because the corresponding failure is silent:
 
 1. **Inference produced actions** — the render script prints the action magnitude it applied, so a policy loading into a zeroed state is visible rather than assumed.

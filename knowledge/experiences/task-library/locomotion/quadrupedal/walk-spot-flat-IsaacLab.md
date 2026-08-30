@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: none (flat terrain)
 - bimanual: false
+- summary: Track a commanded base velocity while walking on flat ground.
 
 > Boston Dynamics **Spot** quadruped, flat-terrain velocity tracking, manager-based RL env (`ManagerBasedRLEnv`). Spot is notable because it ships its **own** `mdp/` subtree (`config/spot/mdp/rewards.py`, `config/spot/mdp/events.py`) with a **distinct reward set** — gait-enforcement, foot-air-time, foot-clearance, foot-slip, air-time-variance, plus a remotized-PD knee actuator — that differs from the shared Anymal-style velocity reward (`track_lin_vel_xy_exp` / `track_ang_vel_z_exp` + L2 penalties). The whole point of this spec is to capture Spot's own reward functions verbatim.
 

@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: sphere, bin, table
 - bimanual: false
+- summary: Pick up a sphere and place it inside a bin.
 
 Task: place a dynamic sphere onto the top of a shallow kinematic bin; the robot must end static with the gripper open (not grasping).
 

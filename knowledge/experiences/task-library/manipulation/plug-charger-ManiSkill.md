@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: charger, receptacle, table
 - bimanual: false
+- summary: Grasp a charger and plug it into a wall receptacle.
 
 A precision two-prong insertion task: the robot must grasp a wall-charger (a base block with two thin metal prongs) and plug it into a matching wall receptacle (a kinematic socket with two prong holes). Success requires the charger to reach the goal pose (receptacle pose rotated 180° about z) within a very tight `5e-3 m` position tolerance AND `0.2 rad` orientation tolerance. Both charger and receptacle are procedurally built from primitive boxes (no external assets); prong clearance is `5e-4 m` single-sided. The receptacle is kinematic. **This env is sparse-only** — it declares `SUPPORTED_REWARD_MODES = ["none", "sparse"]` and provides no dense reward; staging (grasp→align→insert) must be supplied externally if dense shaping is desired.
 

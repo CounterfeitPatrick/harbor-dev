@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: apple, bowl, kitchen counter
 - bimanual: true
+- summary: Pick an apple off a kitchen counter and place it in a bowl.
 
 **Task:** Control the humanoid Unitree G1 (simplified upper body, fixed/seated base) to grasp an apple with its RIGHT arm and place it in a bowl beside it. Bimanual-capable robot (both arms + both 6-DoF hands actuated) but only the right side is used by the reward/success logic.
 

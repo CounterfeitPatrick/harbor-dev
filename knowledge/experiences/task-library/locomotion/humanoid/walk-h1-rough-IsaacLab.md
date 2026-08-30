@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: none (procedurally generated rough terrain)
 - bimanual: false
+- summary: Track a commanded base velocity across procedurally generated rough terrain.
 
 > **Task in one line:** Unitree H1 humanoid (19 DoF) tracks a commanded base velocity (lin_vel_x, lin_vel_y, ang_vel_z) while walking over procedurally generated ROUGH terrain (stairs / boxes / slopes / random rough), using a torso-mounted height-scan ray-caster + a terrain-level curriculum.
 

@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: three DexCubes, lab table
 - bimanual: false
+- summary: Stack three cubes into a tower, in order.
 
 Task summary: a single FR3 + Franka-hand robot stacks **three** identical 4.3 cm DexCubes into a tower on a lab table. The robot base sits at world `(-0.274, +0.49, 0.01)` with `joint1=-0.785` so the EE arcs over the table. Three cubes (`cube_0` / `cube_1` / `cube_2`) spawn at staggered xy positions with ±5 cm uniform jitter (no z jitter). Goal (implicit — no `CommandsCfg`): build a 3-tier tower with `cube_1` (base, on table) ← `cube_0` ← `cube_2` (top). Two intermediate latched bonuses fire on (a) cube_0 stacked on cube_1 with the EE retreated and (b) the full 3-tier tower assembled. Episode horizon = 9.0 s @ 20 Hz = 180 control steps. Action = 3-D Cartesian EE-delta (RPY locked) + 1-D binary gripper = 4-D. Observation = 19-D, gated by a stateless mux that swaps the "currently grasping" cube between `cube_0` (state A) and `cube_2` (state B) on the predicate `cube_0_on_cube_1`.
 

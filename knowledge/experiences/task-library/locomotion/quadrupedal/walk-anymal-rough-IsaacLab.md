@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: none (procedurally generated rough terrain)
 - bimanual: false
+- summary: Track a commanded base velocity across procedurally generated rough terrain.
 
 > **DELTA vs flat (`Isaac-Velocity-Flat-Anymal-C-v0`):** ROUGH is the *base* config (`AnymalCRoughEnvCfg`); FLAT *subclasses* it and strips the rough additions. The three rough-specific additions are:
 > 1. **height-scan ray-caster sensor** (`scene.height_scanner`) + the `height_scan` policy obs term → adds **187** obs dims (17×11 grid). Flat sets both to `None` → obs dim **48** instead of **235**.

@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: two DexCubes, tote bin, table
 - bimanual: true
+- summary: Two hands pick two cubes off a table and drop them into a tote, in a fixed order.
 
 > Source package name anonymized as `bimanual_suite`. This task comes from an internal
 > bimanual manipulation suite rather than a public repo; the design below is otherwise verbatim.

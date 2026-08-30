@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: DexCube, lab table, commanded goal pose
 - bimanual: false
+- summary: Reach a cube, lift it clear of the table, and carry it to a commanded goal pose.
 
 This is the **joint-position-control** Franka cube-lift task. A Franka Panda must reach a cube on a table, lift it above 4 cm, then carry it to a randomly commanded 3D goal pose. Manager-based RL env (`isaaclab.envs:ManagerBasedRLEnv`). The arm is driven by absolute joint-position targets (scaled relative deltas off the default pose), the gripper by a binary open/close command.
 

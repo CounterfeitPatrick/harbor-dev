@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: two 4 cm cubes, table
 - bimanual: false
+- summary: Stack one cube on top of another.
 
 ManiSkill maps to the Harbor §1..§7 schema as follows. A ManiSkill task is a single `BaseEnv` subclass — there is no separate per-robot `env_cfg`/`mdp/` tree. All design choices live in one file (`mani_skill/envs/tasks/tabletop/stack_cube.py`) plus shared base classes (`Panda` agent, `TableSceneBuilder`, `BaseEnv`). Code below is verbatim.
 

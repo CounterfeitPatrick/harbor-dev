@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: none (flat ground plane)
 - bimanual: false
+- summary: Stand upright and stay balanced on a flat plane.
 
 > NOTE: This is a SAPIEN ManiSkill task, NOT an IsaacLab manager-based task. There is no `mdp/` tree, no `RewardsCfg`/`ObservationsCfg`/`EventCfg` managers. All §1..§7 wiring lives directly on the `BaseEnv` subclass (`HumanoidStandEnv` / `UnitreeH1StandEnv`) and its agent (`UnitreeH1Simplified`). Sections below map the IsaacLab §1..§7 contract onto ManiSkill's hook methods.
 

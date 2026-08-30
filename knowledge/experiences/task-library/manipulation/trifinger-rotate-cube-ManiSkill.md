@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: cube, table, circular arena wall
 - bimanual: false
+- summary: Rotate a cube to a target orientation with a three-finger manipulator.
 
 ---
 

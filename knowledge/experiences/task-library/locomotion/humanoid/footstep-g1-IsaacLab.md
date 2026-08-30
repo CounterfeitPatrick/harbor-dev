@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: none (flat terrain)
 - bimanual: false
+- summary: Follow an alternating sequence of swing-foot touchdown poses on flat ground.
 
 > **CAVEAT:** All dims / counts below are **ANALYTIC** from reading the source (not build-verified here).
 > This captures the DESIGN for reproduction / adaptation, not a runtime trace.

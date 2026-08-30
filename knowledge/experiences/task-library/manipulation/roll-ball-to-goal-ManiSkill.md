@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: ball, goal region, table
 - bimanual: false
+- summary: Roll a ball across the table into a goal region.
 
 > ManiSkill maps to the §1..§7 sections as: §1 = `@register_env` + `SUPPORTED_ROBOTS` + `_load_agent` + `_load_scene` + sim cfg; §2 = controller / control_mode + action space; §3 = `_initialize_episode`; §4 = `evaluate()` + `max_episode_steps`; §5 = `_get_obs_extra` + obs modes; §6 = `compute_dense_reward` / `compute_normalized_dense_reward`; §7 = domain randomization.
 

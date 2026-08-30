@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: cube, L-shaped tool, table
 - bimanual: false
+- summary: Use an L-shaped tool to pull an out-of-reach cube into reach.
 
 ---
 

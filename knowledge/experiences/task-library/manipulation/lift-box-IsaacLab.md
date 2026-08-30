@@ -12,6 +12,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: eurobox, lab table
 - bimanual: true
+- summary: Two arms cooperatively grasp a eurobox and lift it off the table.
 
 Task summary: two FR3 + Franka-hand robots stand at world `y = ±0.49` facing each other. A 0.40 × 0.30 × 0.22 m eurobox (0.5 kg) sits centered on the lab table, **rotated 90° about +Z** so its long axis runs along world Y (between the robots) and its short y-end faces (0.30 m × 0.22 m) face each robot. Two `FrameTransformerCfg` markers (`grasp_frame_0`, `grasp_frame_1`) visualize the top-center of each short face. Each robot grasps its assigned short y-end face top-down with a parallel-jaw gripper (3-D EMA xyz EE-delta + binary gripper; RPY locked at reset). Goal: lift the box COM to world env-local `(0, 0, BOX_INIT_Z + 0.25) = (0, 0, 0.36025)` with `|box.lin_vel_w| < 0.10 m/s`. Episode horizon = 10 s @ 20 Hz = 200 steps.
 

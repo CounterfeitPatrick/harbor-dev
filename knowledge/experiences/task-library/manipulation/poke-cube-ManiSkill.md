@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: cube, peg, goal marker, table
 - bimanual: false
+- summary: Use a peg to poke a cube to a goal position.
 
 > ManiSkill task. Unlike IsaacLab manager-based tasks, all design choices live as methods on a single
 > `BaseEnv` subclass (`PokeCubeEnv`) decorated with `@register_env`. There is no `RewardsCfg` / `ObservationsCfg` /

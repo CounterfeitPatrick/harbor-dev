@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: blue cube, goal region, table
 - bimanual: false
+- summary: Pull a cube across the table toward the robot into a goal region.
 
 A simple tabletop manipulation task: a Panda arm must pull a blue cube along the table surface onto a red-and-white target region using a pushing/pulling motion from behind the cube. Single-stage, dense-reward, 50-step episodes.
 

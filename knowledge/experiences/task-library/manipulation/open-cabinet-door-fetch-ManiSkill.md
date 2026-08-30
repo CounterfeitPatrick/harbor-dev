@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: PartnetMobility cabinet (target door), ground
 - bimanual: false
+- summary: Drive to a cabinet and open its door at least three quarters of the way.
 
 > **Class hierarchy note.** `OpenCabinetDoor-v1` is a *thin subclass* of `OpenCabinetDrawerEnv`. It overrides only `TRAIN_JSON` (door cabinets instead of drawer cabinets) and `handle_types = ["revolute", "revolute_unwrapped"]` (door = revolute joint vs. drawer = prismatic). Every other method (`_load_agent`, `_load_scene`, `_load_cabinets`, `_initialize_episode`, `evaluate`, `_get_obs_extra`, `compute_dense_reward`, `compute_normalized_dense_reward`) is inherited verbatim from `OpenCabinetDrawerEnv`. All code below is the inherited implementation unless noted.
 

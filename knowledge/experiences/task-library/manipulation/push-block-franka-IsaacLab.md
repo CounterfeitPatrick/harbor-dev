@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: block, target marker, lab table
 - bimanual: false
+- summary: Push a block across the table to a target marker using a closed gripper as a pusher.
 
 This is a **non-prehensile planar push** task. A Franka Panda (gripper forced closed, used as a flat pusher) must push a small DexCube block across a table to a commanded 2-D goal position. Absolute joint-position control on the 7 arm joints; the goal is a `UniformPoseCommand` resampled every 4 s; success = block within 5 cm of the goal (logging-only). Modeled on `manipulation/lift` but planar (no lift gate, no `ee_frame` FrameTransformer).
 

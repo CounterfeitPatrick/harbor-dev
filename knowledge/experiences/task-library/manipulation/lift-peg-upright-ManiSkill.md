@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: two-color box peg, table
 - bimanual: false
+- summary: Move a peg lying flat on the table into an upright orientation.
 
 ManiSkill task: move a peg lying flat on the table into an upright orientation. Subclasses `mani_skill.envs.sapien_env.BaseEnv`; registered with `@register_env("LiftPegUpright-v1", max_episode_steps=50)`. Robots supported: `panda` (default), `fetch`.
 

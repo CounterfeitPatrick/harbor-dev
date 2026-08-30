@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: none (commanded goal pose), lab table
 - bimanual: false
+- summary: Move the end-effector to a commanded goal pose.
 
 This is a manager-based reaching task: a Franka Emika Panda arm must drive its `panda_hand`
 end-effector to a randomly commanded 6-DoF pose (position + orientation) in the workspace.

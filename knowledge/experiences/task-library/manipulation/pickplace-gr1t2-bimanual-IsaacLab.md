@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: steering wheel, packing table
 - bimanual: true
+- summary: A bimanual humanoid picks a steering wheel off a packing table and places it.
 
 > **CAVEAT (teleop / IL task).** This is the absolute-IK (`-Abs`) Pink-IK pipeline used for OpenXR/Manus-Vive teleoperation + robomimic BC (imitation learning). `rewards = None`, `commands = None`, `curriculum = None` in the env_cfg. **There is no shaped RL reward (§6 is absent).** Success is a binary termination term only. The reusable value of this spec is the **bimanual scene / 36-D dual-arm absolute-pose action / Dict observation / success-termination** structure (§1–§5). To use as an RL task, a §6 reward must be authored from scratch.
 

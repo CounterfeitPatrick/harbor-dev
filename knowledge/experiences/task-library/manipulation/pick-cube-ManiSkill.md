@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: red cube, green goal sphere, table
 - bimanual: false
+- summary: Grasp a cube and move it to a goal position marked by a sphere.
 
 > ManiSkill maps the IsaacLab §1..§7 sections onto methods of a single `BaseEnv` subclass (`PickCubeEnv`) rather than onto manager Cfg dataclasses. The mapping used below:
 > - §1 = `@register_env` + `SUPPORTED_ROBOTS` + `__init__`/cfg + `_load_agent` + `_load_scene` + sim/scene/camera config

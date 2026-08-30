@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: blue cubeA, green cubeB, target marker, table
 - bimanual: true
+- summary: Two arms cooperate to stack one cube on another at a target.
 
 > Family note: ManiSkill tasks subclass `mani_skill.envs.sapien_env.BaseEnv` and self-register via `@register_env(id, max_episode_steps=...)`. There is **no** IsaacLab manager-based `*Cfg` split (no `ActionsCfg`/`ObservationsCfg`/`RewardsCfg`/`EventCfg`). All seven sections map onto `BaseEnv` method overrides:
 > - §1 → `@register_env` + `SUPPORTED_ROBOTS` + `_load_agent` + `_load_scene` + `_default_sim_config`/`_default_sensor_configs`

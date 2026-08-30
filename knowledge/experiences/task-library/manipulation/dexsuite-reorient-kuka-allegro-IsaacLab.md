@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: randomly-shaped rigid object, table
 - bimanual: false
+- summary: Reorient a randomly shaped object to a commanded 6-DoF goal pose.
 
 > **Build caveat (read first).** This task is an UPSTREAM IsaacLab manager-based env registered inside `isaaclab_tasks` (NOT in `harbor/benchmark-spec.json`). `gym.make` requires `import isaaclab_tasks` first, which in turn imports `isaaclab.envs.mdp` → `isaaclab.utils.mesh` → `from pxr import Usd` and fails because the host `.venv` does not ship the Omniverse `pxr` package. The whole spec below is from a verbatim source read; the §1 build smoke and obs/action spaces were NOT executed. Resolved dims are analytic (see §2 / §5).
 

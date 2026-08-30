@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: none (flat ground; commanded goal position)
 - bimanual: false
+- summary: Walk to a commanded goal position on flat ground.
 
 > Task type: **goal-directed quadruped locomotion**. The Anymal-C quadruped must walk to a target sphere placed ~2.5 m in front of it (within ±0.5 m fwd, ±1 m lateral) and stop within 0.35 m of it without falling over. This is NOT velocity-command tracking — there is no commanded base velocity; the agent is rewarded purely on shrinking distance-to-goal plus stability penalties. The same env class (`QuadrupedReachEnv`) backs both `AnymalC-Reach-v1` (anymal_c) and `UnitreeGo2-Reach-v1` (go2); this spec documents the AnymalC subclass.
 

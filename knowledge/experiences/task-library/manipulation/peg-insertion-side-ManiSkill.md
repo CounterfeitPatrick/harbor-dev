@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: peg, box with hole, table
 - bimanual: false
+- summary: Insert a peg sideways into a matching hole in a box.
 
 A precision peg-insertion task: pick up an orange-white peg laid flat on the table and insert its orange (head) end into a side hole of a box. Hole clearance is a tight `0.003 m` over the peg radius; success requires the peg head to be inserted past the mid-depth with sub-`box_hole_radii` lateral tolerance.
 

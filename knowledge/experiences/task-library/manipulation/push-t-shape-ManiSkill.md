@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: T-shaped block, T target marker, white table
 - bimanual: false
+- summary: Push a T-shaped block into alignment with a target T outline.
 
 A simulated version of the real-world push-T task from Diffusion Policy. The robot uses a stick end-effector (`panda_stick`) to precisely push a T-shaped block so that it covers ≥90% of a fixed target-T region on the table. Success is coverage-only (the "PushT-easy" variant — the ee end-zone return is not enforced by `evaluate()`).
 

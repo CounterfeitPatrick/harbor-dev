@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: three cubes, table
 - bimanual: false
+- summary: Arrange three cubes into a pyramid.
 
 ManiSkill maps onto the §1..§7 design-choice schema as follows. There is no IsaacLab-style `*Cfg` manager tree; every section is a method on the `BaseEnv` subclass. All section code is pasted verbatim from `mani_skill/envs/tasks/tabletop/stack_pyramid.py` unless noted.
 

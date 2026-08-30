@@ -182,6 +182,67 @@ def render_agents():
     return "\n".join(lines) + "\n"
 
 
+LIBRARY_GROUPS = [
+    ("manipulation", "Manipulation",
+     "Arms and hands acting on objects — reaching, grasping, placing, inserting, "
+     "stacking, and in-hand reorientation."),
+    ("locomotion/humanoid", "Humanoid locomotion",
+     "Bipedal whole-body control: standing, velocity tracking, and footstep following."),
+    ("locomotion/quadrupedal", "Quadrupedal locomotion",
+     "Four-legged velocity tracking and goal-reaching over flat and rough terrain."),
+]
+
+
+def render_task_library():
+    """The library indexed by embodiment.
+
+    Generated from the entries' own metadata rather than written alongside them, for the same
+    reason the command table is: a hand-maintained index of 52 files is an index that goes
+    stale on the 53rd. Each group is a <details> block so the page opens as three lines
+    rather than a wall.
+    """
+    root = ROOT / "knowledge" / "experiences" / "task-library"
+    lines = ["# Task library", "",
+             "Every task HARBOR has authored or reproduced, kept as a self-contained "
+             "implementation spec — scene, actions, reset, termination, observation, reward "
+             "and DR, with verbatim code. Together they are what a new task is adapted "
+             "*from*: authoring runs a search over this library first, so a new task starts "
+             "from the closest prior one rather than from a blank file.", "",
+             "Each entry is reproducible with "
+             "[`/harbor:task-create`](/guide/commands) `from=<spec>`.", ""]
+    counts = []
+    total = 0
+    for subdir, title, blurb in LIBRARY_GROUPS:
+        entries = sorted((root / subdir).glob("*.md"))
+        entries = [e for e in entries if e.name != "README.md"]
+        if not entries:
+            continue
+        total += len(entries)
+        counts.append((title, len(entries)))
+        lines += [f"<details>", f"<summary><b>{title}</b> — {len(entries)} tasks</summary>",
+                  "", blurb, "",
+                  "| Task | Robot | Simulator | What it does |", "|---|---|---|---|"]
+        for e in entries:
+            fm = {}
+            for line in e.read_text(encoding="utf-8").split("\n"):
+                m = re.match(r"^-\s*(robot|simulator|summary)\s*:\s*(.+?)\s*$", line)
+                if m and m.group(1) not in fm:
+                    fm[m.group(1)] = m.group(2)
+            rel = f"knowledge/experiences/task-library/{subdir}/{e.name}"
+            lines.append(
+                f"| [`{e.stem}`]({REPO_URL}/blob/main/{rel}) "
+                f"| {cell(fm.get('robot', '—'))} "
+                f"| {cell(fm.get('simulator', '—').split('(')[0].strip())} "
+                f"| {cell(fm.get('summary', '—'))} |"
+            )
+        lines += ["", "</details>", ""]
+    if total:
+        breakdown = ", ".join(f"{n} {t.lower()}" for t, n in counts)
+        lines.insert(4, f"**{total} tasks** today — {breakdown}.")
+        lines.insert(5, "")
+    return "\n".join(lines).rstrip("\n") + "\n"
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--check", action="store_true",
@@ -190,7 +251,9 @@ def main():
 
     OUT.mkdir(parents=True, exist_ok=True)
     stale = []
-    for name, text in (("commands.md", render_commands()), ("agents.md", render_agents())):
+    for name, text in (("commands.md", render_commands()),
+                       ("agents.md", render_agents()),
+                       ("task-library.md", render_task_library())):
         path = OUT / name
         current = path.read_text(encoding="utf-8") if path.exists() else None
         if args.check:

@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: none (flat terrain)
 - bimanual: false
+- summary: Track a commanded base velocity while walking on flat ground.
 
 This is an UPSTREAM IsaacLab manager-based **locomotion / velocity-tracking** task for the **Unitree H1 bipedal humanoid** on **flat ground**. The agent tracks a commanded base velocity (lin_x, lin_y, ang_z) via direct joint-position targets over all 19 joints.
 

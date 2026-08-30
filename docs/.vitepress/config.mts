@@ -66,10 +66,11 @@ export default defineConfig({
       },
       {
         text: 'Reference',
-        activeMatch: '^/guide/(commands|agents)$',
+        activeMatch: '^/guide/(commands|agents|task-library)$',
         items: [
           { text: 'Commands', link: '/guide/commands' },
           { text: 'Agents', link: '/guide/agents' },
+          { text: 'Task library', link: '/guide/task-library' },
         ],
       },
       { text: 'Paper', link: 'https://arxiv.org/abs/2606.08610' },
@@ -111,6 +112,7 @@ export default defineConfig({
           items: [
             { text: 'Commands', link: '/guide/commands' },
             { text: 'Agents', link: '/guide/agents' },
+            { text: 'Task library', link: '/guide/task-library' },
           ],
         },
       ],

@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: box, two tables
 - bimanual: true
+- summary: Lift a box from one table and carry it across to another.
 
 ManiSkill tasks are SAPIEN `BaseEnv` subclasses decorated with `@register_env`. There is no IsaacLab-style manager-based config tree: scene / actions / reset / termination / observation / reward are all *methods* on the env class. The §1..§7 mapping below adapts the Harbor section model onto these methods.
 

@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: random YCB object, green goal sphere, table
 - bimanual: false
+- summary: Lift a randomly sampled YCB object and move it to a goal position.
 
 ---
 

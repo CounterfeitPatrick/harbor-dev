@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: cabinet with drawers, table
 - bimanual: false
+- summary: Grasp a cabinet drawer handle and pull the drawer open.
 
 Manager-based RL task: a Franka Panda arm must reach, align with, grasp, and pull open the **top drawer** of an articulated Sektion cabinet. The manipulated object is an `ArticulationCfg` (the cabinet) whose `drawer_top_joint` is the controlled DOF; `FrameTransformerCfg`s track the gripper TCP/fingertips and the drawer handle. Reward is a 9-term sum implementing a staged approach → align → grasp → open curriculum.
 

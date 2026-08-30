@@ -70,12 +70,12 @@ If the user's text already opens with a bold gist, keep it; otherwise synthesize
 
 The file MUST look like an implementation spec:
 - first heading matches `# <TaskID> — Implementation Spec`
-- carries the four metadata lines: `- robot:`, `- simulator:`, `- objects:`, `- bimanual:`
+- carries the five metadata lines: `- robot:`, `- simulator:`, `- objects:`, `- bimanual:`, `- summary:`
 - has `## §1` … `## §6` section anchors
 
 If any is missing, refuse: "not an implementation spec — generate one with `/harbor:probe-task` first." Do not copy.
 
-Every entry in the library states those four fields identically, because they are what a
+Every entry in the library states those five fields identically, because they are what a
 search across the library matches on. A spec that omits one is filed inconsistently and
 stops being findable.
 

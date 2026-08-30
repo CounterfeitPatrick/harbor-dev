@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: tote box (object_0), table
 - bimanual: true
+- summary: Two dexterous hands cooperatively grasp a tote box and lift it to a commanded pose.
 
 > Source package name anonymized as `bimanual_suite`. This task comes from an internal
 > bimanual manipulation suite rather than a public repo; the design below is otherwise verbatim.

@@ -80,7 +80,8 @@ task, so gating on it refuses healthy ones.
      - `EventCfg`: every term with `mode != "reset"` (i.e. `startup` / `interval`). Function, params, ranges. If none, write `<no DR>`.
 
 4. **Fill the metadata block.** `robot` and `objects` come from the §1 scene you just read;
-   `bimanual` is true when the scene holds two arms the policy drives independently. These four
+   `bimanual` is true when the scene holds two arms the policy drives independently, and `summary`
+   is one sentence naming what the robot must do. These five
    fields are what the task-library is searched on, so they are stated the same way for every
    entry.
 
@@ -92,6 +93,7 @@ task, so gating on it refuses healthy ones.
    - simulator: <simulator + its API shape, e.g. `IsaacLab (Isaac Sim, manager-based)`>
    - objects: <the scene's manipulable + goal objects, or `none (<terrain>)` for locomotion>
    - bimanual: <true|false>
+   - summary: <one sentence: what the task asks the robot to do>
 
    ## §1 Registration + Scene
    ...

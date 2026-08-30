@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: none (flat ground plane)
 - bimanual: false
+- summary: Stand upright and stay balanced on a flat plane.
 
 ManiSkill differs structurally from IsaacLab manager-based tasks: there is no `RewardsCfg`/`ObservationsCfg`/`EventCfg`/`TerminationsCfg`. Instead the task is a single `BaseEnv` subclass whose hooks (`_load_scene`, `_initialize_episode`, `evaluate`, `_get_obs_extra`, `compute_*_reward`) and the chosen robot agent (`UnitreeG1Simplified`) collectively define §1..§7. Sections below map those hooks onto the §1..§7 schema.
 

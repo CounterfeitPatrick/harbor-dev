@@ -4,6 +4,7 @@
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
 - objects: three-spoke valve, table
 - bimanual: false
+- summary: Rotate a three-spoke valve with a three-finger hand.
 
 > NOTE: All five `RotateValveLevel{0..4}-v1` ids are registered on subclasses of one base `RotateValveEnv`. Behaviour differs only through `self.difficulty_level`, which gates (a) `success_threshold`, (b) the valve-head angle sampling in `_load_articulations`, (c) valve radius randomization (level ≥ 3), and (d) the rotation direction (level 4 randomizes sign). This spec captures the full base design and annotates exactly what Level1 selects.
 

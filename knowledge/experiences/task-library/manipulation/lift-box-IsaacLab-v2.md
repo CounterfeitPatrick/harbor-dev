@@ -7,6 +7,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: eurobox, lab table
 - bimanual: true
+- summary: Two arms cooperatively grasp a eurobox and lift it off the table.
 
 > **AppLauncher caveat**: bare-shell `gym.make` does NOT work in this repo — `pxr` is only
 > importable through `isaaclab.app.AppLauncher`. Every build/smoke must first construct

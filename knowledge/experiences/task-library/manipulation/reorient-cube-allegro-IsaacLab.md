@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: cube, goal-pose cube marker
 - bimanual: false
+- summary: Rotate a cube in-hand to match a commanded goal orientation.
 
 This is the **in-hand cube reorientation** task: a *fixed* Allegro hand (16-DoF, gravity disabled on the hand bodies) must reorient a free-floating cube resting in its palm to a commanded goal orientation. There is no arm and no base — the hand never translates. The goal is an orientation-only command (constant position, sampled quaternion); on each success the goal is immediately resampled, so a single episode chains many consecutive reorientations. The task has rich domain randomization (friction, mass, actuator gains) and Gaussian observation noise.
 

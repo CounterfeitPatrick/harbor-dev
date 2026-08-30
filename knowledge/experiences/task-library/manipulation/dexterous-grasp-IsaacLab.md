@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: "dog" rigid object, lab table
 - bimanual: false
+- summary: Grasp a small rigid object off a table and lift it to a target height.
 
 Task summary: a single UFactory 850 + Allegro right hand (22-DoF: 6 arm + 16 hand) sits at env-local `(-0.274, -0.475, 0.01)` and must grasp + lift a small "dog" rigid object (0.11 kg, dynamic) sitting at env-local `(0.05, -0.35, 0.0)` on a lab table. Goal: drive the dog to env-local target `(0.05, -0.35, 0.30)` — same xy as spawn, +30 cm in z — within 10 cm tolerance before the 8.33-s horizon expires. Scene + actuator stack + init pose mirror the source repo `InsertDrawer`'s right-robot half byte-for-byte (USD, init pos, joint qpos, 9-group ImplicitActuatorCfg blocks). Controller is the **joint-space** EMA cumulative-relative action vendored verbatim from the source repo into `mdp/actions.py` + `mdp/actions_cfg.py` (no runtime cross-repo import). Reward composer is `sum` over 6 dense-then-sparse terms. No DR is wired (`EventCfg` only has reset terms).
 

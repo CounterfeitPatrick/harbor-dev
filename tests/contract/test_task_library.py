@@ -25,7 +25,7 @@ ENTRIES = sorted(p for p in LIBRARY.rglob("*.md") if p.name != "README.md")
 
 # The header every entry states identically, because it is what the library is searched on.
 # Order is fixed too: a reader scanning many entries reads position, not labels.
-REQUIRED_FIELDS = ("robot", "simulator", "objects", "bimanual")
+REQUIRED_FIELDS = ("robot", "simulator", "objects", "bimanual", "summary")
 
 SECTIONS = ("§1", "§2", "§3", "§4", "§5", "§6", "§7")
 
@@ -87,7 +87,7 @@ def test_bimanual_is_a_boolean(path):
 def test_robot_simulator_and_objects_are_answered(path):
     """Guards the failure that leaves the field present and the answer absent."""
     text = path.read_text(encoding="utf-8")
-    for f in ("robot", "simulator", "objects"):
+    for f in ("robot", "simulator", "objects", "summary"):
         v = _field(text, f)
         assert v and len(v) >= 4 and v.lower() not in {"tbd", "todo", "n/a", "none", "-"}, (
             f"{path.relative_to(LIBRARY)}: '{f}' is {v!r} — state it. A locomotion task with "

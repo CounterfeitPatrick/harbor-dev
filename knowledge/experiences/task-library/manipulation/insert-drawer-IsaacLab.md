@@ -4,6 +4,7 @@
 - simulator: IsaacLab (Isaac Sim, manager-based)
 - objects: DexCube, drawer cabinet, lab table
 - bimanual: false
+- summary: Pick a cube off the table, place it inside an open drawer, and push the drawer closed.
 
 Task summary: Franka FR3 (single arm) starts with a drawer ALREADY OPEN (joint pos = 0.30 m). The policy must (1) pick up a small DexCube from the table, (2) lift it above the drawer rim, (3) place it inside the open drawer, (4) retract the gripper out of the drawer interior, and (5) push the drawer closed. Episode ends on either time-out (9 s @ 20 Hz = 180 steps) or task success (cube inside + drawer joint pos < 0.10 m). Composer = sum, 8 active reward terms with monotonically-increasing per-step magnitudes (`reach < lift < align < retract < close < cube_inside_latch < success_bonus`).
 
