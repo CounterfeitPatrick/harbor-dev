@@ -38,13 +38,51 @@ def _write(tmp_path, metrics_rows, design=DESIGN):
     return m, d
 
 
-def _run(metrics, design, *extra):
+VALID_ANALYSIS = {
+    "checkpoint_watched": "final",
+    "frames_usable": "robot, cube and marker in frame for all 12 frames",
+    "behavior": "the arm reaches the cube and hovers; the gripper never closes",
+    "stage_reached": "reach (rung 1 of 2); never advances to lift",
+    "time_allocation": "frames 0-2 approach, frames 3-11 stationary hover",
+    "reward_hacking": "parks at the reach term's maximum instead of grasping",
+    "physical_validity": "no penetration; the cube rests on the table throughout",
+    "termination": "never fires; every episode runs the full horizon",
+    "actuation_quality": "smooth approach, slight wrist jitter while hovering",
+    "failure_mode": "reach saturates before grasp is attempted",
+    "findings": ["gate reach on gripper-closed"],
+}
+
+
+def _analysis(tmp_path, **overrides):
+    """A complete checklist, so tests about the NUMBERS need not restate it."""
+    obj = dict(VALID_ANALYSIS)
+    for k, v in overrides.items():
+        if v is _DROP:
+            obj.pop(k, None)
+        else:
+            obj[k] = v
+    p = tmp_path / "analysis.json"
+    p.write_text(json.dumps(obj))
+    return p
+
+
+_DROP = object()
+
+
+def _run(metrics, design, *extra, expect_rc=0):
+    extra = list(extra)
+    # --analysis-json is mandatory under the default `scored` status. Tests that are about
+    # the arithmetic get a valid one injected so they stay about the arithmetic.
+    if "--analysis-json" not in extra and "--status" not in extra:
+        extra += ["--analysis-json", str(_analysis(metrics.parent))]
     r = subprocess.run(
         [sys.executable, str(SCRIPT), "--metrics", str(metrics),
          "--design", str(design), "--iter", "7", *extra],
         capture_output=True, text=True,
     )
-    assert r.returncode == 0, r.stderr
+    assert r.returncode == expect_rc, f"rc={r.returncode}\n{r.stderr}"
+    if expect_rc:
+        return r.stderr
     return json.loads(r.stdout)
 
 
@@ -108,9 +146,13 @@ def test_task_and_reward_smoke_failures_stay_distinguishable(tmp_path):
     """A broken sensor and a broken reward term look identical downstream unless the
     status and the per-smoke map say which one it was."""
     _, d = _write(tmp_path, [])
+    a = tmp_path / "smoke_fail.json"
+    a.write_text(json.dumps({"failure_mode": "contact sensor never reports a hit",
+                             "findings": ["add a contact sensor to the gripper"]}))
     v = _run(tmp_path / "absent.jsonl", d, "--status", "task_smoke_failed",
              "--smoke", "S1=pass", "--smoke", "S4=fail", "--smoke", "S6=skipped",
-             "--failure-mode", "contact sensor never reports a hit")
+             "--analysis-json", str(a))
+    assert v["failure_mode"] == "contact sensor never reports a hit"
     assert v["status"] == "task_smoke_failed"
     assert v["smokes"] == {"S1": "pass", "S4": "fail", "S6": "skipped"}
     assert v["success_rate"] is None
@@ -140,14 +182,15 @@ def test_prose_and_artifacts_pass_through(tmp_path):
     ])
     out = tmp_path / "verdict.json"
     mp4 = tmp_path / "render.mp4"; mp4.write_bytes(b"mp4")   # must exist — see the gate below
-    v = _run(m, d, "--behavior", "arm reaches but never closes the gripper",
-             "--failure-mode", "no grasp",
-             "--finding", "contact gate never fires",
+    a = _analysis(tmp_path, behavior="arm reaches but never closes the gripper",
+                  failure_mode="no grasp", findings=["contact gate never fires"])
+    v = _run(m, d, "--analysis-json", str(a),
              f"--artifact", f"render_mp4={mp4}",
              "--out", str(out))
     assert v["behavior"].startswith("arm reaches")
     assert v["failure_mode"] == "no grasp"
     assert v["findings"] == ["contact gate never fires"]
+    assert v["analysis"]["termination"].startswith("never fires")
     assert v["artifacts"] == {"render_mp4": str(mp4)}
     assert json.loads(out.read_text()) == v      # --out and stdout agree
 
@@ -208,3 +251,88 @@ def test_all_artifacts_present_produces_no_note(tmp_path):
     v = _run(m, d, "--artifact", f"render_mp4={mp4}", "--artifact", f"curves_dir={curves}")
     assert set(v["artifacts"]) == {"render_mp4", "curves_dir"}
     assert not any("do not exist" in n for n in v["notes"])
+
+
+def test_scoring_without_an_analysis_is_refused(tmp_path):
+    """A `scored` candidate is one whose rollout was watched. Scoring one with no analysis
+    would publish numbers with no account of what the policy actually did."""
+    m, d = _write(tmp_path, [
+        {"step": 1, "reward/total/episodic_return_mean": 1.0,
+         "reward/stack_success/episodic_return_mean": 100.0},
+    ])
+    err = _run(m, d, "--status", "scored", expect_rc=1)
+    assert "--analysis-json is required" in err
+
+
+def test_an_unanswered_aspect_is_refused(tmp_path):
+    """Coverage is the half a machine can check. It cannot tell whether 'the gripper never
+    closes' is true; it can tell that nobody addressed termination at all."""
+    m, d = _write(tmp_path, [
+        {"step": 1, "reward/total/episodic_return_mean": 1.0,
+         "reward/stack_success/episodic_return_mean": 100.0},
+    ])
+    a = _analysis(tmp_path, termination=_DROP)
+    err = _run(m, d, "--analysis-json", str(a), expect_rc=1)
+    assert "missing required key 'termination'" in err
+
+
+def test_a_placeholder_answer_is_refused(tmp_path):
+    """Same rule the visual passes use: an answer that cannot be contradicted by the frames
+    is not evidence."""
+    m, d = _write(tmp_path, [
+        {"step": 1, "reward/total/episodic_return_mean": 1.0,
+         "reward/stack_success/episodic_return_mean": 100.0},
+    ])
+    for junk in ("clean", "ok", "Looks correct.", "  n/a "):
+        a = _analysis(tmp_path, physical_validity=junk)
+        err = _run(m, d, "--analysis-json", str(a), expect_rc=1)
+        assert "physical_validity" in err, junk
+
+
+def test_explicit_uncertainty_is_accepted(tmp_path):
+    """The checklist must not push toward confabulation: 'I could not see' is a real answer,
+    and is exactly what a forced-choice schema would destroy."""
+    m, d = _write(tmp_path, [
+        {"step": 1, "reward/total/episodic_return_mean": 1.0,
+         "reward/stack_success/episodic_return_mean": 100.0},
+    ])
+    a = _analysis(tmp_path, reward_hacking="unclear: only the arm is in frame")
+    v = _run(m, d, "--analysis-json", str(a))
+    assert v["analysis"]["reward_hacking"].startswith("unclear")
+
+
+def test_a_typoed_aspect_is_refused_rather_than_silently_dropped(tmp_path):
+    """A misspelled key would otherwise leave that aspect unanswered while the checklist
+    looks full — the exact failure the checklist exists to prevent."""
+    m, d = _write(tmp_path, [
+        {"step": 1, "reward/total/episodic_return_mean": 1.0,
+         "reward/stack_success/episodic_return_mean": 100.0},
+    ])
+    a = _analysis(tmp_path, terminaton="never fires", termination=_DROP)
+    err = _run(m, d, "--analysis-json", str(a), expect_rc=1)
+    assert "unknown key(s) ['terminaton']" in err
+
+
+def test_checkpoint_watched_must_say_which_policy(tmp_path):
+    """On a run that peaked and collapsed, the rendered best checkpoint and the final one are
+    different policies; conflating them misreports what the reward produced."""
+    m, d = _write(tmp_path, [
+        {"step": 1, "reward/total/episodic_return_mean": 1.0,
+         "reward/stack_success/episodic_return_mean": 100.0},
+    ])
+    a = _analysis(tmp_path, checkpoint_watched="the good one")
+    err = _run(m, d, "--analysis-json", str(a), expect_rc=1)
+    assert "checkpoint_watched" in err
+
+
+def test_smoke_failed_candidate_needs_no_rollout_aspects(tmp_path):
+    """It never trained, so there is no video. Demanding eight observations of a rollout that
+    does not exist would only manufacture them — but it still owes a failure_mode."""
+    _, d = _write(tmp_path, [])
+    a = tmp_path / "sf.json"
+    a.write_text(json.dumps({"failure_mode": "contact sensor never reports a hit",
+                             "findings": ["add a contact sensor"]}))
+    v = _run(tmp_path / "absent.jsonl", d, "--status", "reward_smoke_failed",
+             "--analysis-json", str(a))
+    assert v["failure_mode"].startswith("contact sensor")
+    assert v["analysis"] is None

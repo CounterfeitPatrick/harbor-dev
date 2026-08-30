@@ -98,6 +98,10 @@ numeric fields come from `scripts/reward-tuning-agent/score_iter.py`, which owns
   "behavior": "<one paragraph: what the policy actually does, vs `description`>",
   "failure_mode": "<one line, or null when it converged>",
   "findings": ["<0-3 lines the next design should act on>"],
+  "analysis": {"checkpoint_watched": "peak | final",
+               "frames_usable": "...", "stage_reached": "...", "time_allocation": "...",
+               "reward_hacking": "...", "physical_validity": "...",
+               "termination": "...", "actuation_quality": "..."},
   "notes": ["<scorer-emitted caveats>"],
   "artifacts": {"render_mp4": "...", "frames_dir": "...", "curves_dir": "...",
                 "metrics_jsonl": "...", "run_log": "...", "trial_dir": "..."} }
@@ -111,7 +115,19 @@ so in `notes` — the designer is never sent to a dead file.
 
 **`verdict.json` is the ONLY analysis channel.** `behavior` / `failure_mode` / `findings` are
 the write-up; there is no companion prose file. A candidate that has more to say says it in
-those fields. `artifacts` are raw evidence — the render, the frames, the metrics, the run log —
+those fields.
+
+`behavior`, `failure_mode`, `findings`, and `analysis` all come from the candidate's
+`iter_<NNN>/analysis.json`, passed to `score_iter.py --analysis-json`. That file is a
+**checklist**: eight aspects of the rollout, each answered in prose. The scorer validates
+coverage — a missing key, an unknown key, or a placeholder answer exits non-zero rather
+than producing a verdict with quiet holes, and `--analysis-json` is mandatory whenever
+`status` is `scored`. Coverage is the half a machine can check: it cannot tell whether
+"the gripper never closes" is true, but it can tell that nobody addressed `termination`.
+
+Read `analysis.physical_validity` before concluding anything about the reward — penetration
+and sinking are §1–§3 defects, and every other aspect points at the reward, so the two lead
+to opposite repairs. `artifacts` are raw evidence — the render, the frames, the metrics, the run log —
 for the designer to pull when a verdict doesn't add up, never a second narrative to maintain.
 
 The durable copy on disk is what makes the loop resume-safe: a crashed session, a killed

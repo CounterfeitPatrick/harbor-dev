@@ -330,26 +330,53 @@ dead policy.
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/reward-tuning-agent/score_iter.py" \
     --metrics "$trial/metrics.jsonl" --design "<iter_dir>/design.json" --iter <NNN> \
     --status scored --smoke S1=pass --smoke S6=pass [--smoke ...] \
-    --behavior "<what the policy does>" [--failure-mode "..."] [--finding "..."]... \
+    --analysis-json "<iter_dir>/analysis.json" \
     --artifact render_mp4=<iter_dir>/render.mp4 --artifact frames_dir=<iter_dir>/frames \
     --artifact curves_dir=<iter_dir>/curves --artifact metrics_jsonl=<iter_dir>/metrics.jsonl \
     --artifact run_log=<iter_dir>/run.log --artifact trial_dir=$trial \
     --out "<iter_dir>/verdict.json"
 ```
 
-The scorer owns every number. Your contribution is the part it cannot compute:
+The scorer owns every number. Your contribution is the part it cannot compute: what the
+robot actually does. Extract `n_frames` frames from `render.mp4` with `ffmpeg` into
+`<iter_dir>/frames/`, `Read` every one of them, then write `<iter_dir>/analysis.json`.
 
-- **Watch the rollout.** Extract `n_frames` frames from `render.mp4` with `ffmpeg` into
-  `<iter_dir>/frames/`, `Read` them, and write `behavior` as what the policy actually does
-  compared with `description`. "Reward went up" is not a behavior; "the arm reaches the cube
-  and hovers, gripper never closes" is.
-- **Read the scorer's `peak` block before writing `behavior`.** If it reports the run peaked
-  and collapsed, say which policy you actually watched — the rendered best checkpoint is not
-  the end-of-training one, and conflating them misreports what the reward produced.
-- **`failure_mode`** — one line naming the mechanism, not the symptom.
-- **`findings`** — 0–3 lines the next design should act on, and say whether each points at
-  the task design or the reward. This is your entire influence on the search; a vague
-  finding is a wasted iteration.
+It is a **checklist, not an essay** — work the aspects in order, and answer each from the
+frames. `score_iter.py` refuses to score a candidate whose checklist has a missing key, an
+unknown key, or a placeholder answer, because an aspect nobody addressed is the common way
+a rollout analysis misleads the search.
+
+```json
+{ "checkpoint_watched": "peak | final",
+  "frames_usable":     "is the subject in frame — if not, say so; the rest is then void",
+  "behavior":          "what the policy does, against `description`",
+  "stage_reached":     "furthest rung of the term ladder, and where it stalls",
+  "time_allocation":   "where the frames cluster",
+  "reward_hacking":    "a term being farmed instead of progress, or that you saw none",
+  "physical_validity": "penetration, sinking, jitter, explosion — or that it is clean",
+  "termination":       "fires as intended / never / constantly / on a wrong-looking state",
+  "actuation_quality": "jitter, oscillation, saturation — or that motion is smooth",
+  "failure_mode":      "one line naming the MECHANISM, not the symptom; null if converged",
+  "findings":          ["0-3 lines the next design should act on"] }
+```
+
+Answers are prose because the useful content does not fit an enum — "reaches at frame 2,
+hovers 3–11" is the answer, `stalled` is not. Four rules:
+
+- **Say what you saw.** "Reward went up" is not a behavior; "the arm reaches the cube and
+  hovers, gripper never closes" is. One-word answers are rejected outright.
+- **Uncertainty is allowed, guessing is not.** `"unclear: only the arm is in frame"` is a
+  valid answer. Inventing a confident one because the field must be filled is the failure
+  this checklist exists to prevent.
+- **`checkpoint_watched` is load-bearing.** Read the scorer's `peak` block first: if the run
+  peaked and collapsed, the rendered best checkpoint is not the end-of-training one, and
+  conflating them misreports what the reward produced.
+- **`physical_validity` routes differently from everything else.** Penetration and sinking
+  are §1–§3 defects; every other aspect points at the reward. Getting this one wrong sends
+  the next iteration to repair the wrong layer.
+
+`findings` is your entire influence on the search — say whether each points at the task
+design or the reward. A vague finding is a wasted iteration.
 
 `verdict.json` is your whole write-up — there is no companion `analysis.md`. Everything you
 want the designer to know goes in `behavior` / `failure_mode` / `findings`; everything it might
