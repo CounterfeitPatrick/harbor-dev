@@ -163,54 +163,45 @@ HARBOR is both an **end-to-end robot RL workflow** and a **structured agentic ha
 
 ### Capabilities
 
-HARBOR covers the workflow from an existing simulator repository and a task request to a trained, evaluated policy.
+Each of these is one request. HARBOR can chain them end to end, or you can invoke any of them on its own.
 
-| Stage | What HARBOR handles |
-|:--|:--|
-| **Environment setup** | Probes the target repository, resolves dependencies, builds an isolated environment, and verifies that the simulator can import and run. |
-| **Task construction** | Turns a natural-language task description into simulator-native task code, observations, termination conditions, success criteria, and executable smoke tests. |
-| **Reward design** | Builds reward functions, trains candidate policies, inspects learning signals and rendered behavior, and iterates when the reward produces the wrong behavior. |
-| **RL integration** | Connects the task to a reproducible training stack with algorithm configs, wrappers, logging, checkpointing, evaluation, and rendering. |
-| **Training & tuning** | Runs training, diagnoses failures from metrics and rollouts, tunes rewards or RL settings, evaluates checkpoints, and renders final policies. |
+| Capability | What it does | How to run it |
+|:--|:--|:--|
+| **Install a simulator** | Probes the repository, builds an installation plan from its own docs, creates an isolated `.venv/`, and verifies the package imports and sees your GPU. | `/harbor:env-install-uv` |
+| **Design a task** | Turns a sentence into simulator-native task code — scene, actions, reset, success predicate, observations — each section gated by its own behavioral smoke. | `/harbor:task-create name=<id> description="..."` |
+| **Tune a reward** | Searches reward designs with real training as the fitness function: candidates train in parallel, get scored on success rate and rendered behavior, and the winner is promoted onto the task. | `/harbor:reward-tune task=<id>` |
+| **Write an RL algorithm** | Scaffolds a training stack against your task — train, eval, render, configs, logging — from a self-contained algorithm tree, SB3, or your own implementation. | `/harbor:task-create` runs it, or dispatch `rl-integration-generator` |
+| **Train a policy** | Runs training with any config key overridable inline, and renders the result on success. | `/harbor:rl-run task=<id> algorithm=ppo` |
+| **Tune an algorithm** | Searches hyperparameters open-endedly — baseline, then a tricks pass, then log-driven edits — under a wall-clock budget so a win cannot come from more compute. | `/harbor:rl-tune task=<list> algorithm=<list>` |
+| **Plot training curves** | Mean ± std curves from W&B, grouped into a multi-panel figure by task × baseline, averaging seeds within each pair. | `/harbor:plot spec=<yaml>` |
+| **Reproduce a task** | Extracts an existing task into a portable spec capturing every design choice with verbatim code, then rebuilds it from that spec. | `/harbor:probe-task task=<id>` then `/harbor:task-create from=<spec>` |
 
-The same workflow applies across manipulation, dexterous control, and whole-body locomotion. You can ask HARBOR to run it end to end, or invoke individual stages and commands yourself.
+The same workflow applies across manipulation, dexterous control, and whole-body locomotion.
 
-### Coming soon
-
-Built, not yet released. The commands accept these requests and tell you they are unavailable rather than half-doing them.
-
-| Capability | What it will do |
-|---|---|
-| **Domain randomization** (§7) | Adds and tunes simulation randomization while checking that the resulting task remains physically valid and learnable. Tasks are already authored with the DR slot left open, so it can be wired in without re-authoring §1–§6. |
-| **Sim-to-sim migration** | Ports a task's *design* — scene, actions, reset, success predicate, reward ladder — from one simulator to another, re-earning the reward's validation by training in the destination simulator. |
+Behind these sit **23 commands** and **9 agents** — the full surface, including the primitives the capabilities above compose. See the **[command reference →](https://supersglzc.github.io/harbor-dev/guide/commands)** for every command and its arguments, the **[agent reference →](https://supersglzc.github.io/harbor-dev/guide/agents)** for each agent's role and tools, and the **[task library →](https://supersglzc.github.io/harbor-dev/guide/task-library)** for the 52 tasks already authored.
 
 ### Architecture
 
 HARBOR specializes a general agentic harness to robot RL as five interacting pieces:
 
-| | |
-|:--|:--|
-| **Agents** | Context-isolated subprocesses, each owning one bounded stage. They read stage-local artifacts, do the work, and return a compact summary — implementation noise never reaches the context making decisions. |
-| **Commands** | Reproducible operations, from primitives like `rl-run` to composed loops like `reward-tune`. The same surface is callable by any agent, or by you. |
-| **Artifacts** | Workflow state externalized into persistent files. They are the communication substrate between agents, which is what lets a run survive a killed agent or a resumed session. |
-| **Gates** | Executable checks that decide whether a stage may advance — import checks, rollout shape checks, actuator tracking error, reward-composition assertions, frame-difference render checks. A failed gate returns a diagnosis, not a stack trace. |
-| **Knowledge** | Templates, references, and an append-only experience ledger that accumulates across runs, so the second task of a kind is much cheaper than the first. |
+| | What it is | Concretely |
+|:--|:--|:--|
+| **Agents** | Context-isolated subprocesses, each owning one bounded stage. They read stage-local artifacts, do the work, and return a compact summary. | `reward-tuning-agent` designs candidates and dispatches one `reward-candidate-agent` each. A candidate's traceback, log tail and failed frames stay on its side — the agent choosing what to try next sees verdicts, not noise. |
+| **Commands** | Reproducible operations, from primitives like `rl-run` to composed loops like `reward-tune`. The same surface is callable by any agent, or by you. | `rl-sweep` calls `rl-run` once per trial; `task-create` calls `reward-tune` for §6; `test` drives the whole chain. Composition is why they stay model-invocable. |
+| **Artifacts** | Workflow state externalized into persistent files — the communication substrate between agents. | `benchmark-spec.json` is written once and read by every later stage. `tune-state.json` checkpoints each iteration, so a killed tune resumes from disk instead of starting over. |
+| **Gates** | Executable checks that decide whether a stage may advance. A failed gate returns a diagnosis, not a stack trace. | §2 asserts the achieved joint position matches the commanded one — catching a controller bug in minutes rather than as non-convergence hours later. §6 asserts `sum(detailed_reward.values()) == reward` every step, so per-term curves are trustworthy evidence. |
+| **Knowledge** | Templates, references, and append-only experience ledgers that accumulate across runs. | 52 task specifications indexed by embodiment; authoring searches them first, so a new task starts from the closest prior one. Reward experience cut a redesign on the hardest task from four hours to thirty minutes. |
 
-The property that matters: HARBOR cannot guarantee your policy is semantically correct. What it does is **turn common RL engineering failures into gate failures that surface before they propagate downstream** — the difference between a bug caught early and one discovered after a long training run.
-
-HARBOR ships **23 commands** and **9 agents**. See the full **[command reference →](https://supersglzc.github.io/harbor-dev/guide/commands)** and **[agent reference →](https://supersglzc.github.io/harbor-dev/guide/agents)** for their arguments, roles, tools, and source definitions.
+The property that matters: HARBOR cannot guarantee your policy is semantically correct. What it does is **turn common RL engineering failures into gate failures that surface before they propagate downstream**. Removing the gates makes the pipeline *faster* and drops success from 48/50 to 41/50, while letting a silent render-path defect ship undetected.
 
 ## Documentation
 
 | | |
 |:--|:--|
-| [Getting started](https://supersglzc.github.io/harbor-dev/guide/) | Install, first benchmark, first task. |
-| [Concepts](https://supersglzc.github.io/harbor-dev/guide/harness) | Agents, commands, artifacts, gates, knowledge — and why the harness is shaped this way. |
-| [Command reference](https://supersglzc.github.io/harbor-dev/guide/commands) | Every command, generated from the plugin source. |
-| [Agent reference](https://supersglzc.github.io/harbor-dev/guide/agents) | Every agent, its tools, and its contract. |
-| [Authoring tasks](https://supersglzc.github.io/harbor-dev/guide/tasks) | Create a task, edit one section, or reproduce a task in another simulator. |
-| [Tuning rewards](https://supersglzc.github.io/harbor-dev/guide/rewards) | How the candidate search works, and why it trains every candidate for real. |
-| [`CLAUDE.md`](CLAUDE.md) | The architecture in full: the six-layer model and where a new module belongs. |
+| [Getting started](https://supersglzc.github.io/harbor-dev/guide/) | What HARBOR is, installation, and your first benchmark. |
+| [Workflows](https://supersglzc.github.io/harbor-dev/guide/end-to-end) | The end-to-end run, then authoring tasks, tuning rewards, and training. |
+| [Concepts](https://supersglzc.github.io/harbor-dev/guide/harness) | The harness, gates, semantic correctness, context optimization, and your workspace. |
+| [Reference](https://supersglzc.github.io/harbor-dev/guide/commands) | Every command, every agent, and the task library — generated from the source. |
 
 ## Contributing
 
