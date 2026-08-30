@@ -21,13 +21,13 @@ hero:
 
 features:
   - title: Long-horizon automation
-    details: Every stage in one workflow. The choices are coupled, so automating a single step leaves the seams to you.
+    details: A reliable workflow over tightly coupled decisions — related work automates individual steps.
   - title: Wall-clock efficiency
-    details: Reward engineering and tuning dominate the clock. Isolated parallel trials cut them roughly 6×.
+    details: The iterative stages — reward engineering and hyperparameter tuning — are where the clock goes.
   - title: Self-improvement
-    details: Heuristics, prior runs, and a task library carry forward — 8× on a repeated reward design.
+    details: Human heuristics and existing examples, carried into the next run by in-context learning.
   - title: Interpretability and controllability
-    details: Code, configs, logs, and video on disk. Step in at any gate, correct it, and resume.
+    details: Full trace documentation at every stage, and human intervention wherever you want it.
 ---
 
 <div style="max-width: 980px; margin: 4rem auto 0; text-align: center;">
