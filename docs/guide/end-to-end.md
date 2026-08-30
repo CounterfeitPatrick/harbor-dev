@@ -93,9 +93,11 @@ The same command continues into the reward loop, or run it standalone against an
 
 Details in [tuning rewards](/guide/rewards).
 
-### 7. Domain randomization (§7, opt-in)
+### 7. Domain randomization (§7) — coming soon
 
-Skipped unless you ask for it. `dr-generator` wires every available randomization term across robot, object, and observation-noise groups.
+Not available in this release; `dr-generator` is never dispatched, and asking for DR gets you a note saying so rather than a silent skip. When it ships it will wire every available randomization term across robot, object, and observation-noise groups.
+
+The slot is left DR-aware in the meantime — §3 range params and §5 observation noise are authored at point intervals — so DR can be added later without re-authoring §1–§6.
 
 **Gate:** exact value read-back at `num_envs=16`, re-checked after reset — which catches randomization that is configured but never actually applied.
 

@@ -1,5 +1,5 @@
 ---
-description: Clone a task into an isolated, independently-editable copy — a GENERAL primitive, not tied to any single caller. Same-repo mode registers the copy under a new suffixed gym id (suffix is caller-chosen, e.g. -rewarditer7, -abtest1); cross-benchmark mode (dest_repo=) migrates the task's DESIGN to another benchmark/simulator (sim2sim, e.g. IsaacLab → Genesis) by composing probe-task + task-create reproduce. `op=create` dispatches the task-cloner subagent (copy source's editable surface → rewire imports → register <dest> → run clone smokes). `op=delete` removes the clone's files and confirms the source still builds. Use when the user types /harbor:task-clone op=create source=<TaskID> dest=<TaskID> | op=delete dest=<TaskID>, or asks "clone task X for isolated editing", "copy this task under a new id", "port this task to <other benchmark>".
+description: Clone a task into an isolated, independently-editable copy — a GENERAL primitive, not tied to any single caller. Same-repo mode registers the copy under a new suffixed gym id (suffix is caller-chosen, e.g. -rewarditer7, -abtest1); cross-benchmark mode (dest_repo=, sim2sim) is COMING SOON and refuses in this release. `op=create` dispatches the task-cloner subagent (copy source's editable surface → rewire imports → register <dest> → run clone smokes). `op=delete` removes the clone's files and confirms the source still builds. Use when the user types /harbor:task-clone op=create source=<TaskID> dest=<TaskID> | op=delete dest=<TaskID>, or asks "clone task X for isolated editing", "copy this task under a new id".
 argument-hint: "op=create source=<TaskID> dest=<TaskID> [repo=<path>] [dest_repo=<path>] [surface=<sections>] [info_out=<path>] | op=delete dest=<TaskID> [repo=<path>]"
 ---
 
@@ -12,7 +12,7 @@ This is a general-purpose primitive. Known callers / use cases (not exhaustive �
 | Use case | Mode | Notes |
 |---|---|---|
 | A/B experiments on any section (actions, obs, reset, reward) | same-repo | suffix free-form (e.g. `-abtest1`); widen `surface=` to the sections being edited. The variant is edited while the source stays intact. |
-| sim2sim / cross-benchmark migration (e.g. IsaacLab → Genesis) | cross-repo (`dest_repo=`) | migrates the task's *design*, not its files — see "Cross-benchmark mode" below. |
+| sim2sim / cross-benchmark migration (e.g. IsaacLab → Genesis) | cross-repo (`dest_repo=`) | **COMING SOON** — not available in this release; see "Cross-benchmark mode" below. |
 
 Cloning is serialized in the caller (one clone at a time per repo), so registration never races.
 
@@ -31,7 +31,7 @@ Cloning is serialized in the caller (one clone at a time per repo), so registrat
 | Arg | Default | Effect |
 |---|---|---|
 | `repo` | `$(pwd)` | Source repo root. |
-| `dest_repo` | (none) | Cross-benchmark mode: absolute path of the DESTINATION benchmark repo (may be a different simulator family). Omitted ⇒ same-repo clone. |
+| `dest_repo` | (none) | **COMING SOON** — cross-benchmark (sim2sim) mode is not released; passing it is refused. Omitted ⇒ same-repo clone, which is fully supported. |
 | `surface` | `reward` | Which editable surface to copy (same-repo mode): `reward` (env_cfg + reward mdp modules — the default), or a comma list widening it (e.g. `surface=reward,actions,observations`) for experiments that edit more than §6. |
 | `info_out` | `<repo>/harbor/clones/<dest>.json` | Where to write the clone manifest (caller passes its own dir, e.g. `<task_dir>/iter_<NNN>/clone-info.json`). |
 
@@ -60,9 +60,15 @@ Cloning is serialized in the caller (one clone at a time per repo), so registrat
 
 3. **Return** the agent verdict + manifest path. On `status: fail`, the agent has already removed any partial clone — surface the error and exit non-zero.
 
-### op=create — Cross-benchmark mode (`dest_repo=` given, sim2sim)
+### op=create — Cross-benchmark mode (`dest_repo=` given, sim2sim) — COMING SOON
 
-Porting a task across benchmark families (e.g. IsaacLab → Genesis) is a *design* migration, not a file copy — simulator APIs, asset formats, and cfg idioms differ. Do NOT dispatch task-cloner (its file-copy + import-rewire contract is same-repo only). Instead compose the existing probe → reproduce chain:
+**Not available in this release.** When `dest_repo` is given, refuse before doing any work:
+
+> Cross-benchmark (sim2sim) migration is coming soon and is not part of this release.
+> Same-repo cloning works — re-run without `dest_repo=`.
+
+Do not probe, do not reproduce, do not create anything in either repo. The design below is
+what it will do; it is documentation, not an instruction to follow today:
 
 1. **Pre-flight**: source repo passes the same checks as above; `dest_repo` must have completed its own bootstrap chain (`.venv/`, `benchmark-spec.json`, `harbor/create-task/task-implementation.md`) — if not, run the missing stages there first (same rule as `/harbor:task-create` Step 0).
 2. **Probe the source**: run `/harbor:probe-task task=<source> repo=<repo>` → emits the portable per-task spec `<slug>-implementation.md` (§1..§7 design: scene, actions, reset, goal, obs, reward, DR).
@@ -105,7 +111,7 @@ Delete is idempotent — a missing manifest or already-removed files is a no-op 
 /harbor:task-clone op=create source=Isaac-Lift-Cube-Franka-v0 dest=Isaac-Lift-Cube-Franka-abtest1-v0 \
     surface=reward,actions
 
-# sim2sim: port the task's design from this IsaacLab repo to a Genesis benchmark repo
+# sim2sim (COMING SOON — this form is refused in the current release)
 /harbor:task-clone op=create source=Isaac-Stack-Two-Cubes-Franka-v0 dest=Genesis-Stack-Two-Cubes-Franka-v0 \
     dest_repo=/home/me/code/Genesis
 

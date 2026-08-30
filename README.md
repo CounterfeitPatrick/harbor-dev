@@ -171,10 +171,18 @@ HARBOR covers the workflow from an existing simulator repository and a task requ
 | **Task construction** | Turns a natural-language task description into simulator-native task code, observations, termination conditions, success criteria, and executable smoke tests. |
 | **Reward design** | Builds reward functions, trains candidate policies, inspects learning signals and rendered behavior, and iterates when the reward produces the wrong behavior. |
 | **RL integration** | Connects the task to a reproducible training stack with algorithm configs, wrappers, logging, checkpointing, evaluation, and rendering. |
-| **Domain randomization** | Adds and tunes simulation randomization while checking that the resulting task remains physically valid and learnable. |
 | **Training & tuning** | Runs training, diagnoses failures from metrics and rollouts, tunes rewards or RL settings, evaluates checkpoints, and renders final policies. |
 
 The same workflow applies across manipulation, dexterous control, and whole-body locomotion. You can ask HARBOR to run it end to end, or invoke individual stages and commands yourself.
+
+### Coming soon
+
+Built, not yet released. The commands accept these requests and tell you they are unavailable rather than half-doing them.
+
+| Capability | What it will do |
+|---|---|
+| **Domain randomization** (§7) | Adds and tunes simulation randomization while checking that the resulting task remains physically valid and learnable. Tasks are already authored with the DR slot left open, so it can be wired in without re-authoring §1–§6. |
+| **Sim-to-sim migration** | Ports a task's *design* — scene, actions, reset, success predicate, reward ladder — from one simulator to another, re-earning the reward's validation by training in the destination simulator. |
 
 ### Architecture
 

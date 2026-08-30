@@ -17,7 +17,7 @@ Gates come in two kinds. **Hard interface checks** verify that something is stru
 | §4 Termination | One check/validation pair per implemented predicate | A success predicate that never fires, or fires immediately |
 | §5 Observation | Shape and finiteness | Terms that silently emit NaN |
 | §6 Reward | Finite, non-constant, composition assertion | A reward that is passthrough, constant, or whose terms do not sum back to it |
-| §7 DR | Exact value read-back at `num_envs=16` | Randomization that is configured but not actually applied |
+| §7 DR *(coming soon)* | Exact value read-back at `num_envs=16` | Randomization that is configured but not actually applied |
 | RL integration | Five-tier smoke | An algorithm that trains but produces no checkpoint, curves, or metrics |
 | Render | Inference-moved + frame difference | A zeroed policy, a frozen IK solve |
 

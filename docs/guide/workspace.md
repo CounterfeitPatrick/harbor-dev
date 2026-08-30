@@ -46,7 +46,7 @@ harbor/create-task/<task-slug>/
 ├── smokes/                    rendered smokes + the verdict.json each wrote
 ├── smoke_s{3,4,6}_frames/     reset layouts · per-predicate states · rollout keyframes
 ├── reward-history.md          the §6 tuning log
-├── dr-history.md              the §7 log
+├── dr-history.md              the §7 log (coming soon — not written yet)
 └── handoff-dr-generator.md    available and effective DR terms, modes, ranges, results
 ```
 

@@ -1,6 +1,6 @@
 # What is HARBOR?
 
-HARBOR is a [Claude Code](https://claude.com/claude-code) plugin that automates the engineering pipeline around robot reinforcement learning. Given a simulator codebase and a task specification, it goes from an empty checkout to a trained policy: environment setup, task construction, reward design, algorithm integration, domain randomization, and hyperparameter tuning.
+HARBOR is a [Claude Code](https://claude.com/claude-code) plugin that automates the engineering pipeline around robot reinforcement learning. Given a simulator codebase and a task specification, it goes from an empty checkout to a trained policy: environment setup, task construction, reward design, algorithm integration, and hyperparameter tuning.
 
 It is described in [*HARBOR: A Harness Framework for Agentic Robot Reinforcement Learning*](https://arxiv.org/abs/2606.08610).
 

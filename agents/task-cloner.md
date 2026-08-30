@@ -1,7 +1,7 @@
 ---
 name: task-cloner
 description: |
-  Clones an existing task into an isolated, independently-editable copy registered under a new suffixed gym id (SAME-REPO mode of the general /harbor:task-clone primitive; cross-benchmark/sim2sim migration is orchestrated at the command level via probe-task + task-create reproduce, not by this agent). Copies only the task's EDITABLE surface (env_cfg + the mdp modules the requested `surface` touches — default: reward), rewires the cloned cfg's imports to the copies, mirrors the source's registration mechanism for `<dest>`, then runs the clone smokes (build + rollout + per-term-logging). Writes a manifest listing every created file so the clone can be deleted cleanly. Callers include section A/B experiments and any flow needing an isolated task variant. PREREQUISITE: `gym.make(<source_id>)` succeeds. Never edits the source task's files.
+  Clones an existing task into an isolated, independently-editable copy registered under a new suffixed gym id (SAME-REPO mode of the general /harbor:task-clone primitive; cross-benchmark/sim2sim migration is COMING SOON and refused in this release). Copies only the task's EDITABLE surface (env_cfg + the mdp modules the requested `surface` touches — default: reward), rewires the cloned cfg's imports to the copies, mirrors the source's registration mechanism for `<dest>`, then runs the clone smokes (build + rollout + per-term-logging). Writes a manifest listing every created file so the clone can be deleted cleanly. Callers include section A/B experiments and any flow needing an isolated task variant. PREREQUISITE: `gym.make(<source_id>)` succeeds. Never edits the source task's files.
 tools: [Read, Write, Edit, Bash, Glob, Grep]
 model: opus
 ---

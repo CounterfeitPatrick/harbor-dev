@@ -10,7 +10,7 @@ A task in HARBOR is authored in seven numbered sections, and each one is gated s
 | 4 | Goal / termination | The success predicate and the subgoal decomposition |
 | 5 | Observation | What a reward term is allowed to key on |
 | 6 | Reward | The term ladder, validated by actual training |
-| 7 | Domain randomization | Opt-in; skipped by default |
+| 7 | Domain randomization | **Coming soon** — not authored in this release |
 
 ## Create a task
 
@@ -51,17 +51,17 @@ Re-author individual sections surgically, leaving the rest untouched:
 
 ## Reproduce a task elsewhere
 
-Probe an existing task into a portable specification, then rebuild it in another benchmark:
+Probe an existing task into a portable specification, then rebuild it from that spec:
 
 ```text
 /harbor:probe-task task=Isaac-Insert-Drawer-Franka-v0
-/harbor:task-create name=Genesis-Insert-Drawer-UR10-v0 \
+/harbor:task-create name=Isaac-Insert-Drawer-UR10-v0 \
   from=harbor/create-task/isaac-insert-drawer-implementation.md
 ```
 
 The spec captures every design choice with verbatim code — scene, actions, reset, termination, observation, reward, and DR. In reproduce mode the reward is pasted verbatim at iteration 0 of the reward-tune loop and then validated by real training like any other candidate, because a reward that worked in one simulator's contact model is a hypothesis in the next one, not a guarantee.
 
-This is the sim-to-sim path: the same task, adapted to a different simulator's APIs and physics, with intent preserved.
+Reproducing into a repo of the **same** simulator family works today. Reproducing across families — the sim-to-sim path, where the same task is adapted to a different simulator's APIs and physics with its intent preserved — is **coming soon** and is refused in this release.
 
 ## Clone a task
 
