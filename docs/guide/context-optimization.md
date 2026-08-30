@@ -1,4 +1,4 @@
-# Context economics
+# Context optimization
 
 An agent that authors a robot task is not a chatbot with tools. It runs for hours, waits on work that takes longer than it does, and produces artifacts far larger than anything it can hold. Those three properties decide what a run costs — far more than how much the model thinks.
 

@@ -55,12 +55,12 @@ export default defineConfig({
       },
       {
         text: 'Concepts',
-        activeMatch: '^/guide/(harness|gates|semantic-correctness|context-economics|workspace)$',
+        activeMatch: '^/guide/(harness|gates|semantic-correctness|context-optimization|workspace)$',
         items: [
           { text: 'The harness', link: '/guide/harness' },
           { text: 'Gates', link: '/guide/gates' },
           { text: 'Semantic correctness', link: '/guide/semantic-correctness' },
-          { text: 'Context economics', link: '/guide/context-economics' },
+          { text: 'Context optimization', link: '/guide/context-optimization' },
           { text: 'Your workspace', link: '/guide/workspace' },
         ],
       },
@@ -102,7 +102,7 @@ export default defineConfig({
             { text: 'The harness', link: '/guide/harness' },
             { text: 'Gates', link: '/guide/gates' },
             { text: 'Semantic correctness', link: '/guide/semantic-correctness' },
-            { text: 'Context economics', link: '/guide/context-economics' },
+            { text: 'Context optimization', link: '/guide/context-optimization' },
             { text: 'Your workspace', link: '/guide/workspace' },
           ],
         },
