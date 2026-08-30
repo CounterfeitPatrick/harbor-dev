@@ -167,14 +167,14 @@ Each of these is one request. HARBOR can chain them end to end, or you can invok
 
 | Capability | |
 |:--|:--|
-| **Install a simulator** | Probes the repository, builds an isolated `.venv/`, and verifies it imports and sees your GPU.<br>`/harbor:env-install-uv` |
-| **Design a task** | Turns a sentence into simulator-native task code — scene, actions, reset, success predicate, observations — each section gated by its own smoke.<br>`/harbor:task-create name=<id> description="..."` |
-| **Tune a reward** | Searches reward designs with real training as the fitness function; the winner is promoted onto the task.<br>`/harbor:reward-tune task=<id>` |
-| **Write an RL algorithm** | Scaffolds train, eval, render, configs and logging — from a self-contained algorithm tree, SB3, or your own implementation.<br>Run by `/harbor:task-create`, or dispatch `rl-integration-generator` |
-| **Train a policy** | Runs training with any config key overridable inline, and renders the result on success.<br>`/harbor:rl-run task=<id> algorithm=ppo` |
-| **Tune an algorithm** | Searches hyperparameters open-endedly, under a wall-clock budget so a win cannot come from more compute.<br>`/harbor:rl-tune task=<list> algorithm=<list>` |
-| **Plot training curves** | Mean ± std W&B curves, multi-panel by task × baseline, averaging seeds within each pair.<br>`/harbor:plot spec=<yaml>` |
-| **Reproduce a task** | Extracts a task into a portable spec with verbatim code, then rebuilds it from that spec.<br>`/harbor:probe-task task=<id>` then `/harbor:task-create from=<spec>` |
+| **Install a simulator** | Probes the repository, builds an isolated `.venv/`, and verifies it imports and sees your GPU. `/harbor:env-install-uv` |
+| **Design a task** | Turns a sentence into simulator-native task code — scene, actions, reset, success predicate, observations — each section gated by its own smoke. `/harbor:task-create name=<id> description="..."` |
+| **Tune a reward** | Searches reward designs with real training as the fitness function; the winner is promoted onto the task. `/harbor:reward-tune task=<id>` |
+| **Write an RL algorithm** | Scaffolds train, eval, render, configs and logging — from a self-contained algorithm tree, SB3, or your own implementation. Run by `/harbor:task-create`, or dispatch `rl-integration-generator` |
+| **Train a policy** | Runs training with any config key overridable inline, and renders the result on success. `/harbor:rl-run task=<id> algorithm=ppo` |
+| **Tune an algorithm** | Searches hyperparameters open-endedly, under a wall-clock budget so a win cannot come from more compute. `/harbor:rl-tune task=<list> algorithm=<list>` |
+| **Plot training curves** | Mean ± std W&B curves, multi-panel by task × baseline, averaging seeds within each pair. `/harbor:plot spec=<yaml>` |
+| **Reproduce a task** | Extracts a task into a portable spec with verbatim code, then rebuilds it from that spec. `/harbor:probe-task task=<id>` then `/harbor:task-create from=<spec>` |
 
 The same workflow applies across manipulation, dexterous control, and whole-body locomotion.
 
