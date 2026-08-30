@@ -21,13 +21,13 @@ hero:
 
 features:
   - title: Long-horizon automation
-    details: Dependency setup, task construction, reward design, algorithm integration, randomization, and tuning run as one workflow. The stages are not separable — each one's choices constrain the next — so automating a single step, as prior work does, leaves the coupling between them to be paid by hand.
+    details: Every stage in one workflow. The choices are coupled, so automating a single step leaves the seams to you.
   - title: Wall-clock efficiency
-    details: The cost is concentrated in the iterative stages, reward engineering and hyperparameter tuning, where every candidate costs a training run. HARBOR fans those out into isolated parallel trials — roughly 6× faster — without any trial's traceback reaching the context deciding what to try next.
+    details: Reward engineering and tuning dominate the clock. Isolated parallel trials cut them roughly 6×.
   - title: Self-improvement
-    details: Human heuristics, previous runs, and a library of existing task specifications are all in-context material. Append-only experience ledgers carry what worked into the next run, and a new task adapts from the closest prior one instead of starting blank — an 8× speedup on a repeated reward design.
+    details: Heuristics, prior runs, and a task library carry forward — 8× on a repeated reward design.
   - title: Interpretability and controllability
-    details: Every stage writes inspectable code, configs, logs, keyframes, and video into your repository, alongside a design record of why each choice was made. Step in at any gate, correct it, and resume — and when a check stops making progress, the agent stops and asks rather than burning retries.
+    details: Code, configs, logs, and video on disk. Step in at any gate, correct it, and resume.
 ---
 
 <div style="max-width: 980px; margin: 4rem auto 0; text-align: center;">
