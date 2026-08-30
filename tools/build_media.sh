@@ -128,6 +128,15 @@ encode maniskill_g1_footstep.mp4 gallery/g1-footstep__maniskill.webp  "" "-ss 2 
 encode genesis_g1_jump.mp4       gallery/g1-jump__genesis.webp        "" "-ss 2 -t 6"
 encode genesis_g1_footstep.mp4   gallery/g1-footstep__genesis.webp    "" "-ss 2 -t 6"
 
+# Bridge-cross and kick-ball come from the renders set, already short (3-10 s), so only the
+# 10 s Genesis bridge-cross is trimmed — the rest loop at their natural length.
+encode isaaclab__bridge_cross.mp4   gallery/g1-bridge-cross__isaaclab.webp
+encode maniskill__bridge_cross.mp4  gallery/g1-bridge-cross__maniskill.webp
+encode genesis__bridge_cross.mp4    gallery/g1-bridge-cross__genesis.webp  "" "-t 6"
+encode isaaclab__kick_ball.mp4      gallery/g1-kick-ball__isaaclab.webp
+encode maniskill__kick_ball.mp4     gallery/g1-kick-ball__maniskill.webp
+encode genesis__kick_ball.mp4       gallery/g1-kick-ball__genesis.webp
+
 echo "==> extra IsaacLab tasks (not in the grid)"
 encode stack_two_cube.mp4 gallery/stack-two-cube__isaaclab.webp
 encode place_banana.mp4   gallery/place-banana__isaaclab.webp
@@ -139,6 +148,12 @@ cp "$ROOT/assets/logo/harbor-mark.svg"      "$DOCS/logo.svg"
 cp "$ROOT/assets/logo/harbor-mark-dark.svg" "$DOCS/logo-dark.svg"
 cp "$ROOT/assets/logo/favicon.svg"          "$DOCS/favicon.svg"
 cp "$OUT/hero/walkthrough-poster.webp"      "$DOCS/walkthrough-poster.webp"
+
+# The docs landing page renders the same gallery grid as the README. The tiles are copied
+# rather than duplicated in git — package.json and the docs workflow do the same before a
+# build, and docs/public/gallery/ is gitignored.
+mkdir -p "$DOCS/gallery"
+cp "$OUT"/gallery/*.webp "$DOCS/gallery/"
 
 # One strip of all four tasks for the docs landing page. Each clip is looped to a common
 # 4 s so hstack gets equal frame counts — without that the shortest clip truncates the row.

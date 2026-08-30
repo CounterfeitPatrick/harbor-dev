@@ -96,6 +96,18 @@ The same task descriptions, given to HARBOR against different simulator codebase
   <td><img src="assets/gallery/g1-footstep__maniskill.webp" width="180" alt="G1 Footstep in ManiSkill"></td>
   <td><img src="assets/gallery/g1-footstep__genesis.webp" width="180" alt="G1 Footstep in Genesis"></td>
 </tr>
+<tr>
+  <td><b>G1&nbsp;Bridge&nbsp;Cross</b><br><sub>narrow<br>traverse</sub></td>
+  <td><img src="assets/gallery/g1-bridge-cross__isaaclab.webp" width="180" alt="G1 Bridge Cross in IsaacLab"></td>
+  <td><img src="assets/gallery/g1-bridge-cross__maniskill.webp" width="180" alt="G1 Bridge Cross in ManiSkill"></td>
+  <td><img src="assets/gallery/g1-bridge-cross__genesis.webp" width="180" alt="G1 Bridge Cross in Genesis"></td>
+</tr>
+<tr>
+  <td><b>G1&nbsp;Kick&nbsp;Ball</b><br><sub>dynamic<br>contact</sub></td>
+  <td><img src="assets/gallery/g1-kick-ball__isaaclab.webp" width="180" alt="G1 Kick Ball in IsaacLab"></td>
+  <td><img src="assets/gallery/g1-kick-ball__maniskill.webp" width="180" alt="G1 Kick Ball in ManiSkill"></td>
+  <td><img src="assets/gallery/g1-kick-ball__genesis.webp" width="180" alt="G1 Kick Ball in Genesis"></td>
+</tr>
 </table>
 
 ## Quickstart
