@@ -180,7 +180,9 @@ V.check("C5", "repeatable", not repeat_problems,
         + (f"; {repeat_problems}" if repeat_problems else ""))
 
 # ------------------------------------------------------------------ verdict
-env.close()
-sim_app.close()
+# V.done() BEFORE the teardown: Kit's shutdown can kill the process, and anything after
+# sim_app.close() may never run — including the `S3 OK:` line that IS the pass criterion.
 V.done("C1 injected values · C2 buffers · C3 robot configuration · C4 layout settles · "
        "C5 repeatable")
+env.close()
+sim_app.close()

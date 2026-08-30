@@ -283,7 +283,10 @@ def main():
         problems.append(f"§{n} was requested but has no block in the history")
 
     header = text.split("\n## ", 1)[0]
-    if PENDING in header:
+    # Only the header's TABLE rows can hold an unfilled field. The prose above the table
+    # documents the format rules and necessarily quotes `_pending_` to name it, so scanning
+    # the whole header makes the scaffold trip its own gate.
+    if any(PENDING in ln for ln in header.splitlines() if ln.lstrip().startswith("|")):
         problems.append("header table still has a _pending_ field (finished_at / status)")
     check_tables("header", header, problems)
 

@@ -129,6 +129,135 @@ def _track_body_pos_w(env):
     return None
 
 
+# --- ManiSkill follow-cam rig ------------------------------------------------------------
+# WHY THIS EXISTS. Under `sim_backend=physx_cuda` ManiSkill renders human cameras through a
+# sapien RenderCameraGroup whose pose is `gpu_pose[cam.gpu_pose_batch_index] * cam.local_pose`.
+# `local_pose` is read ONCE, at group-creation time, and MSScene._sapien_update_render builds
+# that group exactly once behind the `_human_render_cameras_initialized` latch. So
+# `RenderCamera.set_local_pose()` is accepted, reads back correctly, and never changes a pixel
+# — which silently no-opped the follow-cam for EVERY GPU-sim ManiSkill task. Harmless for a
+# fixed-base tabletop task; fatal for locomotion, where the robot simply walks out of frame.
+#
+# Two fixes were measured before this one was chosen:
+#   - Forcing a re-bake (clearing the latch before each update_render) DOES rebuild the group,
+#     but on the default UNMOUNTED camera the frame comes back byte-identical (its pose is read
+#     from an absent gpu row, not the CPU one) AND it leaks ~10 MB of GPU memory per frame.
+#     Rejected: no pixels moved and it leaks.
+#   - Binding the camera to the gpu pose row of a body we control makes the pose live: it is
+#     re-read every frame, costs ~1.8 ms/frame and leaks nothing. That is what this does.
+#
+# The rig is a 1 mm kinematic, collision-free box, so it cannot perturb physics or observations,
+# and it sits exactly at the camera origin — inside the 0.01 m near plane — so it is never drawn.
+_MS_RIG_PATCHED: set = set()
+
+
+def _maniskill_install_cam_rig(cfg) -> bool:
+    """Add a `cam_rig` body to the task's env class. MUST run BEFORE the env is built.
+
+    Runtime patch only — the benchmark's source is never edited. No-ops (returning False) for
+    non-ManiSkill families and for any ManiSkill version whose API does not match.
+    """
+    try:
+        import sapien  # noqa: F401  — present only in a SAPIEN/ManiSkill env
+        from mani_skill.utils.building import actors
+        from mani_skill.utils.registration import REGISTERED_ENVS
+
+        spec = REGISTERED_ENVS.get(str(cfg.get("task")))
+        if spec is None:
+            return False
+        env_cls = spec.cls
+        if env_cls in _MS_RIG_PATCHED:
+            return True
+        orig = env_cls._load_scene
+
+        def _load_scene(self, options: dict):
+            orig(self, options)
+            try:
+                self.cam_rig = actors.build_box(
+                    self.scene,
+                    half_sizes=(0.0005, 0.0005, 0.0005),
+                    color=(0.0, 0.0, 0.0, 1.0),
+                    name="cam_rig",
+                    body_type="kinematic",
+                    add_collision=False,
+                    initial_pose=sapien.Pose(p=[0.0, 0.0, -5.0]),
+                )
+            except Exception:
+                self.cam_rig = None
+
+        env_cls._load_scene = _load_scene
+        _MS_RIG_PATCHED.add(env_cls)
+        return True
+    except Exception:
+        return False
+
+
+def _maniskill_bind_cam_rig(env) -> bool:
+    """Point the human render camera at the rig's gpu pose row and rebuild the group ONCE.
+
+    Call AFTER the first render (the render system group does not exist before it).
+    """
+    u = _cam_unwrapped(env)
+    if getattr(u, "_harbor_cam_rig_bound", False):
+        return True
+    rig = getattr(u, "cam_rig", None)
+    if rig is None:
+        return False
+    try:
+        import sapien
+        import sapien.physx as physx
+
+        # The render system group and the camera group are created lazily, on the FIRST render.
+        # Bind before that and there is nothing to rebind, so force one frame here rather than
+        # depending on call order in main().
+        try:
+            u.render()
+        except Exception:
+            pass
+
+        scene = u.scene
+        cams = getattr(scene, "human_render_cameras", None)
+        if not isinstance(cams, dict) or not cams:
+            return False
+        name, sensor = next(iter(cams.items()))
+        idx = (
+            rig._objs[0]
+            .find_component_by_type(physx.PhysxRigidBodyComponent)
+            .gpu_pose_index
+        )
+        for comp in sensor.camera._render_cameras:
+            comp.set_gpu_pose_batch_index(idx)
+            comp.set_local_pose(sapien.Pose())  # camera pose == rig pose
+        textures = list(sensor.config.shader_config.texture_names.keys())
+        group = scene.render_system_group.create_camera_group(
+            sensor.camera._render_cameras, textures
+        )
+        sensor.camera.camera_group = group
+        scene.camera_groups[name] = group
+        u._harbor_cam_rig_bound = True
+        return True
+    except Exception:
+        return False
+
+
+def _sync_render_markers(env) -> None:
+    """Let a task re-stage debug-marker poses immediately before a frame is grabbed.
+
+    ManiSkill's `Actor.set_pose` only STAGES a row of `px.cuda_rigid_body_data`; the step's next
+    `gpu_fetch_rigid_dynamic_data` overwrites it with the marker's un-applied sim pose, so a
+    marker written during `_step` renders frozen. A task that draws markers can define
+    `_sync_render_markers(self)` and this template will call it after the last fetch of the step.
+    Simulation is unaffected — the marker is kinematic and collision-free.
+    """
+    u = _cam_unwrapped(env)
+    fn = getattr(u, "_sync_render_markers", None)
+    if callable(fn):
+        try:
+            fn()
+        except Exception:
+            pass
+
+
 def _set_viewer_camera(env, eye, target) -> bool:
     """Best-effort: point the render/viewer camera from ``eye`` at ``target`` (world m).
 
@@ -144,10 +273,25 @@ def _set_viewer_camera(env, eye, target) -> bool:
         return True
     except Exception:
         pass
-    # ManiSkill / SAPIEN: move a human-render camera with the canonical look_at() helper.
-    # (Best-effort — API surface varies by ManiSkill version; guarded so failure falls back.)
+    # ManiSkill / SAPIEN. Two paths, and the order matters — see _maniskill_install_cam_rig.
+    #
+    # 1. If the camera rig is bound, write the RIG's pose. Under sim_backend=physx_cuda this is
+    #    the ONLY thing that actually moves the camera: the render camera group renders from
+    #    `gpu_pose[cam.gpu_pose_batch_index] * cam.local_pose`, and only the gpu_pose half is
+    #    re-read per frame.
+    # 2. Otherwise fall back to set_local_pose, which DOES work on the CPU backend.
     try:
         from mani_skill.utils.sapien_utils import look_at
+        from mani_skill.utils.structs.pose import Pose as MSPose
+
+        rig = getattr(u, "cam_rig", None)
+        if rig is not None and getattr(u, "_harbor_cam_rig_bound", False):
+            raw = look_at(eye, target, up=(0, 0, 1)).raw_pose
+            raw = np.asarray(raw.detach().cpu().numpy() if hasattr(raw, "detach") else raw).reshape(-1)
+            import sapien
+
+            rig.set_pose(MSPose.create(sapien.Pose(p=raw[:3], q=raw[3:])))
+            return True
 
         pose = look_at(eye, target)
         cams = getattr(u.scene, "human_render_cameras", None)
@@ -157,7 +301,12 @@ def _set_viewer_camera(env, eye, target) -> bool:
             setter = getattr(cam, "set_pose", None) or getattr(getattr(cam, "camera", None), "set_local_pose", None)
         if setter is not None:
             setter(pose)
-            return True
+            # HONEST RETURN. On physx_cuda this call is accepted and reads back correctly but
+            # does not change a single pixel, so reporting True here is what made the follow-cam
+            # silently no-op for every GPU-sim ManiSkill task. Only claim success when the rig
+            # is bound or we are on a backend where the CPU-side pose is what renders.
+            gpu = bool(getattr(getattr(u, "scene", None), "gpu_sim_enabled", False))
+            return not gpu
     except Exception:
         pass
     return False
@@ -231,6 +380,10 @@ def main(cfg: DictConfig):
     if not ckpt.exists():
         print(f"[error] checkpoint not found: {ckpt}", file=sys.stderr); sys.exit(2)
 
+    # ManiSkill only, and a no-op elsewhere: the camera rig body must exist before the scene is
+    # built, so this patches the env class ahead of create_render_env(). See the rig helpers.
+    _maniskill_install_cam_rig(cfg)
+
     env = create_render_env(cfg)
     # Tighten max_steps to the env's episode horizon when available — avoids
     # rendering 1000 steps on a 300-step env.
@@ -275,12 +428,21 @@ def main(cfg: DictConfig):
     # tasks never trigger it → their renders are unchanged. Disable with camera_follow=false.
     camera_follow = bool(cfg.get("camera_follow", True))
     follow_cam: dict = {}
+    # Shared render resolution. Angle alone is not enough for by-eye comparison: three
+    # benchmarks of the same task at 512x512 / 640x480 / 1280x720 read as three different
+    # things. The family's env_wrapper must honour this when it builds the render camera.
+    render_resolution = tuple(cfg.get("render_resolution", (1280, 720)))
     try:
         viewer_eye    = np.asarray(cfg.get("viewer_eye",    [1.35, 1.00, 0.75]), dtype=float)
         viewer_target = np.asarray(cfg.get("viewer_target", [0.35, 0.0, 0.10]), dtype=float)
         env_origin = _env_origin_w(env)
         eye    = viewer_eye + env_origin
         target = viewer_target + env_origin
+        # ManiSkill only: bind the render camera to the rig's gpu pose row. Must come AFTER the
+        # first render (the render system group does not exist before it) and BEFORE the first
+        # _set_viewer_camera, so that call takes the rig path rather than the no-op path.
+        if _maniskill_bind_cam_rig(env):
+            print("[render] ManiSkill follow-cam rig bound (camera pose is live per frame)", flush=True)
         if _set_viewer_camera(env, eye, target):
             print(f"[render] viewer camera   eye={eye.tolist()}  target={target.tolist()}", flush=True)
         if camera_follow:
@@ -314,6 +476,7 @@ def main(cfg: DictConfig):
                         _set_viewer_camera(env, root + follow_cam["eye_off"], root + follow_cam["target_off"])
             except Exception:
                 pass
+        _sync_render_markers(env)
         f = _grab_frame(env)
         if f is not None:
             frames.append(f)
@@ -358,6 +521,7 @@ def main(cfg: DictConfig):
         if isinstance(done, torch.Tensor) and done.numel() > 1:
             obs = next_obs; continue
         if bool(done.item() if isinstance(done, torch.Tensor) else done):
+            _sync_render_markers(env)
             f = _grab_frame(env)
             if f is not None:
                 frames.append(f)

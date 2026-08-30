@@ -86,8 +86,10 @@ if spec is None:
     V.check("C1", "registration", False,
             f"{TASK_ID} is not in gym.registry — the module holding gym.register is never "
             f"imported, or the id has a typo")
+    # done() BEFORE the teardown here too: done() is what exits non-zero once a check has
+    # failed, so if Kit's shutdown takes the process first this FAILING path exits 0.
+    V.done("C1 failed — task not registered")
     sim_app.close()
-    V.done("unreachable — C1 already failed")
 
 cfg_entry = spec.kwargs.get("env_cfg_entry_point")
 print(f"      entry_point         = {spec.entry_point}")

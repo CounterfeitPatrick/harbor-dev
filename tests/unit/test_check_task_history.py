@@ -17,6 +17,7 @@ SCRIPT = ROOT / "scripts" / "task-generator" / "check_task_history.py"
 TEMPLATE = ROOT / "knowledge" / "templates" / "task-generator" / "task-history.md.template"
 
 ANSWER = "a real answer long enough to clear the tripwire"
+PENDING_TOKEN = "_pending_"
 
 
 def _section(n, title, terms, rows):
@@ -67,6 +68,32 @@ def test_pending_term_is_caught(tmp_path):
     out = _run(tmp_path, _history(terms=[("Task interpretation", "_pending_")]))
     assert not out["ok"]
     assert any("_pending_" in p and "Task interpretation" in p for p in out["problems"])
+
+
+def test_template_prose_quoting_pending_does_not_trip_the_gate(tmp_path):
+    """Regression: the scaffold must not fail its own gate.
+
+    The header is prose (the format rules) followed by the field table, and the rules have to
+    quote `_pending_` in order to name it. Scanning the whole header for the token therefore
+    flagged every history rendered from the template, including finished ones -- two ports
+    hand-reworded the bullets to get past it. Only table ROWS can hold an unfilled field.
+
+    The prose is read from the real template so this cannot silently pass by drifting away
+    from what agents actually render.
+    """
+    header_prose = TEMPLATE.read_text(encoding="utf-8").split("\n| Field |", 1)[0]
+    assert PENDING_TOKEN in header_prose, "template prose no longer quotes the token — retarget this test"
+    text = _history()
+    body = text.split("\n| Field |", 1)[1]
+    out = _run(tmp_path, header_prose + "\n| Field |" + body)
+    assert out["ok"], out["problems"]
+
+
+def test_pending_in_a_header_table_row_is_still_caught(tmp_path):
+    """The other half: relaxing the scan must not stop it catching an unfilled field."""
+    out = _run(tmp_path, _history().replace("| status | pass |", "| status | _pending_ |"))
+    assert not out["ok"]
+    assert any("header table" in p for p in out["problems"])
 
 
 def test_token_answer_is_caught(tmp_path):

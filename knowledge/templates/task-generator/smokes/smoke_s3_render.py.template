@@ -81,8 +81,10 @@ except ImportError:
 for i, frame in enumerate(frames):
     imageio.imwrite(str(FRAMES_DIR / f"reset_{i:02d}.png"), frame)
 
-env.close()
-sim_app.close()
+# V.done() BEFORE the teardown: Kit's shutdown can kill the process, and anything after
+# sim_app.close() may never run — including the `S3 OK:` line that IS the pass criterion.
 V.done(f"wrote {len(frames)} reset frames to {FRAMES_DIR}. Agent: OPEN THEM. Check each against "
        f"§1's desired behavior and potential failures — reachability, orientation, clearance, "
        f"nothing intersecting, nothing floating.")
+env.close()
+sim_app.close()

@@ -204,7 +204,9 @@ for i, (label, force_fn, fired_fn) in enumerate(PREDICATES, start=1):
             f"{path} (pixel std {spread:.1f})" if ok_frame
             else "no frame captured — check enable_cameras / render_mode")
 
-env.close()
-sim_app.close()
+# V.done() BEFORE the teardown: Kit's shutdown can kill the process, and anything after
+# sim_app.close() may never run — including the `S4 OK:` line that IS the pass criterion.
 V.done(f"G1 goal + {len(PREDICATES)} predicate(s) x2 checks; keyframes in {FRAMES_DIR}. "
        f"Agent: OPEN THEM — a predicate that fires in a state you did not mean passes C<i>.")
+env.close()
+sim_app.close()
