@@ -16,8 +16,9 @@ trains the policy — and checks its own work at every step.
 [![License](https://img.shields.io/badge/license-Apache%202.0-0FB6C9?style=flat-square)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-6C4BF6?style=flat-square)](https://claude.com/claude-code)
 [![Tests](https://img.shields.io/github/actions/workflow/status/supersglzc/harbor-dev/test.yml?style=flat-square&label=tests)](../../actions)
+[![Discord](https://img.shields.io/badge/Discord-join-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/W3ywA3jUKs)
 
-**[Quickstart](#quickstart)** · **[Gallery](#gallery)** · **[Inside HARBOR](#inside-harbor)** · **[Docs](https://supersglzc.github.io/harbor-dev)** · **[Paper](https://arxiv.org/abs/2606.08610)** · **[Cite](#citation)**
+**[Quickstart](#quickstart)** · **[Gallery](#gallery)** · **[Inside HARBOR](#inside-harbor)** · **[Docs](https://supersglzc.github.io/harbor-dev)** · **[Paper](https://arxiv.org/abs/2606.08610)** · **[Discord](https://discord.gg/W3ywA3jUKs)** · **[Cite](#citation)**
 
 <br>
 
@@ -205,7 +206,7 @@ The property that matters: HARBOR cannot guarantee your policy is semantically c
 
 ## Contributing
 
-Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). The fastest way to help is to run HARBOR on a simulator we have not covered and file what broke: the harness improves by accumulating exactly that kind of experience.
+Questions and discussion happen on [Discord](https://discord.gg/W3ywA3jUKs). Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). The fastest way to help is to run HARBOR on a simulator we have not covered and file what broke: the harness improves by accumulating exactly that kind of experience.
 
 ## Citation
 

@@ -120,6 +120,7 @@ export default defineConfig({
 
     socialLinks: [
       { icon: 'github', link: 'https://github.com/supersglzc/harbor-dev' },
+      { icon: 'discord', link: 'https://discord.gg/W3ywA3jUKs' },
     ],
 
     search: { provider: 'local' },

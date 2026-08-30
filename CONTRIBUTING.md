@@ -4,6 +4,8 @@ Thanks for your interest. The most valuable contribution is usually not a code c
 
 ## Ways to help
 
+**Ask first if you are not sure.** [Discord](https://discord.gg/W3ywA3jUKs) is the place for setup trouble, a simulator that will not cooperate, or a question about how to shape a task. Not everything that goes wrong is a bug, and a conversation is faster than an issue when it is not.
+
 **Report a failure with its artifacts.** HARBOR writes an inspectable record of every run. A good issue includes the relevant `history.md`, the failing smoke's `verdict.json`, and what you asked for. That is usually enough to diagnose without a reproduction.
 
 **Add a simulator.** If you get HARBOR working against a benchmark it has not seen, the `probe-benchmark` guide and any new references you needed are worth upstreaming.
