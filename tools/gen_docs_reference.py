@@ -21,7 +21,7 @@ REPO_URL = "https://github.com/supersglzc/harbor-dev"
 # Commands are grouped by filename prefix, which is the only grouping mechanism Claude Code
 # offers — there is no real subdirectory namespace for commands.
 GROUPS = [
-    ("env", "Environment", "Set up a Python GPU robotics repository and its virtual environment."),
+    ("env", "Environment", "Set up a Python simulation repository and its virtual environment."),
     ("probe", "Probing", "Inspect an existing benchmark or task and emit a portable specification."),
     ("task", "Task authoring", "Create, list, and clone tasks inside a benchmark."),
     ("reward", "Reward engineering", "Design and tune the reward, validated by actual training."),

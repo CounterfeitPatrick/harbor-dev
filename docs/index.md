@@ -18,16 +18,6 @@ hero:
     - theme: alt
       text: Read the paper
       link: https://arxiv.org/abs/2606.08610
-
-features:
-  - title: Long-horizon automation
-    details: A reliable workflow over tightly coupled decisions — related work automates individual steps.
-  - title: Wall-clock efficiency
-    details: The iterative stages — reward engineering and hyperparameter tuning — are where the clock goes.
-  - title: Self-improvement
-    details: Human heuristics and existing examples, carried into the next run by in-context learning.
-  - title: Interpretability and controllability
-    details: Full trace documentation at every stage, and human intervention wherever you want it.
 ---
 
 <div style="max-width: 980px; margin: 4rem auto 0; text-align: center;">
@@ -59,6 +49,13 @@ Practitioners build the task, shape the reward, calibrate randomization, tune hy
 HARBOR treats the whole problem as **harness engineering**: shifting human effort from executing each step to designing an agent-readable workflow with verifiable interfaces. Robot RL is unusually well suited to this, because the MDP already exposes stable interfaces — state, action, reward, dynamics, termination — and simulators already produce executable feedback.
 
 HARBOR cannot prove your policy is semantically correct. What it does is turn the common RL engineering failures into **gate failures that surface before they propagate downstream**.
+
+| | |
+|:--|:--|
+| **Long-horizon automation** | A reliable workflow over tightly coupled decisions — related work automates individual steps. |
+| **Wall-clock efficiency** | The iterative stages — reward engineering and hyperparameter tuning — are where the clock goes. |
+| **Self-improvement** | Human heuristics and existing examples, carried into the next run by in-context learning. |
+| **Interpretability and controllability** | Full trace documentation at every stage, and human intervention wherever you want it. |
 
 [Read the concepts →](/guide/harness)
 

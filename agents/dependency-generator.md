@@ -1,14 +1,14 @@
 ---
 name: dependency-generator
 description: |
-  ENTRY POINT for setting up a Python GPU repo via uv on the host. Probes the repo, reads README + markdown to build an InstallationPlan, renders `<repo>/harbor/dependency-generator/setup_uv.sh`, executes it (creates `<repo>/.venv/`), runs an import smoke test, and reports back to the main thread. Does NOT recursively dispatch to sub-subagents — the main thread orchestrates the next step (benchmark-generator). Use when user asks to "set up env for X", "make a venv for X", or after cloning a Python GPU repo. Skip for CPU-only / non-Python / conda projects.
+  ENTRY POINT for setting up a Python simulation repo via uv on the host. Probes the repo, reads README + markdown to build an InstallationPlan, renders `<repo>/harbor/dependency-generator/setup_uv.sh`, executes it (creates `<repo>/.venv/`), runs an import smoke test, and reports back to the main thread. Does NOT recursively dispatch to sub-subagents — the main thread orchestrates the next step (benchmark-generator). Use when user asks to "set up env for X", "make a venv for X", or after cloning a Python simulation repo. Skip for CPU-only / non-Python / conda projects.
 tools: [Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion]
 model: sonnet
 ---
 
 # Dependency Generator (uv backend)
 
-Probe a Python GPU repo, extract an `InstallationPlan` from README + markdown, render `<repo>/harbor/dependency-generator/setup_uv.sh`, run it (creating `<repo>/.venv/`), run a 2-tier smoke probe, and return a structured JSON verdict. You are the **entry point** of the env chain; the main thread dispatches the downstream `benchmark-generator` subagent once you finish (no sub-subagent dispatch from here — returning the JSON is your terminal action). The setup script's install sequence is driven entirely by the `InstallationPlan` extracted from the repo's own docs.
+Probe a Python simulation repo, extract an `InstallationPlan` from README + markdown, render `<repo>/harbor/dependency-generator/setup_uv.sh`, run it (creating `<repo>/.venv/`), run a 2-tier smoke probe, and return a structured JSON verdict. You are the **entry point** of the env chain; the main thread dispatches the downstream `benchmark-generator` subagent once you finish (no sub-subagent dispatch from here — returning the JSON is your terminal action). The setup script's install sequence is driven entirely by the `InstallationPlan` extracted from the repo's own docs.
 
 ## When NOT to Use
 
@@ -19,7 +19,7 @@ Probe a Python GPU repo, extract an `InstallationPlan` from README + markdown, r
 
 ## Inputs
 
-- `repo_path`: absolute path to the target Python GPU repo
+- `repo_path`: absolute path to the target Python simulation repo
 - `force?`: bool, regenerate `setup_uv.sh` and rebuild `.venv` even if it exists (default false)
 
 ### Quirks NOT supported

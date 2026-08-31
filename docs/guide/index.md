@@ -26,7 +26,7 @@ And it accumulates. Append-only experience ledgers plus a library of task specif
 
 ## What you need
 
-- A Python GPU robotics repository (IsaacLab, ManiSkill, Genesis, MJLab, Loco-MuJoCo, and others)
+- A Python simulation repository (IsaacLab, ManiSkill, Genesis, MJLab, Loco-MuJoCo, and others)
 - An NVIDIA GPU with a working driver
 - Claude Code 2.1.219 or newer
 

@@ -69,15 +69,3 @@
 .vp-doc table {
   overflow-x: auto;
 }
-
-/* Home feature cards. Left-aligned they read as four stacked paragraphs; centred, the four
-   claims read as parallel and the titles carry. Only viable because the copy is short — the
-   `box` is a flex column, so it needs align-items as well as text-align. */
-.VPFeatures .VPFeature .box {
-  align-items: center;
-}
-
-.VPFeatures .VPFeature .title,
-.VPFeatures .VPFeature .details {
-  text-align: center;
-}

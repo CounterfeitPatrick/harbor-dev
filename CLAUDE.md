@@ -1,6 +1,6 @@
 # harbor
 
-Plugin for setting up Python GPU robotics repos via uv and authoring RL tasks end-to-end.
+Plugin for setting up Python simulation repos via uv and authoring RL tasks end-to-end.
 
 ## Hard constraints (apply to ALL tasks)
 

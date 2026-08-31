@@ -11,7 +11,7 @@ Adds benchmark sanity scaffolding to a Python env that dependency-generator alre
 
 ## `dependency-generator`
 
-ENTRY POINT for setting up a Python GPU repo via uv on the host. Probes the repo, reads README + markdown to build an InstallationPlan, renders `<repo>/harbor/dependency-generator/setup_uv.sh`, executes it (creates `<repo>/.venv/`), runs an import smoke test, and reports back to the main thread. Does NOT recursively dispatch to sub-subagents — the main thread orchestrates the next step (benchmark-generator).
+ENTRY POINT for setting up a Python simulation repo via uv on the host. Probes the repo, reads README + markdown to build an InstallationPlan, renders `<repo>/harbor/dependency-generator/setup_uv.sh`, executes it (creates `<repo>/.venv/`), runs an import smoke test, and reports back to the main thread. Does NOT recursively dispatch to sub-subagents — the main thread orchestrates the next step (benchmark-generator).
 
 **Tools** · Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion  
 **Source** · [`agents/dependency-generator.md`](https://github.com/supersglzc/harbor-dev/blob/main/agents/dependency-generator.md)

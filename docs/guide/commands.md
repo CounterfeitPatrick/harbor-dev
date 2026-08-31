@@ -4,11 +4,11 @@ Every HARBOR command, generated from the plugin source. Invoke any of them as `/
 
 ## Environment
 
-Set up a Python GPU robotics repository and its virtual environment.
+Set up a Python simulation repository and its virtual environment.
 
 | Command | Arguments | Purpose |
 |---|---|---|
-| [`env-install-uv`](https://github.com/supersglzc/harbor-dev/blob/main/commands/env-install-uv.md) | `[path]` | Generate an isolated Python environment for a GPU repo using uv on the host (creates a `.venv/`). |
+| [`env-install-uv`](https://github.com/supersglzc/harbor-dev/blob/main/commands/env-install-uv.md) | `[path]` | Generate an isolated Python environment for a simulation repo using uv on the host (creates a `.venv/`). |
 
 ## Probing
 

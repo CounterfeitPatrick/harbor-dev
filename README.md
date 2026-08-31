@@ -127,7 +127,7 @@ That is the whole install. HARBOR installs [`uv`](https://docs.astral.sh/uv/) on
 
 ### 2. Ask HARBOR to build a task
 
-Point HARBOR at any Python GPU robotics repository and describe what you want. It handles the rest.
+Point HARBOR at a Python simulation repository and describe what you want. It handles the rest.
 
 ```text
 /harbor:task-create Set up the env for https://github.com/isaac-sim/IsaacLab, then create a task where
@@ -204,8 +204,6 @@ HARBOR specializes a general agentic harness to robot RL as five interacting pie
 | **Artifacts** | Workflow state in files, not context. `benchmark-spec.json` is written once and read by every later stage; `tune-state.json` checkpoints each iteration, so a killed tune resumes from disk. |
 | **Gates** | Executable checks that decide whether a stage advances, returning a diagnosis rather than a stack trace. §2 asserts the achieved joint position matches the commanded one; §6 asserts the terms sum back to the reward every step. |
 | **Knowledge** | Templates, references, and append-only ledgers that accumulate across runs. Authoring searches a library of prior task specs first, so a new task starts from the closest one rather than a blank file. |
-
-The property that matters: HARBOR cannot guarantee your policy is semantically correct. What it does is **turn common RL engineering failures into gate failures that surface before they propagate downstream**. Removing the gates makes the pipeline *faster* and drops success from 48/50 to 41/50, while letting a silent render-path defect ship undetected.
 
 ## Documentation
 
