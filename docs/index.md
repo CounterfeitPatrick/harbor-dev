@@ -50,12 +50,24 @@ HARBOR treats the whole problem as **harness engineering**: shifting human effor
 
 HARBOR cannot prove your policy is semantically correct. What it does is turn the common RL engineering failures into **gate failures that surface before they propagate downstream**.
 
-| | |
-|:--|:--|
-| **Long-horizon automation** | A reliable workflow over tightly coupled decisions — related work automates individual steps. |
-| **Wall-clock efficiency** | The iterative stages — reward engineering and hyperparameter tuning — are where the clock goes. |
-| **Self-improvement** | Human heuristics and existing examples, carried into the next run by in-context learning. |
-| **Interpretability and controllability** | Full trace documentation at every stage, and human intervention wherever you want it. |
+<div class="harbor-cards">
+  <div class="harbor-card">
+    <h3>Long-horizon automation</h3>
+    <p>A reliable workflow over tightly coupled decisions — related work automates individual steps.</p>
+  </div>
+  <div class="harbor-card">
+    <h3>Wall-clock efficiency</h3>
+    <p>The iterative stages — reward engineering and hyperparameter tuning — are where the clock goes.</p>
+  </div>
+  <div class="harbor-card">
+    <h3>Self-improvement</h3>
+    <p>Human heuristics and existing examples, carried into the next run by in-context learning.</p>
+  </div>
+  <div class="harbor-card">
+    <h3>Interpretability and controllability</h3>
+    <p>Full trace documentation at every stage, and human intervention wherever you want it.</p>
+  </div>
+</div>
 
 [Read the concepts →](/guide/harness)
 

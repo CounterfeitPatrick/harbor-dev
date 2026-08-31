@@ -69,3 +69,43 @@
 .vp-doc table {
   overflow-x: auto;
 }
+
+/* The four claims, rendered as cards inside "Why a harness".
+   VitePress only draws `features:` cards above the fold on the home layout, and these belong
+   beside the argument they support — so the markup is by hand and the styling borrows the
+   same theme tokens the built-in cards use, which is what keeps them right in both themes.
+   The h3 rules are overrides: .vp-doc gives headings a top margin and rule that look wrong
+   inside a card. */
+.harbor-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin: 2rem 0;
+}
+
+@media (max-width: 640px) {
+  .harbor-cards { grid-template-columns: 1fr; }
+}
+
+.harbor-card {
+  padding: 20px 24px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  background-color: var(--vp-c-bg-soft);
+}
+
+.vp-doc .harbor-card h3 {
+  margin: 0 0 8px;
+  padding-top: 0;
+  border-top: none;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.vp-doc .harbor-card p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 24px;
+  color: var(--vp-c-text-2);
+}
