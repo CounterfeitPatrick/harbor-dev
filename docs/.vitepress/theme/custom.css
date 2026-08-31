@@ -92,6 +92,7 @@
   border: 1px solid var(--vp-c-divider);
   border-radius: 12px;
   background-color: var(--vp-c-bg-soft);
+  text-align: center;
 }
 
 .vp-doc .harbor-card h3 {
