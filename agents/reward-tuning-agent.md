@@ -28,7 +28,7 @@ every DESIGN sees the freshest completed history plus the designs still running.
 | Key | Required | Notes |
 |---|---|---|
 | `repo_path` | yes | Absolute path to the benchmark repo. |
-| `task` | yes | Task ID; `gym.make(<task>)` must succeed. §6 may be a placeholder or a real reward. |
+| `task` | yes | Task ID; the task must build (see *Does the task build?*). §6 may be a placeholder or a real reward. |
 | `task_dir` | yes | `<repo>/harbor/create-task/<slug>` — the loop's workspace. |
 | `description` | yes | The behavior to match (from `spec.json`); forwarded to every candidate. |
 | `algorithm` | no | `ppo` (default) → `harbor/configs/rl/<algo>.parallel.yaml`. |
@@ -43,7 +43,7 @@ every DESIGN sees the freshest completed history plus the designs still running.
 | `n_frames` | no | Frames the candidate reads per render (default 12). |
 | `prompt_every_n_stuck` | no | Return `needs_decision` after N non-improving completions (default 5). |
 | `monitor_early_stop` | no | Forwarded to candidates (default **false** ⇒ train to full budget). |
-| `monitor_interval` / `monitor_soft_floor` | no | Forwarded; defaults **300** s / **0.5**. |
+| `monitor_interval` / `monitor_soft_floor` | no | Forwarded; defaults **240** s / **0.5**. |
 | `library_refs` | no | Task-library base(s) the caller already selected. Empty ⇒ pure creation. |
 | `spec_section` | no | §6 Code block (reproduce mode); seeds iter 0 verbatim. |
 
@@ -51,11 +51,33 @@ Return: `{status: "converged"|"aborted"|"needs_decision", best_iter, best_succes
 
 ## References (read ONCE at entry, work from memory after)
 
+**`<task_dir>/task-analysis.md` — read it FIRST**, before any other reference. It is the
+design-rationale half of `task-history.md`, generated at that agent's Phase C with the
+per-check Validations stripped, so it carries every §1–§5 `### Analysis` block and the
+Adaptation delta at ~58% of the size. Fall back to `task-history.md` when the digest is absent
+(a task authored before it existed). `task-generator` recorded, per section, the reasoning behind the task you are
+about to write a reward for, and four of those terms are direct inputs to reward design:
+
+| From | What it gives you |
+|---|---|
+| §1 **potential failures** | the physical ways this scene defeats a policy. A reward that ignores them is asking for a behavior the geometry blocks — the failure looks like non-convergence and is not fixable by reweighting. |
+| §2 **orientation decision** | what the action space can express. A term rewarding an alignment the wrist cannot reach is unlearnable by construction. |
+| §3 **reset layout feasibility** | the start state every episode begins in, and which candidate layouts were rejected. Your first shaping term is measured from here. |
+| §4 **subgoal decomposition** + **degenerate states** | the subgoal list is your term ladder, already decomposed with testable criteria. The named degenerate states are the reward-hacking surface — a term that pays out in one of them is a bug you were warned about. |
+| §5 **observability** | the quantities a term may key on. A term reading a signal §5 does not expose makes the task partially observable; §6 cannot fix that. |
+
+`<task_dir>/test-checklist.md` (sibling) lists what was actually verified — which predicates
+exist and fired, and which subgoals §4 chose **not** to implement. Read the full
+`task-history.md` only when you need a specific smoke's evidence, which is rare at design time.
+
+Both are absent when tuning a task `task-generator` did not author. Say so in iter 0's
+`reward-history.md` and design from the task source instead; do not fabricate the analysis.
+
 - `${CLAUDE_PLUGIN_ROOT}/knowledge/references/reward-tuning-agent/candidate-contract.md` — the request you send, the `design.json` shape, the verdict you get back, the boundary rule, the write scopes.
 - `${CLAUDE_PLUGIN_ROOT}/knowledge/references/adapt-first.md` — how to build from `library_refs` (port everything, change only overrides, document the delta).
 - `${CLAUDE_PLUGIN_ROOT}/knowledge/references/reward-tuning-agent/isaaclab-reward-reference.md` — composer-by-family, RewTerm idiom, common `mdp.*` blocks, weight conventions.
 - `<repo_path>/harbor/create-task/task-implementation.md` — this benchmark's implementation scheme; what a §1–§5 change costs and how it is expressed here. Read before designing any `task_changes`.
-- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/README.md` — which smoke covers which section, and what each section costs to change, so `task_changes.sections` maps to real verification. Read a specific `s<N>-*.md` only when weighing a change to that section.
+- `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/README.md` — which smoke covers which section, and what each section costs to change, so `task_changes.sections` maps to real verification. Read a specific `s<N>-*.md` only when weighing a change to that section.
 - `${CLAUDE_PLUGIN_ROOT}/knowledge/experiences/reward-tuning-agent/reward-experience.md` — staging / gating / scale-ratio heuristics (subordinate to a matched library base).
 - `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-library-search.md` — only if the caller passed no `library_refs` and you must pick a base.
 - `${CLAUDE_PLUGIN_ROOT}/commands/reward-add-log.md` — the per-term-logging flow you run in-line at STEP 0.
@@ -81,9 +103,12 @@ iter_<NNN>/                      # one per candidate, written by the candidate a
 cd "<repo_path>"
 test -x .venv/bin/python && test -f harbor/benchmark-generator/benchmark-spec.json \
   && test -f harbor/rl-integration-generator/rl-suite-spec.json || exit 1
-.venv/bin/python -c "import gymnasium as gym; gym.make('<task>'); print('build ok')" || exit 1
 command -v ffmpeg >/dev/null || exit 1
 ```
+
+Then build `<task>` per *Does the task build?* in `agent-conventions.md` — a bare
+`gym.make('<task>')` raises `TypeError: missing 1 required positional argument: 'cfg'` for every
+manager-based task, so gating on it aborts the tune before iter 0.
 
 **Per-term reward logging MUST be wired before iter 0.** You score `reward/<term>/...` keys;
 without `info["detailed_reward"]` the loop is blind.
@@ -113,7 +138,7 @@ rest. Else CREATE:
   "success_threshold": 0.5, "timesteps_per_iter": <N>,
   "seed": <the ONE seed pinned for this tune — drawn here if the caller gave none>,
   "library_refs": [...],
-  "monitor_early_stop": false, "monitor_interval": 300, "monitor_soft_floor": 0.5,
+  "monitor_early_stop": false, "monitor_interval": 240, "monitor_soft_floor": 0.5,
   "started_at": "<iso8601>", "next_iter": 0, "best_iter": null, "best_success_rate": null,
   "best_total_return": null, "consecutive_non_improving": 0,
   "slots": {}, "in_flight": [], "iters": [] }
@@ -221,6 +246,19 @@ Task-design rules:
 
 Reward-design rules:
 
+- **Start from §4's subgoal decomposition, not from a blank ladder.** It already enumerates
+  every subgoal between the reset state and completion, each with a testable criterion, and
+  says which ones §4 implemented as predicates and which it deliberately left out. An
+  unimplemented subgoal is exactly where a shaping term belongs; an implemented one usually
+  already has the predicate your gate needs. Deriving your own decomposition when one is on
+  file wastes an iteration and risks contradicting §4's success criterion.
+- **Check every term against §4's named degenerate states.** §4 recorded what else satisfies
+  the success predicate — a mug beside the peg, an object held at the right height. For each
+  term ask: does this pay out in one of those? A term that does will be found by the policy,
+  and the run reports a `success_rate` nobody can trust. This check costs a minute and is the
+  cheapest reward-hacking defense available.
+- **A term may only read what §5 exposes.** If the signal a term needs is not an observation,
+  the fix is a `task_changes` §5 entry — not a term that reads it out of the scene anyway.
 - **Nominal weights.** Every `weight` is the term's nominal per-step magnitude, applied
   directly (a `+200` one-shot latch reads `200`). Plan the budget in these units. The
   scorer divides the success term's episodic return by this weight, so it must be exact.
@@ -275,19 +313,30 @@ The candidate writes `verdict.json` then `.done`. Wait on the **union** of in-fl
 candidates, never on one in particular — at `pool_size>1`, blocking on slot 0 while slot 3
 finishes wastes the whole point of the pool:
 
-```bash
-# list one .done path per in-flight candidate; first to appear wins
-until for d in <task_dir>/iter_007/.done <task_dir>/iter_009/.done; do
-        [ -f "$d" ] && echo "$d" && break
-      done | grep -q .; do sleep 15; done
+**[MUST] Tick — never a foreground blocking wait, never a poll loop.** Follow *Waiting on long
+work* in `agent-conventions.md`. Your sentinel is the union of in-flight `.done` files; first to
+appear wins.
+
+```
+# one tick — give the Bash call an explicit timeout above the interval
+python3 -c "import time; time.sleep(240)"
+for d in <task_dir>/iter_007 <task_dir>/iter_009; do
+  [ -f "$d/.done" ] && echo "DONE $d" \
+    || echo "$d elapsed=$(( $(date +%s) - $(cat $d/started_at 2>/dev/null || date +%s) ))s"
+done
 ```
 
-**One Bash call is not enough.** Bash caps at ~600 s while a candidate runs 35 min to 3 h, so
-this is a RE-POLL loop: issue the bounded wait, and when it times out with no `.done`, issue it
-again. Expect tens of iterations over a long candidate — that is normal, not a hang.
+Measured before this rule: 51 foreground waits burned **13.58M cache-write tokens, 94 % of this
+agent's total and ~31 % of the whole run**, asking "is it done yet".
 
-The agent's completion notification is the fast path; the file is the reliable one — trust
-the file, since it survives a lost notification, a killed agent, and a resumed session.
+A candidate runs 35 min to 3 h, above the ~50-minute crossover where one rebuild would be
+marginally cheaper than ticking. Tick anyway, per the shared rule: it survives a lost
+notification and surfaces a stuck candidate in minutes rather than hours. Your context is small
+by design — the noise lives in the candidate — so the premium is a rounding error against a hung
+pool.
+
+The file remains the truth: the wait survives a killed agent or a resumed session. If you are
+re-invoked and no `.done` exists, resume ticking.
 
 ### 2.4 — COLLECT
 

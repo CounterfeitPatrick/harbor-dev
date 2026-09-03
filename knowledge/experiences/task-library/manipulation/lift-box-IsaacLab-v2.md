@@ -5,6 +5,9 @@
 
 - robot: Two Franka FR3 arms + Franka hands (dual-arm cooperative)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: eurobox, lab table
+- bimanual: true
+- summary: Two arms cooperatively grasp a eurobox and lift it off the table.
 
 > **AppLauncher caveat**: bare-shell `gym.make` does NOT work in this repo — `pxr` is only
 > importable through `isaaclab.app.AppLauncher`. Every build/smoke must first construct
@@ -355,7 +358,7 @@ Sim timing: `decimation=6`, `sim.dt=1/120` → `step_dt = 0.05 s`; `episode_leng
 `harbor/create-task/isaac-lift-box-dual-franka-v0/smokes/smoke_s1.py` — env instantiation at
 num_envs=2. Asserts action_dim==8, obs policy dim==33, max_episode_length>0.
 Key output: `S1 OK: env instantiated with valid action/obs/episode-length info`.
-**Re-run for canonical_build (exit 0, confirmed).**
+**Re-run confirmed: exit 0.**
 
 ---
 
@@ -1183,39 +1186,6 @@ episodic means. Key: `S6 OK: 30 steps × 128 envs, reward mean=<m> std=<s> compo
 `mode="reset"`-randomization or `mode="interval"` terms acting on robot params, object physics,
 or observation noise. (Verified by reading `EventCfg` — see §3.) Observation corruption is
 enabled in the policy group config but is an `ObsGroup` flag, not a §7 randomization term.
-
----
-
-## Source files (relative to repo root)
-
-```
-source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/
-├── __init__.py
-├── config/__init__.py
-├── config/franka/__init__.py                 # gym.register (-v0 + -Play-v0)
-├── config/franka/joint_pos_env_cfg.py        # FR3 cfg + scene/action wiring + PLAY
-├── lift_box_env_cfg.py                        # Scene/Actions/Obs/Event/Reward/Term cfgs + sim knobs (nominal weights)
-└── mdp/
-    ├── __init__.py                            # star-imports isaaclab.envs.mdp + local modules
-    ├── actions_cfg.py                         # EMACumulativeDeltaPositionActionCfg
-    ├── actions.py                             # EMACumulativeDeltaPositionAction
-    ├── observations.py                        # ee_pose / box_position / box_quat
-    ├── rewards.py                             # 5-stage ladder + dual-contact gates + latch
-    └── terminations.py                        # lift_box_success (dual-grasp gated)
-```
-
-Assets (verified present on disk):
-- `harbor/assets/eurobox/eurobox.usd`
-- `harbor/assets/fr3/fr3_franka_hand.usd`
-- `harbor/assets/table/lab_table_instanceable_colored_rotated.usd`
-
-Per-section smokes: `harbor/create-task/isaac-lift-box-dual-franka-v0/smokes/`
-(`smoke_s1.py`, `smoke_s2.py`, `smoke_s2_5.py`, `smoke_s3.py`, `smoke_s4.py`, `smoke_s5.py`,
-`smoke_s6.py`, `smoke_s6_render.py`, `smoke_success.py`, `smoke_success_visualize.py`,
-`expected_obs.json`).
-
-Validation checkpoint: `harbor/outputs/ppo_Isaac-Lift-Box-Dual-Franka-v0_20260606-231207`
-(PPO @4096 envs, 40M steps, success_rate 0.89).
 
 ---
 

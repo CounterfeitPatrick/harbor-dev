@@ -2,6 +2,9 @@
 
 - robot: Franka Emika Panda (7 DoF arm + parallel gripper)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: DexCube, lab table, commanded goal pose
+- bimanual: false
+- summary: Reach a cube, lift it clear of the table, and carry it to a commanded goal pose.
 
 This is the **joint-position-control** Franka cube-lift task. A Franka Panda must reach a cube on a table, lift it above 4 cm, then carry it to a randomly commanded 3D goal pose. Manager-based RL env (`isaaclab.envs:ManagerBasedRLEnv`). The arm is driven by absolute joint-position targets (scaled relative deltas off the default pose), the gripper by a binary open/close command.
 
@@ -481,13 +484,3 @@ No domain randomization. `EventCfg` contains only `mode="reset"` terms (covered 
 ### Smoke
 N/A (skipped is valid — no startup/interval events and no obs noise configured).
 
-## Source files (relative to source_repo)
-- source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift/config/franka/__init__.py:17-28  # gym.register for Isaac-Lift-Cube-Franka-v0
-- source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift/config/franka/joint_pos_env_cfg.py:24-94  # franka scene + actions + object + ee_frame, _PLAY variant
-- source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift/lift_env_cfg.py:31-223  # abstract scene, commands, actions, observations, events(reset), rewards, terminations, curriculum, EnvCfg base
-- source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift/mdp/rewards.py:1-69  # object_is_lifted, object_ee_distance, object_goal_distance
-- source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift/mdp/observations.py:1-31  # object_position_in_robot_root_frame
-- source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift/mdp/terminations.py:1-55  # object_reached_goal (unused by this task)
-- source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift/mdp/__init__.py:1-13  # re-exports isaaclab.envs.mdp + local obs/rewards/terminations
-- source/isaaclab_assets/isaaclab_assets/robots/franka.py:26-73  # FRANKA_PANDA_CFG
-- stock isaaclab.envs.mdp: action_rate_l2, joint_vel_l2 (rewards.py); reset_scene_to_default, reset_root_state_uniform (events.py); time_out, root_height_below_minimum (terminations.py); joint_pos_rel, joint_vel_rel, generated_commands, last_action (observations.py); modify_reward_weight (curriculums.py); JointPositionActionCfg, BinaryJointPositionActionCfg, UniformPoseCommandCfg

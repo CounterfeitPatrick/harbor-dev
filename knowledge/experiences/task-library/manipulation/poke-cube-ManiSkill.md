@@ -2,6 +2,9 @@
 
 - robot: Franka Panda (default; Fetch also supported)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: cube, peg, goal marker, table
+- bimanual: false
+- summary: Use a peg to poke a cube to a goal position.
 
 > ManiSkill task. Unlike IsaacLab manager-based tasks, all design choices live as methods on a single
 > `BaseEnv` subclass (`PokeCubeEnv`) decorated with `@register_env`. There is no `RewardsCfg` / `ObservationsCfg` /
@@ -125,7 +128,7 @@ class PokeCubeEnv(BaseEnv):
         return self.peg.pose * self.peg_head_offsets
 ```
 
-**Smoke.** §1 build smoke (see canonical_build above):
+**Smoke.** §1 build smoke:
 ```bash
 cd <repo>
 .venv/bin/python -c "import gymnasium as gym, mani_skill; e=gym.make('PokeCube-v1'); print(e.observation_space, e.action_space); e.close()"
@@ -360,12 +363,6 @@ cd <repo>
 ## §7 DR
 
 `<no DR>` — `PokeCubeEnv` has no startup/interval domain-randomization events. All per-episode variation (peg xy, cube y + z-rotation, robot init qpos noise via `robot_init_qpos_noise=0.02`) is performed inside §3 `_initialize_episode` / `TableSceneBuilder`, not as separate DR events. There is no physical-parameter / material / mass randomization.
-
-## Source files (relative to source_repo)
-- `mani_skill/envs/tasks/tabletop/poke_cube.py:1-231`  # entire env (registration, scene, reset, evaluate, obs, reward)
-- `mani_skill/utils/building/actors/common.py:169-` `build_red_white_target`, `:230-` `build_twocolor_peg`  # actor builders for goal + peg
-- `mani_skill/utils/scene_builder/table/__init__.py`  # TableSceneBuilder (table + Panda placement)
-- `mani_skill/agents/robots/panda/`  # Panda agent: default controllers (pd_joint_delta_pos), tcp, is_grasping, is_static
 
 ## Reproduce
 ```

@@ -152,7 +152,7 @@ Plus shared (top-level) outputs: `harbor/configs/rl/{ppo,sac,td3}{.parallel}.yam
 
 ### Phase 2 — Extend setup_uv.sh
 
-dependency-generator's `setup_uv.sh` already installs the harbor extras (`wandb`, `tensorboardX`, `imageio[ffmpeg]`, `matplotlib`, `hydra-core`, `omegaconf`, `stable_baselines3[extra]`) at env-setup time, so this phase is a near-no-op for `stable_baseline3` / `custom_torch`. Only `local_implementation` still needs an extension (the user's package).
+dependency-generator's `setup_uv.sh` already installs the harbor extras (`wandb`, `tensorboardX`, `imageio[ffmpeg]`, `matplotlib`, `hydra-core`, `omegaconf`, `stable_baselines3[extra]`, `coacd`, `trimesh`) at env-setup time, so this phase is a near-no-op for `stable_baseline3` / `custom_torch`. Only `local_implementation` still needs an extension (the user's package).
 
 Append (idempotent) the source-specific line below to `<repo>/harbor/dependency-generator/setup_uv.sh`, just before the final `echo "[setup_uv] Done. ..."` line. Then run the equivalent `uv pip install --python <repo>/.venv/bin/python ...` against the existing venv so this run can use the new packages without re-creating it:
 

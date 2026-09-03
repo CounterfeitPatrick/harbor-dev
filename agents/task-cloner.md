@@ -1,7 +1,7 @@
 ---
 name: task-cloner
 description: |
-  Clones an existing task into an isolated, independently-editable copy registered under a new suffixed gym id (SAME-REPO mode of the general /harbor:task-clone primitive; cross-benchmark/sim2sim migration is orchestrated at the command level via probe-task + task-create reproduce, not by this agent). Copies only the task's EDITABLE surface (env_cfg + the mdp modules the requested `surface` touches — default: reward), rewires the cloned cfg's imports to the copies, mirrors the source's registration mechanism for `<dest>`, then runs the clone smokes (build + rollout + per-term-logging). Writes a manifest listing every created file so the clone can be deleted cleanly. Callers include section A/B experiments and any flow needing an isolated task variant. PREREQUISITE: `gym.make(<source_id>)` succeeds. Never edits the source task's files.
+  Clones an existing task into an isolated, independently-editable copy registered under a new suffixed gym id (SAME-REPO mode of the general /harbor:task-clone primitive; cross-benchmark/sim2sim migration is COMING SOON and refused in this release). Copies only the task's EDITABLE surface (env_cfg + the mdp modules the requested `surface` touches — default: reward), rewires the cloned cfg's imports to the copies, mirrors the source's registration mechanism for `<dest>`, then runs the clone smokes (build + rollout + per-term-logging). Writes a manifest listing every created file so the clone can be deleted cleanly. Callers include section A/B experiments and any flow needing an isolated task variant. PREREQUISITE: `gym.make(<source_id>)` succeeds. Never edits the source task's files.
 tools: [Read, Write, Edit, Bash, Glob, Grep]
 model: opus
 ---
@@ -60,8 +60,11 @@ Render to `<repo>/harbor/clones/_smoke/smoke_<dest_slug>.py` substituting `{{DES
 ```bash
 cd "<repo_path>"
 test -x .venv/bin/python || exit 1
-.venv/bin/python -c "import gymnasium as gym; gym.make('<source_id>'); print('source ok')" || exit 1
 ```
+
+Then confirm `<source_id>` builds, per *Does the task build?* in `agent-conventions.md` — a bare
+`gym.make('<source_id>')` raises `TypeError: missing 1 required positional argument: 'cfg'` for
+every manager-based task, so gating on it refuses to clone a healthy source.
 
 ## Workflow
 

@@ -2,6 +2,9 @@
 
 - robot: Unitree H1 bipedal humanoid (19 DoF)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: none (flat terrain)
+- bimanual: false
+- summary: Track a commanded base velocity while walking on flat ground.
 
 This is an UPSTREAM IsaacLab manager-based **locomotion / velocity-tracking** task for the **Unitree H1 bipedal humanoid** on **flat ground**. The agent tracks a commanded base velocity (lin_x, lin_y, ang_z) via direct joint-position targets over all 19 joints.
 
@@ -753,15 +756,3 @@ self.events.base_com = None
 
 ---
 
-## Source files (relative to source_repo = IsaacLab)
-
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/h1/__init__.py:14-59`  # gym.register for all four H1 ids
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/h1/flat_env_cfg.py:1-42`  # H1FlatEnvCfg + _PLAY
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/h1/rough_env_cfg.py:1-143`  # H1Rewards + H1RoughEnvCfg (robot, reset/DR/command/termination/reward overrides)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/velocity_env_cfg.py:39-330`  # shared scene/actions/commands/obs/events/rewards/terminations/env base
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/mdp/rewards.py:27-110`  # task-local reward funcs (biped/yaw-frame/slide)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/mdp/__init__.py:1-12`  # re-exports isaaclab.envs.mdp.* + local rewards/terminations/curriculums
-- `source/isaaclab/isaaclab/envs/mdp/rewards.py:37-254`  # shared reward funcs (is_terminated, l2 penalties, joint_deviation_l1, joint_pos_limits, action_rate_l2)
-- `source/isaaclab/isaaclab/envs/mdp/terminations.py:31-162`  # time_out, illegal_contact
-- `source/isaaclab/isaaclab/envs/mdp/commands/commands_cfg.py:33-105`  # UniformVelocityCommandCfg schema
-- `source/isaaclab_assets/isaaclab_assets/robots/unitree.py:184-269`  # H1_CFG + H1_MINIMAL_CFG articulation

@@ -14,7 +14,7 @@ The user wants a tour of everything this plugin offers. **Print the static block
 
 <!-- BEGIN STATIC -->
 
-**harbor** — Set up Python GPU robotics repos with uv and author RL tasks end-to-end.
+**harbor** — Set up Python simulation repos with uv and author RL tasks end-to-end.
 
 ## Slash commands
 
@@ -24,7 +24,7 @@ Grouped by prefix: `env-*` · task (`task-*`/`probe-*`) · `reward-*` · `rl-*` 
 |---|---|
 | `/harbor:help` | This overview. |
 | **env** | |
-| `/harbor:env-install-uv [path]` | Set up an isolated `.venv/` for a GPU repo via uv; renders `harbor/dependency-generator/setup_uv.sh`, runs the import smoke, then dispatches `benchmark-generator`. |
+| `/harbor:env-install-uv [path]` | Set up an isolated `.venv/` for a simulation repo via uv; renders `harbor/dependency-generator/setup_uv.sh`, runs the import smoke, then dispatches `benchmark-generator`. |
 | **task** | |
 | `/harbor:probe-benchmark [repo=<path>]` | Author the family-level `create-task/task-implementation.md` guide for a benchmark repo. |
 | `/harbor:probe-task task=<id> [output=<path>]` | Emit a portable per-task spec (verbatim §1–§7 code). Runs in a subagent to save context. |

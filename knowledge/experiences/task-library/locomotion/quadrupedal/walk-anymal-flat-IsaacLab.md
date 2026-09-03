@@ -2,6 +2,9 @@
 
 - robot: ANYbotics ANYmal-C quadruped (12 DoF)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: none (flat terrain)
+- bimanual: false
+- summary: Track a commanded base velocity while trotting on flat ground.
 
 This is a **quadruped velocity-command tracking** task. The ANYmal-C robot must track a commanded base linear velocity (x, y) and yaw angular velocity on **flat ground**, with a rich shaped reward (exponential velocity tracking + many regularization penalties) and substantial domain randomization (startup friction/mass/CoM, reset pose/joint scale, interval velocity pushes).
 
@@ -618,15 +621,3 @@ DR funcs resolve to core `isaaclab.envs.mdp.events`: `randomize_rigid_body_mater
 
 ---
 
-## Source files (relative to source_repo `IsaacLab`)
-
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/anymal_c/__init__.py:14-25` — gym.register (§1)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/anymal_c/flat_env_cfg.py:11-28` — flat override: terrain/height-scan/reward deltas (§1, §6)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/anymal_c/rough_env_cfg.py:16-22` — robot swap to ANYMAL_C_CFG (§1)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/velocity_env_cfg.py:39-330` — MySceneCfg, CommandsCfg, ActionsCfg, ObservationsCfg, EventCfg, RewardsCfg, TerminationsCfg, env cfg (§1–§7)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/mdp/rewards.py:27-46` — feet_air_time (§6)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/mdp/__init__.py:8-12` — re-exports core mdp + curriculums/rewards/terminations
-- `source/isaaclab/isaaclab/envs/mdp/rewards.py:77-326` — core reward funcs (track_*_exp, lin_vel_z_l2, ang_vel_xy_l2, joint_torques_l2, joint_acc_l2, action_rate_l2, undesired_contacts, flat_orientation_l2, joint_pos_limits) (§6)
-- `source/isaaclab/isaaclab/envs/mdp/terminations.py` (+ core mdp time_out/illegal_contact) — §4
-- `source/isaaclab/isaaclab/envs/mdp/events.py:155,286,400,1010,1046,1074,1238` — DR + reset funcs (§3, §7)
-- `source/isaaclab_assets/isaaclab_assets/robots/anymal.py:34-125` — ANYDRIVE_3_LSTM_ACTUATOR_CFG + ANYMAL_C_CFG (§1)

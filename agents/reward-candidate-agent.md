@@ -43,18 +43,25 @@ read as you enter it, and nothing for the sections you don't:
 
 | Section in `sections` | Read |
 |---|---|
-| 1 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s1-scene.md` |
-| 2 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s2-actions.md` |
-| 3 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s3-reset.md` |
-| 4 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s4-termination.md` |
-| 5 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s5-observation.md` |
-| any of 1/2/3 | also `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-sections/s6-render.md` (the render gate fires) |
+| 1 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/s1-scene.md` |
+| 2 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/s2-actions.md` |
+| 3 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/s3-reset.md` |
+| 4 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/s4-termination.md` |
+| 5 | `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/s5-observation.md` |
+| any of 1/2/3 | also `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/s6-render.md` (the render gate fires) |
 
-Each carries that section's decisions, the smoke that verifies it, its failure→fix table, and
-its traps, and points into
+Each carries that section's **analysis terms**, its decisions, the numbered checks its smoke
+runs, its failure→diagnosis→fix table, and its traps, and points into
 `${CLAUDE_PLUGIN_ROOT}/knowledge/references/task-generator/isaaclab-code-reference.md` for the API. These
 are the same files `task-generator` authors from, so a candidate's delta is held to the same
-contract as the original section.
+contract as the original section — the analysis terms are the designer's job, but the section's
+smoke checks and traps are yours.
+
+Also read `<task_dir>/task-analysis.md`'s `### Analysis` block for each section you touch (the
+design-rationale digest; fall back to `task-history.md` if it is absent), when the file exists: it records why that section is shaped the way it is. A delta that contradicts
+its own section's recorded reasoning — re-introducing a layout §3 rejected, reading a signal §5
+deliberately withheld — is a design defect to report, not an implementation detail to work
+around.
 
 Plus, whenever you change §1–§5: `<repo_path>/harbor/create-task/task-implementation.md` —
 **this benchmark's** implementation scheme, i.e. where the task's files live and how a sensor
@@ -98,18 +105,29 @@ clone or source) and `{{REPO}}` = `repo_path`. Run inside `.venv`. Which ones yo
 driven by `design.task_changes.sections` — the same table that told you which section files
 to read:
 
+**Render `_verdict.py.template` into `<iter_dir>/smokes/_verdict.py` first** (no
+substitutions). Every smoke in both trees imports it as a sibling module and it writes each
+`<iter_dir>/smokes/<smoke>.verdict.json` as the smoke runs — that file, not your recollection,
+is what the `smokes` map must report. (Distinct from `<iter_dir>/verdict.json`, which is your
+scored write-up at STEP 4.)
+
 | Trigger | Smokes |
 |---|---|
-| always | **S1** (env builds) … then **S6** (reward finite / non-constant / composer) |
+| always | **S1** (env builds; C1–C7) … then **S6** (reward finite / non-constant / composer) |
 | §2 in `sections` | S2, S2.5 |
-| §3 in `sections` | S3 |
-| §4 in `sections` | S4, S-success |
+| §3 in `sections` | S3 (numeric, C1–C5) **and** S3-visual (rendered resets) |
+| §4 in `sections` | S4 (G1 + one `C<i>`/`V<i>` pair per implemented predicate) |
 | §5 in `sections` | S5 |
 | any of §1/§2/§3 | S6-render (scene stability + keyframes you then `Read`) |
 
-Order: `S1 → S2 → S2.5 → S3 → S4 → S5 → S-success → S6-render → S6`. A reward-only
+Order: `S1 → S2 → S2.5 → S3 → S3-visual → S4 → S5 → S6-render → S6`. A reward-only
 candidate therefore runs just S1 and S6. Record every smoke's result — `pass`, `fail`, or
-`skipped` — for the verdict's `smokes` map.
+`skipped` — for the verdict's `smokes` map, reading each result out of its `verdict.json`.
+
+Several smokes end in a **visual** judgement — S3-visual's reset frames, S4's per-predicate
+keyframes, S6-render's rollout keyframes. `Read` them; a green numeric verdict beside a frame
+showing the wrong state is a finding for the designer, and one of the few things you can see
+that the designer cannot.
 
 **3 attempts per smoke, fixing implementation only** — idiom, an un-rewired import, a
 malformed cfg. Diagnose from the failing section's own failure→fix table before guessing.
@@ -148,7 +166,7 @@ ckpt=$trial/checkpoint_best.pth; [ -f "$ckpt" ] || ckpt=$trial/checkpoint.pth
 # Collect this candidate's viewable evidence INTO its own iter dir, so an iteration can be
 # reviewed on its own without resolving a timestamped path under harbor/outputs/.
 echo "$trial" > "<iter_dir>/trial_dir.txt"
-for src in render.mp4 metrics.jsonl; do
+for src in render.mp4 render_contact_sheet.jpg metrics.jsonl; do
     cp    "$trial/$src"  "<iter_dir>/$src"  || echo "[collect] MISSING $trial/$src" >&2
 done
 cp -r "$trial/curves" "<iter_dir>/curves"  || echo "[collect] MISSING $trial/curves" >&2
@@ -172,10 +190,31 @@ Do not hand-roll the wait; wrap both commands:
 ```bash
 SENTINEL="${CLAUDE_PLUGIN_ROOT}/scripts/common/run_with_sentinel.sh"
 bash "$SENTINEL" --cmd "<train command>"  --sentinel-log "saved checkpoint to" \
-     --log "<iter_dir>/train.log"  || exit 1
-bash "$SENTINEL" --cmd "<render command>" --sentinel-file "$trial/render.mp4" \
-     --log "<iter_dir>/render.log" || exit 1
+     --log "<iter_dir>/train.log"
+train_rc=$?          # NOT `|| exit 1` — see below
+
+# Render whatever the trainer managed to save, even when it died. The trainer writes
+# checkpoint_best.pth on every improvement and checkpoint_<steps>.pth periodically, so a run
+# that crashed at 28M of 150M still has a policy on disk — and the rollout is the only way to
+# see WHAT it had learned when it died. Exiting here instead is how a whole tune produced
+# nine verdicts and not one video.
+ckpt=$trial/checkpoint_best.pth; [ -f "$ckpt" ] || ckpt=$trial/checkpoint.pth
+if [ -f "$ckpt" ]; then
+    bash "$SENTINEL" --cmd "<render command>" --sentinel-file "$trial/render.mp4" \
+         --log "<iter_dir>/render.log" || echo "[render] FAILED — see render.log" >&2
+else
+    echo "[render] SKIPPED: no checkpoint at all — the trainer died before its first save" >&2
+fi
+[ $train_rc -ne 0 ] && echo "[train] rc=$train_rc (crashed or timed out)" >&2
+
+# LAST line, always reached: the file you wait on. Completion is the artifact, so the wait
+# survives a lost notification, a killed agent, and a resumed session.
+touch "<iter_dir>/run.done"
 ```
+
+A non-zero `train_rc` still means `status: "train_failed"` in the verdict — but with the
+rollout attached, so `behavior` describes the partial policy instead of reading `NOT OBSERVED`.
+A crash is a result about the task, and it deserves the same evidence as a success.
 
 It polls for the sentinel, gives the process a short grace period once it appears, then tears
 down the whole process group — a trainer killed **after** its sentinel is a success, gated on
@@ -187,11 +226,79 @@ Launch per `mode`:
 - **`local`** — launch DETACHED so a harness-side process-group cleanup cannot kill a
   multi-hour trainer mid-run:
   `Bash(run_in_background=true, "setsid bash <iter_dir>/run.sh > <iter_dir>/run.log 2>&1 < /dev/null &")`,
-  then wait for it. (Without `setsid`, a real tune lost a candidate at ~58M steps.)
-- **`cluster`** — write the same body as `<iter_dir>/launch.sh` with SBATCH directives so
-  train **and** render both run on the compute node (never render on a login node), submit
-  with `sbatch`, write the jobid to `<iter_dir>/jobid.txt` (the designer needs it to
-  `scancel` you on convergence — stopping the agent does not stop the SLURM job), and poll
+  then wait on it with the **tick protocol** below. (Without `setsid`, a real tune lost a
+  candidate at ~58M steps.)
+
+  Wait per *Waiting on long work* in `agent-conventions.md`. Both failure directions have been
+  paid for here: 48 foreground waits cost **6.16M cache-write tokens, 62 % of every candidate's
+  total**, and one candidate polling a background `.output` every ~3 s cost **439M cache-read,
+  96 % of its entire cost**.
+
+  **The tick is the default wait path — it is NOT gated by `monitor_early_stop`.** That flag adds
+  the curve-health *decision* (STEP 3b) to the tick body; it never controls whether you tick.
+  There is no un-ticked way to wait.
+
+  | phase | interval | until |
+  |---|---|---|
+  | 1 — startup | 60–120 s | the first `[train] iter=` line appears |
+  | 2 — steady | `monitor_interval` (**240 s**) | `run.done` exists |
+
+  At launch, stamp the start so every tick can compute elapsed:
+  `date +%s > <iter_dir>/started_at`.
+
+  ```bash
+  # ONE tick. <interval> = 60-120 (phase 1) or monitor_interval (phase 2, default 240).
+  # Give the Bash call an explicit timeout ABOVE <interval> — the default is 120 s.
+  python3 -c "import time; time.sleep(<interval>)"
+  D=<iter_dir>; L=$D/train.log                 # TRAINING output. run.log is only the wrapper.
+  echo "elapsed=$(( $(date +%s) - $(cat $D/started_at) ))s"
+  # run.done is a `touch` sentinel — EMPTY. rc surfaces in run.log as `[train] rc=` on failure.
+  if [ -f $D/run.done ]; then
+    echo DONE; grep -E '^\[' $D/run.log | tail -5   # wrapper lines: [sentinel], and
+                                                   # [train] rc= / [collect] MISSING on failure
+  else
+    pgrep -f "$D/run.sh" >/dev/null && echo ALIVE || echo DEAD   # scope to THIS iter_dir:
+                                                # bare `run.sh` matches a sibling candidate
+    PGID=$(ps -o pgid= -p $(pgrep -f "$D/run.sh" | head -1) 2>/dev/null | tr -d ' ')
+    echo "cpu=$(ps -o cputimes= -g ${PGID:-0} 2>/dev/null | awk '{s+=$1} END {printf "%d", s+0}')s"
+    if [ -f $L ]; then                          # absent on the first tick or two
+      echo "iters=$(grep -c '^\[train\] iter=' $L) bytes=$(stat -c %s $L)"
+      grep '^\[train\] iter=' $L | tail -1; tail -2 $L
+    else echo "iters=0 bytes=0 (train.log not created yet)"; fi
+  fi
+  ```
+
+  **Judge it yourself from the three signals — `iters` (progress), `cpu` (compute), `bytes`
+  (output).** Calibrate the cadence from the Δ between two ticks, and aim between the two failure
+  modes: killing a healthy run wastes an iteration and misleads the search, nursing a dead one
+  wastes an hour of GPU. Non-negotiable, because neither recovers: **flat `cpu` while alive** is
+  the one true hang, and **`return=nan` / `-inf`, or a dead process with no `run.done`**, fails
+  immediately.
+
+  **Hard timeout.** Past ~1.5× the expected budget, kill the process group and return
+  `train_failed` with the partial log. Ticking is what makes the wait survivable — it depends on
+  no completion notification, so a lost one costs one extra tick rather than hanging the tune.
+
+  Catching a dead launch at minute 3 instead of minute 97 is worth far more in GPU hours than
+  the ticks cost in tokens.
+- **`cluster`** — render `<iter_dir>/launch.sh` from the **same launcher `/harbor:rl-sweep`
+  uses**, so a compute node gets the site environment that path already solved: pick
+  `${CLAUDE_PLUGIN_ROOT}/knowledge/templates/rl-sweep/launch.sh.isaaclab.template` when
+  `benchmark-spec.json:benchmark.name` is IsaacLab or `harbor/apptainer/isaaclab.def` exists,
+  else `launch.sh.template`. Substitutions are `/harbor:rl-sweep`'s, with a single trial:
+  `{{N_MINUS_1}}` = `0`, `{{SWEEP_ID}}` = `<tune_id>-iter<NNN>`, `{{TRIAL_IDS}}` =
+  `"iter_<NNN>"`, `{{TRIAL_COMMANDS}}` = your STEP 3 body (train **and** render — never render
+  on a login node), `{{WANDB_API_KEY}}` and `{{PROXY_DEFAULT}}` = empty so both inherit from
+  the submitting environment.
+
+  Do **not** hand-write the SBATCH body. The launcher carries the two things a compute node
+  needs and a login node hides — `WANDB_API_KEY` and `HTTP(S)_PROXY` — and without them
+  `DataLogger._init_wandb` burns its ten retries and then succeeds in **offline** mode, so
+  training completes, scoring works, and nothing ever reaches W&B. That is a silent failure,
+  not a loud one; sharing the file is what keeps the two cluster paths from drifting again.
+
+  Then submit with `sbatch`, write the jobid to `<iter_dir>/jobid.txt` (the designer needs it
+  to `scancel` you on convergence — stopping the agent does not stop the SLURM job), and poll
   `squeue -h -j $JOBID` until it clears. The sentinel watchdog still applies inside the job.
 
 ## STEP 3b — MONITOR (only when `monitor_early_stop` is set)
@@ -201,7 +308,13 @@ request opts in, kill an *unambiguously* doomed run early rather than burning th
 but only when confident. Early RL curves are noisy and non-monotonic; a dip at 20–40 % of
 budget routinely recovers. A merely underperforming run is not a kill.
 
-Each tick (~`monitor_interval`, default 300 s) while training is live:
+This adds a check to STEP 3's phase-2 tick, which runs either way — the flag buys the
+curve-health *decision*, not the ticking. Same cadence, same call, curve check appended to the
+tick body. Do **not** background the wait: a
+backgrounded `sleep` ends your turn, so the next request lands after the cache has expired and
+pays a full rebuild, whereas a foreground `python3 time.sleep(240)` returns inside the same turn
+with the cache still warm. That is the whole reason the default is 240 s and not 300: the TTL is
+300, and a tick must land *under* it. Stop ticking once `<iter_dir>/run.done` exists:
 
 ```bash
 trial=$(ls -dt harbor/outputs/<algo>_<task>_* | head -1)   # trial_dir.txt exists only at completion
@@ -231,26 +344,53 @@ dead policy.
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/reward-tuning-agent/score_iter.py" \
     --metrics "$trial/metrics.jsonl" --design "<iter_dir>/design.json" --iter <NNN> \
     --status scored --smoke S1=pass --smoke S6=pass [--smoke ...] \
-    --behavior "<what the policy does>" [--failure-mode "..."] [--finding "..."]... \
+    --analysis-json "<iter_dir>/analysis.json" \
     --artifact render_mp4=<iter_dir>/render.mp4 --artifact frames_dir=<iter_dir>/frames \
     --artifact curves_dir=<iter_dir>/curves --artifact metrics_jsonl=<iter_dir>/metrics.jsonl \
     --artifact run_log=<iter_dir>/run.log --artifact trial_dir=$trial \
     --out "<iter_dir>/verdict.json"
 ```
 
-The scorer owns every number. Your contribution is the part it cannot compute:
+The scorer owns every number. Your contribution is the part it cannot compute: what the
+robot actually does. Extract `n_frames` frames from `render.mp4` with `ffmpeg` into
+`<iter_dir>/frames/`, `Read` every one of them, then write `<iter_dir>/analysis.json`.
 
-- **Watch the rollout.** Extract `n_frames` frames from `render.mp4` with `ffmpeg` into
-  `<iter_dir>/frames/`, `Read` them, and write `behavior` as what the policy actually does
-  compared with `description`. "Reward went up" is not a behavior; "the arm reaches the cube
-  and hovers, gripper never closes" is.
-- **Read the scorer's `peak` block before writing `behavior`.** If it reports the run peaked
-  and collapsed, say which policy you actually watched — the rendered best checkpoint is not
-  the end-of-training one, and conflating them misreports what the reward produced.
-- **`failure_mode`** — one line naming the mechanism, not the symptom.
-- **`findings`** — 0–3 lines the next design should act on, and say whether each points at
-  the task design or the reward. This is your entire influence on the search; a vague
-  finding is a wasted iteration.
+It is a **checklist, not an essay** — work the aspects in order, and answer each from the
+frames. `score_iter.py` refuses to score a candidate whose checklist has a missing key, an
+unknown key, or a placeholder answer, because an aspect nobody addressed is the common way
+a rollout analysis misleads the search.
+
+```json
+{ "checkpoint_watched": "peak | final",
+  "frames_usable":     "is the subject in frame — if not, say so; the rest is then void",
+  "behavior":          "what the policy does, against `description`",
+  "stage_reached":     "furthest rung of the term ladder, and where it stalls",
+  "time_allocation":   "where the frames cluster",
+  "reward_hacking":    "a term being farmed instead of progress, or that you saw none",
+  "physical_validity": "penetration, sinking, jitter, explosion — or that it is clean",
+  "termination":       "fires as intended / never / constantly / on a wrong-looking state",
+  "actuation_quality": "jitter, oscillation, saturation — or that motion is smooth",
+  "failure_mode":      "one line naming the MECHANISM, not the symptom; null if converged",
+  "findings":          ["0-3 lines the next design should act on"] }
+```
+
+Answers are prose because the useful content does not fit an enum — "reaches at frame 2,
+hovers 3–11" is the answer, `stalled` is not. Four rules:
+
+- **Say what you saw.** "Reward went up" is not a behavior; "the arm reaches the cube and
+  hovers, gripper never closes" is. One-word answers are rejected outright.
+- **Uncertainty is allowed, guessing is not.** `"unclear: only the arm is in frame"` is a
+  valid answer. Inventing a confident one because the field must be filled is the failure
+  this checklist exists to prevent.
+- **`checkpoint_watched` is load-bearing.** Read the scorer's `peak` block first: if the run
+  peaked and collapsed, the rendered best checkpoint is not the end-of-training one, and
+  conflating them misreports what the reward produced.
+- **`physical_validity` routes differently from everything else.** Penetration and sinking
+  are §1–§3 defects; every other aspect points at the reward. Getting this one wrong sends
+  the next iteration to repair the wrong layer.
+
+`findings` is your entire influence on the search — say whether each points at the task
+design or the reward. A vague finding is a wasted iteration.
 
 `verdict.json` is your whole write-up — there is no companion `analysis.md`. Everything you
 want the designer to know goes in `behavior` / `failure_mode` / `findings`; everything it might

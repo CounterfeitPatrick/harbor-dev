@@ -2,6 +2,9 @@
 
 - robot: Franka Panda (default; Fetch also supported)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: blue cube, goal region, table
+- bimanual: false
+- summary: Pull a cube across the table toward the robot into a goal region.
 
 A simple tabletop manipulation task: a Panda arm must pull a blue cube along the table surface onto a red-and-white target region using a pushing/pulling motion from behind the cube. Single-stage, dense-reward, 50-step episodes.
 
@@ -290,14 +293,6 @@ Expected: `True` (finite reward).
 ## §7 DR (Domain Randomization)
 
 `<no DR>` — there is no `_default_sim_config` override, no episodic randomization beyond the cube/robot init pose noise in §3 (cube xy uniform, `robot_init_qpos_noise=0.02`), and no startup/interval physical-property randomization (mass, friction, damping, etc.). The task uses default sim/material parameters everywhere.
-
----
-
-## Source files (relative to source_repo)
-- `mani_skill/envs/tasks/tabletop/pull_cube.py:1-152`  — full env: registration, scene, reset, evaluate, obs, reward
-- `mani_skill/envs/sapien_env.py:124,287-294,388-390`  — SUPPORTED_OBS_MODES default, `_default_sim_config` → `SimConfig()`
-- `mani_skill/utils/structs/types.py:78-87`  — `SimConfig` defaults (sim_freq=100, control_freq=20)
-- `mani_skill/agents/robots/panda/panda.py:17-189`  — Panda agent: URDF, rest keyframe, joints, controller configs, default `pd_joint_delta_pos`
 
 ---
 

@@ -4,11 +4,21 @@ Contract: **always exits 0**, even with zero tasks found, and says in `source` w
 produced the answer. rl-integration-generator branches on that, so a silent fallback to a
 weaker source would scaffold configs against the wrong task list.
 """
+import importlib.util
 import json
 import subprocess
 import sys
 
+import pytest
+
 from _pluginmeta import ROOT
+
+
+def _importable(name):
+    try:
+        return importlib.util.find_spec(name) is not None
+    except (ImportError, ValueError):
+        return False
 
 SCRIPT = ROOT / "scripts" / "rl-integration-generator" / "discover_rl_tasks.py"
 
@@ -60,6 +70,14 @@ def test_corrupt_spec_degrades_instead_of_crashing(tmp_path):
     assert out["ok"] is True
 
 
+@pytest.mark.skipif(
+    _importable("gymnasium") or _importable("gym"),
+    reason="needs a bare interpreter: with gym importable the third fallback "
+           "(gym.envs.registry) returns the stock envs, so 'nothing found' is unreachable",
+)
 def test_nothing_found_is_still_a_clean_zero(tmp_path):
+    """'Nothing found' only exists when every route is empty — and route 3 reads the
+    INTERPRETER's gym registry, not the repo. Run this with a benchmark venv and it reports
+    50 stock envs (Acrobot-v1, Ant-v2, ...) for a repo that contains no tasks."""
     out = _run(tmp_path)
     assert out["ok"] is True and out["count"] == 0 and out["tasks"] == []

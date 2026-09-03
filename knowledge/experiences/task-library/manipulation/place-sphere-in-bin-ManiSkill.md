@@ -2,6 +2,9 @@
 
 - robot: Franka Panda (default; Fetch also supported)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: sphere, bin, table
+- bimanual: false
+- summary: Pick up a sphere and place it inside a bin.
 
 Task: place a dynamic sphere onto the top of a shallow kinematic bin; the robot must end static with the gripper open (not grasping).
 
@@ -309,11 +312,3 @@ Helpers used (all on agent/structs, no task-local defs): `self.agent.tcp.pose.p`
 
 ---
 
-## Source files (relative to source_repo)
-
-- `mani_skill/envs/tasks/tabletop/place_sphere.py:1-259`  # full env: registration, scene, reset, evaluate, obs_extra, reward
-- `mani_skill/envs/sapien_env.py:124,192-309`            # SUPPORTED_OBS_MODES, default obs/control mode resolution
-- `mani_skill/agents/base_agent.py:111-115,245-253`      # control_mode defaults to supported_control_modes[0]
-- `mani_skill/agents/robots/panda/panda.py:90-213`       # Panda controller configs (default pd_joint_delta_pos → 8-dim action)
-- `mani_skill/utils/scene_builder/table/__init__.py`     # TableSceneBuilder (table + robot init with qpos noise)
-- `mani_skill/utils/building/actors.py`                  # build_sphere

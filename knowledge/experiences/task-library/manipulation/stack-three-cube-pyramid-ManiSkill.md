@@ -2,6 +2,9 @@
 
 - robot: Franka Panda with wrist camera (`panda_wristcam`; Panda / Fetch also supported)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: three cubes, table
+- bimanual: false
+- summary: Arrange three cubes into a pyramid.
 
 ManiSkill maps onto the §1..§7 design-choice schema as follows. There is no IsaacLab-style `*Cfg` manager tree; every section is a method on the `BaseEnv` subclass. All section code is pasted verbatim from `mani_skill/envs/tasks/tabletop/stack_pyramid.py` unless noted.
 
@@ -346,14 +349,6 @@ See §3 (`UniformPlacementSampler` + `random_quaternions` + `robot_init_qpos_noi
 ```
 
 ---
-
-## Source files (relative to source_repo)
-- `mani_skill/envs/tasks/tabletop/stack_pyramid.py:1-197`  — full task (§1 register/scene, §2 implicit via agent, §3 reset, §4 evaluate, §5 obs, §6 reward modes, §7 init-DR)
-- `mani_skill/envs/sapien_env.py:128,300-304,645-720`  — SUPPORTED_REWARD_MODES, reward_mode default, get_reward / compute_sparse_reward / compute_dense_reward stubs, sim defaults
-- `mani_skill/agents/robots/panda/panda.py:90-218`  — `pd_joint_delta_pos` (default control mode), gripper mimic, controller_configs dict
-- `mani_skill/agents/base_agent.py:114,253`  — default control mode = first registered key
-- `mani_skill/utils/scene_builder/table/__init__.py`  — `TableSceneBuilder` (table + ground + robot placement + qpos noise)
-- `mani_skill/utils/building/actors.py`  — `build_cube` primitive
 
 ## Reproduce
 ```

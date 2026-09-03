@@ -2,6 +2,9 @@
 
 - robot: Unitree H1 bipedal humanoid (19 DoF)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: none (procedurally generated rough terrain)
+- bimanual: false
+- summary: Track a commanded base velocity across procedurally generated rough terrain.
 
 > **Task in one line:** Unitree H1 humanoid (19 DoF) tracks a commanded base velocity (lin_vel_x, lin_vel_y, ang_vel_z) while walking over procedurally generated ROUGH terrain (stairs / boxes / slopes / random rough), using a torso-mounted height-scan ray-caster + a terrain-level curriculum.
 
@@ -764,15 +767,3 @@ ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
 
 ---
 
-## Source files (relative to source_repo)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/h1/__init__.py:14-23` — gym.register
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/h1/rough_env_cfg.py:19-113` — H1Rewards + H1RoughEnvCfg overrides (scene robot, height_scanner reparent, reward retune, command/termination, DR disable)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/h1/flat_env_cfg.py:11-26` — flat sibling delta (terrain plane, height_scan None, curriculum None, feet_air_time retune)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/velocity_env_cfg.py:39-330` — base SceneCfg/Commands/Actions/Obs/Events/Rewards/Terminations/Curriculum/EnvCfg
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/mdp/rewards.py:1-120` — task-local reward funcs (verbatim)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/mdp/curriculums.py:27-57` — terrain_levels_vel
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/mdp/terminations.py:25-55` — terrain_out_of_bounds (NOT used by this task; base uses mdp.time_out + mdp.illegal_contact from shared mdp)
-- `source/isaaclab/isaaclab/envs/mdp/rewards.py` — inherited shared reward funcs (is_terminated, joint_deviation_l1, joint_pos_limits, lin/ang_vel penalties, action_rate_l2, undesired_contacts, track_*_exp)
-- `source/isaaclab_assets/isaaclab_assets/robots/unitree.py:200-269` — H1_CFG / H1_MINIMAL_CFG articulation
-- `source/isaaclab/isaaclab/terrains/config/rough.py` — ROUGH_TERRAINS_CFG
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/h1/agents/rsl_rl_ppo_cfg.py:11-39` — canonical PPO runner (24 steps/env, 3000 iters, ELU MLP 512/256/128, lr 1e-3 adaptive, γ0.99, λ0.95)

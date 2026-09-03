@@ -15,6 +15,7 @@
 # Repo     : {{REPO_PATH}}
 # Generated: {{GENERATED_AT}}
 #
+# Rendered by /harbor:rl-sweep cluster=... and by reward-tune's cluster mode.
 # IsaacLab-flavored launch: bare-metal isaacsim wheels require glibc 2.34+,
 # which most HPC sites (RHEL/AlmaLinux 8) don't provide, so the trial command
 # runs inside an apptainer image (built once from python:3.11-slim) that has

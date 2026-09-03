@@ -53,7 +53,8 @@ test -x "<repo>/.venv/bin/python"               || { echo ".venv/ missing — ru
 
    ```bash
    cd "<repo>"
-   .venv/bin/python -c "import gymnasium as gym; env = gym.make('<canonical_id>'); print(env.observation_space, env.action_space); env.close()"
+   # Build <canonical_id> per *Does the task build?* in agent-conventions.md and keep the
+   # printed observation/action spaces.
    ```
 
    (or the family equivalent — see contract). Paste the literal stdout into `{{REGISTER_SMOKE_EXPECTED}}`. §2..§7 smoke commands are written but NOT executed at this stage — they become the per-phase smoke for the future agents.

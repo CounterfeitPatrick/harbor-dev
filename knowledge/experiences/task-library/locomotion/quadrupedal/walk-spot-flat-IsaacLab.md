@@ -2,6 +2,9 @@
 
 - robot: Boston Dynamics Spot quadruped (12 DoF, remotized-PD knee)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: none (flat terrain)
+- bimanual: false
+- summary: Track a commanded base velocity while walking on flat ground.
 
 > Boston Dynamics **Spot** quadruped, flat-terrain velocity tracking, manager-based RL env (`ManagerBasedRLEnv`). Spot is notable because it ships its **own** `mdp/` subtree (`config/spot/mdp/rewards.py`, `config/spot/mdp/events.py`) with a **distinct reward set** — gait-enforcement, foot-air-time, foot-clearance, foot-slip, air-time-variance, plus a remotized-PD knee actuator — that differs from the shared Anymal-style velocity reward (`track_lin_vel_xy_exp` / `track_ang_vel_z_exp` + L2 penalties). The whole point of this spec is to capture Spot's own reward functions verbatim.
 
@@ -695,12 +698,3 @@ push_robot = EventTerm(
 
 ---
 
-## Source files (relative to source_repo IsaacLab)
-
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/spot/__init__.py:14-23` — §1 gym.register
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/spot/flat_env_cfg.py:29-379` — §1–§7 cfg (terrain, actions, commands, obs, events, rewards, terminations, env __post_init__)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/spot/mdp/rewards.py:32-284` — §6 Spot-specific reward funcs (verbatim)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/spot/mdp/events.py:27-59` — §3 reset_joints_around_default (verbatim)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/velocity_env_cfg.py:39-330` — parent scene (contact sensor, sky light, height scanner) + base __post_init__
-- `source/isaaclab_assets/isaaclab_assets/robots/spot.py:20-182` — §1 SPOT_CFG articulation + 99-row knee joint_parameter_lookup
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/spot/agents/rsl_rl_ppo_cfg.py` — PPO runner cfg (SpotFlatPPORunnerCfg)

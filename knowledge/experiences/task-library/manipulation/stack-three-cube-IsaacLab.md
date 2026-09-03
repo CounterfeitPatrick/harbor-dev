@@ -2,6 +2,9 @@
 
 - robot: Franka FR3 arm + Franka hand (single arm)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: three DexCubes, lab table
+- bimanual: false
+- summary: Stack three cubes into a tower, in order.
 
 Task summary: a single FR3 + Franka-hand robot stacks **three** identical 4.3 cm DexCubes into a tower on a lab table. The robot base sits at world `(-0.274, +0.49, 0.01)` with `joint1=-0.785` so the EE arcs over the table. Three cubes (`cube_0` / `cube_1` / `cube_2`) spawn at staggered xy positions with ±5 cm uniform jitter (no z jitter). Goal (implicit — no `CommandsCfg`): build a 3-tier tower with `cube_1` (base, on table) ← `cube_0` ← `cube_2` (top). Two intermediate latched bonuses fire on (a) cube_0 stacked on cube_1 with the EE retreated and (b) the full 3-tier tower assembled. Episode horizon = 9.0 s @ 20 Hz = 180 control steps. Action = 3-D Cartesian EE-delta (RPY locked) + 1-D binary gripper = 4-D. Observation = 19-D, gated by a stateless mux that swaps the "currently grasping" cube between `cube_0` (state A) and `cube_2` (state B) on the predicate `cube_0_on_cube_1`.
 
@@ -1677,49 +1680,6 @@ def cube_0_stack_broken_penalty_once_per_episode(
 `<no DR>` — `EventCfg` contains only the four reset terms above (`reset_robot_joints`, `reset_cube_0`, `reset_cube_1`, `reset_cube_2`). No `EventTerm` has `mode="startup"` or `mode="interval"`. The `mdp/events.py` module is intentionally empty (only a docstring) — its purpose is to keep `from .events import *` working. The `dr-generator` was not run on this task; the env_cfg `EventCfg` docstring notes "DR terms are added by `dr-generator` in §7" but none have been added.
 
 To add later: `/harbor:create-task name=IsaacLab-Franka-StackCube description="add startup mass + friction + cube pose DR" sections=7`.
-
----
-
-## Source files (relative to source_repo)
-
-| File | Lines | What's there |
-|---|---:|---|
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/__init__.py` | 7 | Family-level module docstring (no re-export of `mdp` — divergence from `lift_box`). |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/config/franka/__init__.py` | 32 | `gym.register` for `IsaacLab-Franka-StackCube` and `-Play`. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/config/franka/joint_pos_env_cfg.py` | 1–255 | Local `FR3_FRANKA_HAND_CFG` constant + `FRANKA_INIT_JOINT_POS` + cube spawn + per-robot action stack + ee_frame; PLAY subclass. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/stack_cube_env_cfg.py` | 1–422 | Abstract SceneCfg + ActionsCfg + ObservationsCfg + EventCfg + RewardsCfg + TerminationsCfg + (empty) CurriculumCfg + EnvCfg + sim/physx knobs. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/mdp/__init__.py` | 18 | Re-exports `isaaclab.envs.mdp` + task-local actions / observations / rewards / events / terminations. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/mdp/actions.py` | 1–167 | `EMACumulativeDeltaPositionAction` (3-D xyz delta + RPY-locked, IK in absolute mode). |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/mdp/actions_cfg.py` | 1–45 | `EMACumulativeDeltaPositionActionCfg` dataclass. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/mdp/events.py` | 1–15 | Empty placeholder (`dr-generator` may add §7 helpers). |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/mdp/observations.py` | 1–117 | `ee_pose_in_robot_root_frame`, `_cube_pos_in_robot_root_frame`, `_stack_target_in_root_frame`, `_cube_0_on_cube_1_predicate`, `grasping_cube_position_in_robot_root_frame`, `grasping_target_position_in_robot_root_frame`. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/mdp/rewards.py` | — | 7 reward terms, all active + private predicate + latch infra + private contact helpers. No unused helpers or parameters. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/stack_cube/mdp/terminations.py` | 1–41 | Cross-module helper `_no_contact_between_cube_and_gripper_or_ee` only (no public termination funcs — the only DoneTerm is `mdp.time_out` from the shared namespace). |
-| `harbor/assets/fr3/fr3_franka_hand.usd` | (binary) | FR3 + Franka hand articulation USD (converted from `franka_description/urdfs/fr3_franka_hand.urdf` via `scripts/tools/convert_urdf.py`). Verified `test -e` OK. |
-| `harbor/assets/table/lab_table_instanceable_colored_rotated.usd` | (binary) | Lab table (the source repo rotated/colored variant, kinematic), surface at z≈0. Verified `test -e` OK. |
-| `${ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd` | (binary, remote) | Nucleus-hosted DexCube USD (Isaac Sim default props). Resolves at runtime via `isaaclab.utils.assets.ISAAC_NUCLEUS_DIR`. |
-
-External imports the task relies on:
-
-- `isaaclab.actuators.ImplicitActuatorCfg` — actuator dataclasses.
-- `isaaclab.assets.{ArticulationCfg, AssetBaseCfg, RigidObjectCfg}` — scene asset cfgs.
-- `isaaclab.controllers.DifferentialIKControllerCfg` — IK controller.
-- `isaaclab.envs.{ManagerBasedRLEnv, ManagerBasedRLEnvCfg}` — env classes.
-- `isaaclab.envs.mdp.actions.{DifferentialInverseKinematicsActionCfg, DifferentialInverseKinematicsAction}` — base action term.
-- `isaaclab.envs.mdp.actions.task_space_actions.DifferentialInverseKinematicsAction` — parent of the EMA action.
-- `isaaclab.envs.mdp.*` — re-exported into the task `mdp` namespace (provides `joint_pos`, `last_action`, `reset_joints_by_scale`, `reset_root_state_uniform`, `time_out`, `BinaryJointPositionActionCfg`).
-- `isaaclab.managers.{EventTermCfg, ObservationGroupCfg, ObservationTermCfg, RewardTermCfg, SceneEntityCfg, TerminationTermCfg}` — manager-based dataclasses.
-- `isaaclab.markers.config.FRAME_MARKER_CFG` — debug viz for ee_frame.
-- `isaaclab.scene.InteractiveSceneCfg` — base scene class.
-- `isaaclab.sensors.{ContactSensorCfg, FrameTransformer}` and `isaaclab.sensors.frame_transformer.frame_transformer_cfg.{FrameTransformerCfg, OffsetCfg}` — sensor cfgs / runtime types.
-- `isaaclab.sim` (alias `sim_utils`) — `DomeLightCfg`, `MassPropertiesCfg`, `RigidBodyPropertiesCfg`, `UsdFileCfg`, `ArticulationRootPropertiesCfg`.
-- `isaaclab.sim.schemas.schemas_cfg.RigidBodyPropertiesCfg` — cube rigid props.
-- `isaaclab.sim.spawners.from_files.from_files_cfg.{GroundPlaneCfg, UsdFileCfg}` — ground / USD spawns.
-- `isaaclab.utils.configclass` — `@configclass` decorator.
-- `isaaclab.utils.assets.ISAAC_NUCLEUS_DIR` — Nucleus base URL.
-- `isaaclab.utils.math.subtract_frame_transforms` — robot-root frame transforms.
-
-> **Important divergence from `lift_box`:** unlike `lift_box`, this task does **NOT** import `FR3_FRANKA_HAND_CFG` or `EMACumulativeDeltaPositionActionCfg` from `insert_drawer`. Both are vendored locally in `stack_cube/config/franka/joint_pos_env_cfg.py` and `stack_cube/mdp/actions.py` respectively. No sibling-task dependencies. Self-contained relative to `isaaclab` + `isaaclab_tasks`.
 
 ---
 

@@ -10,6 +10,9 @@
 
 - robot: Two Franka FR3 arms + Franka hands (dual-arm cooperative)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: eurobox, lab table
+- bimanual: true
+- summary: Two arms cooperatively grasp a eurobox and lift it off the table.
 
 Task summary: two FR3 + Franka-hand robots stand at world `y = ±0.49` facing each other. A 0.40 × 0.30 × 0.22 m eurobox (0.5 kg) sits centered on the lab table, **rotated 90° about +Z** so its long axis runs along world Y (between the robots) and its short y-end faces (0.30 m × 0.22 m) face each robot. Two `FrameTransformerCfg` markers (`grasp_frame_0`, `grasp_frame_1`) visualize the top-center of each short face. Each robot grasps its assigned short y-end face top-down with a parallel-jaw gripper (3-D EMA xyz EE-delta + binary gripper; RPY locked at reset). Goal: lift the box COM to world env-local `(0, 0, BOX_INIT_Z + 0.25) = (0, 0, 0.36025)` with `|box.lin_vel_w| < 0.10 m/s`. Episode horizon = 10 s @ 20 Hz = 200 steps.
 
@@ -896,28 +899,6 @@ def success_bonus(
 ## §7 DR
 
 `<no DR>` — `EventCfg` contains only the three reset terms above (no `mode="startup"` or `mode="interval"` randomization terms). The `dr-generator` was not run; `permit_env_edits=true` was authorized for reward-tune but the iter-0 reward fit entirely in §6, so no §7 wiring was added. To add later: `/harbor:create-task name=IsaacLab-Lift-Box description="add startup mass + friction + box pose DR" sections=7`.
-
----
-
-## Source files (relative to source_repo)
-
-| File | Lines | What's there |
-|---|---|---|
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/__init__.py` | 13 | Family-level module docstring + `from . import mdp`. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/config/franka/__init__.py` | 30 | `gym.register` for IsaacLab-Lift-Box and -Play. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/config/franka/joint_pos_env_cfg.py` | 1–296 | FR3 robot wiring + box spawn + per-robot action stack + ee_frame + grasp_frame; PLAY subclass. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/lift_box_env_cfg.py` | 1–387 | Abstract SceneCfg + ActionsCfg + ObservationsCfg + EventCfg + RewardsCfg + TerminationsCfg + EnvCfg + sim/physx knobs. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/mdp/__init__.py` | 18 | Re-exports `isaaclab.envs.mdp` + task-local observations/rewards/terminations. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/mdp/observations.py` | 1–81 | `ee_pose_in_robot_root_frame` (parameterized), `box_position_in_world`, `box_quat_in_world`. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/mdp/rewards.py` | 1–256 | 5 reward funcs + 2 helpers + latch registry + `placeholder_zero` legacy shim. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/lift_box/mdp/terminations.py` | 1–60 | `lift_box_success`. |
-| `harbor/assets/eurobox/eurobox.usd` | (binary) | Converted from `<downloads>/eurobox.stl` via `harbor/create-task/isaaclab-lift-box/make_eurobox_usd.py`. Recentered: extents x=±0.20, y=±0.15, z=±0.11025. |
-| `harbor/assets/fr3/fr3_franka_hand.usd` | (binary) | FR3 + Franka hand articulation USD (imported via insert_drawer's `FR3_FRANKA_HAND_CFG`). |
-| `harbor/assets/table/lab_table_instanceable_colored_rotated.usd` | (binary) | Lab table (the source repo rotated variant, kinematic), surface at z≈0. |
-
-External imports the task relies on:
-- `isaaclab_tasks.manager_based.manipulation.insert_drawer.config.franka.joint_pos_env_cfg.FR3_FRANKA_HAND_CFG` — the FR3 articulation cfg with actuator stiffness/damping.
-- `isaaclab_tasks.manager_based.manipulation.insert_drawer.mdp` — exports `EMACumulativeDeltaPositionActionCfg` and `BinaryJointPositionActionCfg`. **Hard dependency:** if `insert_drawer` is renamed/removed, `lift_box` breaks.
 
 ---
 

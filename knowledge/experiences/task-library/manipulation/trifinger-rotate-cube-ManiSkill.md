@@ -2,6 +2,9 @@
 
 - robot: TriFingerPro three-finger hand (9 DoF, fixed base)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: cube, table, circular arena wall
+- bimanual: false
+- summary: Rotate a cube to a target orientation with a three-finger manipulator.
 
 ---
 
@@ -26,7 +29,7 @@ The env registers five level variants over a single `RotateCubeEnv(BaseEnv)` cla
 - Sensor camera (`base_camera`): `look_at(eye=(0.7,0,0.7), target=(0,0,0))`, 128×128, fov π/2.
 - Human render camera (`render_camera`): same pose, 512×512, fov 1.0.
 
-### Decisions resolved — asset paths (verified to exist on disk, relative to source_repo)
+### Decisions resolved — asset paths
 - `mani_skill/assets/robots/trifinger/table_without_border.urdf` ✓
 - `mani_skill/assets/robots/trifinger/robot_properties_fingers/meshes/high_table_boundary.stl` ✓
 - `mani_skill/assets/robots/trifinger/trifingerpro.urdf` ✓
@@ -481,9 +484,3 @@ No `startup`/`interval` randomization events. The only stochasticity is reset-ti
 
 ---
 
-## Source files (relative to source_repo `ManiSkill`)
-- `mani_skill/envs/tasks/rotate_cube.py:1-404` — full env (`RotateCubeEnv` base + 5 level subclasses); §1 scene, §3 reset/goal-sampling, §4 evaluate, §5 `_get_obs_extra`, §6 reward.
-- `mani_skill/agents/robots/trifingerpro/trifingerpro.py:1-183` — TriFingerPro agent: §1 robot cfg/URDF, §2 controllers, §5 proprioception override (`tip_poses`/`tip_velocities`).
-- `mani_skill/agents/base_agent.py:109-114,252-257,339-347` — default control-mode resolution (`supported_control_modes[0]`) + base `get_proprioception` (qpos/qvel).
-- `mani_skill/envs/sapien_env.py:128` — `SUPPORTED_REWARD_MODES = ("normalized_dense","dense","sparse","none")` (default = normalized_dense).
-- Assets: `mani_skill/assets/robots/trifinger/{table_without_border.urdf, trifingerpro.urdf, robot_properties_fingers/meshes/high_table_boundary.stl}` (all verified present).

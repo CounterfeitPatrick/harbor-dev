@@ -2,6 +2,9 @@
 
 - robot: Franka Panda with wrist camera (`panda_wristcam`)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: peg, box with hole, table
+- bimanual: false
+- summary: Insert a peg sideways into a matching hole in a box.
 
 A precision peg-insertion task: pick up an orange-white peg laid flat on the table and insert its orange (head) end into a side hole of a box. Hole clearance is a tight `0.003 m` over the peg radius; success requires the peg head to be inserted past the mid-depth with sub-`box_hole_radii` lateral tolerance.
 
@@ -404,11 +407,3 @@ Reward verified by source read; runtime check at reproduction time: step env wit
 
 ---
 
-## Source files (relative to source_repo)
-- `mani_skill/envs/tasks/tabletop/peg_insertion_side.py:1-361`  # full env: registration, scene, reset, evaluate, obs, reward
-- `mani_skill/envs/sapien_env.py:124,128,286-307,546-554`        # BaseEnv obs/reward mode defaults, _get_obs_agent/state_dict
-- `mani_skill/agents/robots/panda/panda.py:53-213`               # Panda joints, gains, controller configs (default = pd_joint_delta_pos)
-- `mani_skill/agents/robots/panda/panda_wristcam.py:13`          # PandaWristCam(Panda) — the SUPPORTED_ROBOT
-- `mani_skill/agents/base_agent.py:108-118,253`                  # _default_control_mode = supported_control_modes[0]
-- `mani_skill/utils/structs/types.py:78-87`                      # SimConfig defaults: sim_freq=100, control_freq=20
-```

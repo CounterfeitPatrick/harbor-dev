@@ -2,6 +2,9 @@
 
 - robot: Two Franka Panda arms with wrist cameras (`panda_wristcam` x2, multi-agent)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: red cube, green goal sphere, table
+- bimanual: true
+- summary: Two arms cooperate to pick a cube and move it to a goal sphere.
 
 ---
 
@@ -359,10 +362,3 @@ def compute_normalized_dense_reward(self, obs: Any, action: torch.Tensor, info: 
 
 ---
 
-## Source files (relative to source_repo)
-
-- `mani_skill/envs/tasks/tabletop/two_robot_pick_cube.py:20-262`  # env class: register, scene, reset, evaluate, obs, full reward
-- `mani_skill/agents/multi_agent.py:12-107`  # MultiAgent: per-arm proprio + combined Dict action space + control_mode
-- `mani_skill/agents/robots/panda/panda.py:17-182`  # Panda: joints, controllers (pd_joint_delta_pos lower/upper ±0.1), stiffness/damping, rest keyframe, gripper mimic config
-- `mani_skill/agents/robots/panda/panda_wristcam.py:13-17`  # PandaWristCam: uid="panda_wristcam", urdf_path panda_v3.urdf
-- `mani_skill/assets/robots/panda/panda_v3.urdf`  # resolved robot asset (verified exists)

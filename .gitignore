@@ -17,11 +17,11 @@ output/
 outputs/
 plot_output/
 *.mp4
+!docs/public/demo.mp4
 *.pdf
+.claude/settings.local.json
 
-# Harness-native artifacts rendered from commands/ and agents/.
-/.agents/skills/harbor-*/
-/.codex/agents/harbor-*.toml
-
-# Developer-local Claude Code settings.
-/.claude/settings.local.json
+# docs site
+node_modules/
+docs/.vitepress/dist/
+docs/.vitepress/cache/

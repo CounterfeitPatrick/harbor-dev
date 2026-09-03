@@ -2,6 +2,9 @@
 
 - robot: Franka Panda with wrist camera (`panda_wristcam`; Panda / Fetch also supported)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: two 4 cm cubes, table
+- bimanual: false
+- summary: Stack one cube on top of another.
 
 ManiSkill maps to the Harbor §1..§7 schema as follows. A ManiSkill task is a single `BaseEnv` subclass — there is no separate per-robot `env_cfg`/`mdp/` tree. All design choices live in one file (`mani_skill/envs/tasks/tabletop/stack_cube.py`) plus shared base classes (`Panda` agent, `TableSceneBuilder`, `BaseEnv`). Code below is verbatim.
 
@@ -319,10 +322,3 @@ def compute_normalized_dense_reward(self, obs: Any, action: torch.Tensor, info: 
 
 ---
 
-## Source files (relative to source_repo)
-- `mani_skill/envs/tasks/tabletop/stack_cube.py:18-187` — full StackCubeEnv (register, scene, reset, evaluate, obs, reward).
-- `mani_skill/agents/robots/panda/panda.py:18-219` — Panda agent: joints, stiffness/damping, keyframe qpos, `_controller_configs` (§2).
-- `mani_skill/agents/robots/panda/panda_wristcam.py` — `panda_wristcam` (default robot, subclasses Panda, adds wrist camera).
-- `mani_skill/utils/scene_builder/table/scene_builder.py:67-140` — `TableSceneBuilder.initialize` robot reset (§3 robot branch).
-- `mani_skill/agents/base_agent.py:109-259,339-353` — default control-mode resolution + `get_proprioception` (§2/§5).
-- `mani_skill/envs/sapien_env.py:124,287-310` — `SUPPORTED_OBS_MODES`, obs/control-mode defaults (§5).

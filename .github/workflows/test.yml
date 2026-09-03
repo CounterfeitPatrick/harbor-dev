@@ -15,7 +15,10 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # PR runs supersede each other — cancelling the stale one is free. Pushes to main must
+  # NOT: a cancelled job reports `failure`, so a second push landing while the first is
+  # still testing marks the first commit broken forever, on a commit nobody ever tested.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:

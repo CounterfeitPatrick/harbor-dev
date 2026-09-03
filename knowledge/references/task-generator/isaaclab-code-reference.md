@@ -30,11 +30,11 @@ Closing: `env.close(); sim_app.close()`.
 1. **Hard-exit after the artifact is on disk** — `os.sync(); os._exit(0)` immediately after writing the MP4 / final assertion print. Bypasses atexit hooks. The plugin's `render.py.template` already does this. Use the same pattern in any new IsaacLab-targeted script that writes an artifact and exits.
 2. **External watchdog** — orchestrator polls the script's log for the success marker, then `pkill -9` the python process. Less clean but works when the script source can't be modified.
 
-The smoke templates (S1..S5, S6, S7, S-success) all run for ≤30 seconds and exit before reaching shutdown, so this trap doesn't bite them in practice. Long-running scripts (render, eval policy rollout) DO hit it.
+The smoke templates (S1..S7) all run for ≤30 seconds and exit before reaching shutdown, so this trap doesn't bite them in practice. Long-running scripts (render, eval policy rollout) DO hit it.
 
 **Fabric + render-buffer trap**: in some IsaacLab forks the cloner errors out with `"Failed to clone in Fabric"` when `use_fabric=True`, leading to a workaround of `parse_env_cfg(..., use_fabric=False)`. This SILENTLY breaks the offscreen render pipeline — the GPU render buffer is fed by Fabric, so with `use_fabric=False` `env.render()` returns the SAME stale frame on every call regardless of the actual articulation state. Symptom: pose data printed each step shows the env progressing, but the recorded MP4 shows a frozen scene.
 
-**Always pass `use_fabric=True` for any path that calls `env.render()`** — smoke templates (S1..S7, S-success), render scripts, eval-policy rollouts. If the cloner error reappears, fix it at the asset / sim-cfg level (e.g. raise `physx.gpu_collision_stack_size`) rather than disabling Fabric. The plugin's smoke templates and the live `harbor/scripts/rl/<impl>/env_wrapper.py:create_render_env` already enforce this; the helper `IsaacLab/scripts/_isaaclab_env.py` (benchmark-specific, NOT a plugin file) historically hardcoded `use_fabric=False` and has been observed to break rendering — the render path bypasses it for that reason.
+**Always pass `use_fabric=True` for any path that calls `env.render()`** — smoke templates (S1..S7), render scripts, eval-policy rollouts. If the cloner error reappears, fix it at the asset / sim-cfg level (e.g. raise `physx.gpu_collision_stack_size`) rather than disabling Fabric. The plugin's smoke templates and the live `harbor/scripts/rl/<impl>/env_wrapper.py:create_render_env` already enforce this; the helper `IsaacLab/scripts/_isaaclab_env.py` (benchmark-specific, NOT a plugin file) historically hardcoded `use_fabric=False` and has been observed to break rendering — the render path bypasses it for that reason.
 
 ## Action manager
 

@@ -2,6 +2,9 @@
 
 - robot: Unitree G1 humanoid, simplified-legs URDF (37 DoF, floating base)
 - simulator: ManiSkill (SAPIEN, `BaseEnv` + `@register_env`)
+- objects: none (flat ground plane)
+- bimanual: false
+- summary: Stand upright and stay balanced on a flat plane.
 
 ManiSkill differs structurally from IsaacLab manager-based tasks: there is no `RewardsCfg`/`ObservationsCfg`/`EventCfg`/`TerminationsCfg`. Instead the task is a single `BaseEnv` subclass whose hooks (`_load_scene`, `_initialize_episode`, `evaluate`, `_get_obs_extra`, `compute_*_reward`) and the chosen robot agent (`UnitreeG1Simplified`) collectively define §1..§7. Sections below map those hooks onto the §1..§7 schema.
 
@@ -345,10 +348,3 @@ WARN: No dense reward in source. A `/harbor:task-create from=...` reproduction t
 
 ---
 
-## Source files (relative to source_repo)
-- `mani_skill/envs/tasks/humanoid/humanoid_stand.py:1-130` — `HumanoidStandEnv` base + `@register_env("UnitreeG1Stand-v1")` `UnitreeG1StandEnv` (§1 scene/register, §3 reset, §4 evaluate, §5 _get_obs_extra, §6 sparse reward)
-- `mani_skill/agents/robots/unitree_g1/g1.py:11-179` — `UnitreeG1` / `UnitreeG1Simplified` agent: URDF path, keyframes, body_joints (37), controller configs (§2), is_standing/is_fallen (§4 heuristics)
-- `mani_skill/agents/robots/unitree_g1/__init__.py:1` — agent exports
-- `mani_skill/envs/sapien_env.py:546-560` — `_get_obs_agent` / `_get_obs_state_dict` / `_get_obs_extra` base hooks (§5)
-- `mani_skill/agents/base_agent.py:339-343` — `get_proprioception` = qpos + qvel (§5)
-- `mani_skill/assets/robots/g1_humanoid/g1_simplified_legs.urdf` — robot asset (EXISTS, 36723 bytes)

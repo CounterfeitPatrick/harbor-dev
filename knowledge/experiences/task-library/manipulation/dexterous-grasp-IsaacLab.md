@@ -2,6 +2,9 @@
 
 - robot: UFactory UF850 arm + Allegro right hand (22 DoF)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: "dog" rigid object, lab table
+- bimanual: false
+- summary: Grasp a small rigid object off a table and lift it to a target height.
 
 Task summary: a single UFactory 850 + Allegro right hand (22-DoF: 6 arm + 16 hand) sits at env-local `(-0.274, -0.475, 0.01)` and must grasp + lift a small "dog" rigid object (0.11 kg, dynamic) sitting at env-local `(0.05, -0.35, 0.0)` on a lab table. Goal: drive the dog to env-local target `(0.05, -0.35, 0.30)` — same xy as spawn, +30 cm in z — within 10 cm tolerance before the 8.33-s horizon expires. Scene + actuator stack + init pose mirror the source repo `InsertDrawer`'s right-robot half byte-for-byte (USD, init pos, joint qpos, 9-group ImplicitActuatorCfg blocks). Controller is the **joint-space** EMA cumulative-relative action vendored verbatim from the source repo into `mdp/actions.py` + `mdp/actions_cfg.py` (no runtime cross-repo import). Reward composer is `sum` over 6 dense-then-sparse terms. No DR is wired (`EventCfg` only has reset terms).
 
@@ -1497,33 +1500,6 @@ def placeholder_zero(env: "ManagerBasedRLEnv") -> torch.Tensor:
 ## §7 DR
 
 `<no DR>` — `EventCfg` contains only the two reset terms (`reset_robot_joints`, `reset_dog`). There are NO `mode="startup"` or `mode="interval"` randomization terms. The `dr-generator` was not run; the source repo source has a wider yaw range `[-pi, pi]` on the dog reset which has been pinned here to `(0, 0)` for deterministic smoke. To add later: `/harbor:create-task name=Isaac-Dex-Grasp description="add startup mass + friction + dog yaw DR" sections=7`.
-
----
-
-## Source files (relative to source_repo)
-
-| File | Lines | What's there |
-|---|---|---|
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dex_grasp/__init__.py` | 1–16 | Family-level module docstring + `from . import mdp`. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dex_grasp/dex_grasp_env_cfg.py` | 1–416 | Module constants (`_TARGET_MARKER_CFG`, `_HARBOR_ASSETS`, `_TABLE_USD_PATH`, `_DOG_USD_PATH`, `DOG_TARGET_LOCAL`, `DOG_TARGET_TOL`) + abstract `DexGraspSceneCfg` (robot/ee_frame MISSING, dog/contact_sensors/table/target_marker/plane/light) + `ActionsCfg` (single 22-D EMA cumulative-relative joint pos) + `ObservationsCfg` (47-D PolicyCfg) + `EventCfg` (reset only) + `RewardsCfg` (6 active terms) + `TerminationsCfg` (time_out + dog_reached_target) + `DexGraspEnvCfg` (4096 envs / 2.5 m spacing / replicate_physics=False / 1.0/120 dt / decimation 6 / episode 8.3333 s / physx large-pair caps). |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dex_grasp/config/__init__.py` | 1–7 | Package marker docstring only. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dex_grasp/config/uf850/__init__.py` | 1–30 | `gym.register("Isaac-Dex-Grasp")` and `Isaac-Dex-Grasp-Play`. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dex_grasp/config/uf850/joint_pos_env_cfg.py` | 1–180 | `_ROBOT_USD_PATH` (parents[8] resolved) + `ROBOT_INIT_JOINT_POS` (22 keys: 6 arm + 16 hand) + `UF850_ALLEGRO_RIGHT_CFG` ArticulationCfg with 9 ImplicitActuatorCfg groups (`xArm_1-6`, `allegro_hand_{1..4}`, `allegro_hand_thumb_{1..4}`) + `UF850DexGraspEnvCfg.__post_init__` (binds robot + palm `ee_frame` FrameTransformer) + `UF850DexGraspEnvCfg_PLAY` (50 envs, corruption disabled). |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dex_grasp/mdp/__init__.py` | 1–18 | Re-exports `isaaclab.envs.mdp.*` + task-local `actions_cfg`/`observations`/`rewards`/`terminations`. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dex_grasp/mdp/actions.py` | 1–126 | Vendored `EMACumulativeRelativeJointPositionAction` (extends `JointPositionAction`). |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dex_grasp/mdp/actions_cfg.py` | 1–69 | Vendored `EMACumulativeRelativeJointPositionActionCfg` + 22-entry `JOINT_LOWER_LIMIT` / `JOINT_UPPER_LIMIT` lists. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dex_grasp/mdp/observations.py` | 1–72 | `joint_pos_right_normalized`, `dog_position_in_world`, `asset_cfg_to_joint_ids` helper. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dex_grasp/mdp/rewards.py` | 1–310 | 6 reward funcs + `_allegro_grasp_predicate` helper + `_get_latch_buffer` + `_LATCH_BUFFERS` module-level registry + `placeholder_zero` legacy shim. |
-| `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dex_grasp/mdp/terminations.py` | 1–36 | `dog_reached_target`. |
-| `harbor/assets/ufactory850/uf850_allegro_right.usd` | (binary) | UF850 + Allegro right hand articulation USD. **Copied from the source repo during task creation** — no runtime dependency on `<source-repo>`. Verified `test -e`. |
-| `harbor/assets/grasp/dog.usd` | (binary) | "Dog" rigid object USD (0.11 kg target mass). **Copied from the source repo during task creation** — no runtime dependency on `<source-repo>`. Verified `test -e`. |
-| `harbor/assets/table/lab_table_instanceable_colored_rotated.usd` | (binary) | Lab table (shared with `lift_box` / `insert_drawer`; kinematic). Verified `test -e`. |
-
-External imports the task relies on:
-- `isaaclab.envs.mdp` — re-exported via `mdp/__init__.py` to provide `reset_joints_by_scale`, `reset_root_state_uniform`, `time_out`, `joint_pos`, `last_action`, `JointPositionAction`, `JointPositionActionCfg`.
-- `isaaclab.utils.math.scale_transform` — used in `joint_pos_right_normalized` (obs).
-- `isaaclab.assets`, `isaaclab.managers`, `isaaclab.sensors`, `isaaclab.markers.config.FRAME_MARKER_CFG`, `isaaclab.sim`, `isaaclab.actuators.ImplicitActuatorCfg`, `isaaclab.envs.ManagerBasedRLEnvCfg`, `isaaclab.scene.InteractiveSceneCfg` — standard IsaacLab API.
-- **No runtime import from `the source repo`.** The vendored `EMACumulativeRelativeJointPositionAction` (`mdp/actions.py`) + its cfg + the `JOINT_LOWER_LIMIT` / `JOINT_UPPER_LIMIT` lists eliminate the cross-repo dependency. The robot USD (`uf850_allegro_right.usd`) and dog USD (`dog.usd`) were copied into `harbor/assets/` during task creation.
 
 ---
 

@@ -2,6 +2,9 @@
 
 - robot: ANYbotics ANYmal-C quadruped (12 DoF)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: none (procedurally generated rough terrain)
+- bimanual: false
+- summary: Track a commanded base velocity across procedurally generated rough terrain.
 
 > **DELTA vs flat (`Isaac-Velocity-Flat-Anymal-C-v0`):** ROUGH is the *base* config (`AnymalCRoughEnvCfg`); FLAT *subclasses* it and strips the rough additions. The three rough-specific additions are:
 > 1. **height-scan ray-caster sensor** (`scene.height_scanner`) + the `height_scan` policy obs term → adds **187** obs dims (17×11 grid). Flat sets both to `None` → obs dim **48** instead of **235**.
@@ -713,18 +716,3 @@ class LocomotionVelocityRoughEnvCfg(ManagerBasedRLEnvCfg):
 
 ---
 
-## Source files (relative to source_repo = IsaacLab)
-
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/anymal_c/__init__.py` — gym.register entries (rough id at L40-53)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/anymal_c/rough_env_cfg.py` — `AnymalCRoughEnvCfg` (robot override; base = rough)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/anymal_c/flat_env_cfg.py` — `AnymalCFlatEnvCfg` (delta reference: strips height scan / terrain / curriculum, retunes 3 rewards)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/velocity_env_cfg.py` — base `LocomotionVelocityRoughEnvCfg`: Scene/Actions/Commands/Observations/Events/Rewards/Terminations/Curriculum/EnvCfg
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/mdp/rewards.py:27-46` — local `feet_air_time`
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/mdp/curriculums.py:27-56` — `terrain_levels_vel`
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/mdp/terminations.py` — local terminations (only `terrain_out_of_bounds`; this task uses base `time_out`/`illegal_contact`)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/mdp/__init__.py` — re-exports `isaaclab.envs.mdp.*` + local rewards/curriculums/terminations
-- `source/isaaclab/isaaclab/envs/mdp/rewards.py` — base reward funcs (track_*_exp, *_l2, undesired_contacts)
-- `source/isaaclab/isaaclab/envs/mdp/observations.py:292-300` — `height_scan`
-- `source/isaaclab/isaaclab/terrains/config/rough.py:12-52` — `ROUGH_TERRAINS_CFG`
-- `source/isaaclab_assets/isaaclab_assets/robots/anymal.py:34-125,172-175` — `ANYMAL_C_CFG` + ANYdrive actuators
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/anymal_c/agents/rsl_rl_ppo_cfg.py` — PPO runner cfg

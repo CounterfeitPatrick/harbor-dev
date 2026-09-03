@@ -1,5 +1,5 @@
 ---
-description: Generate an isolated Python environment for a GPU repo using uv on the host (creates a `.venv/`). Use when the user types /harbor:env-install-uv [path], or asks "set up env for X", "make a venv".
+description: Generate an isolated Python environment for a simulation repo using uv on the host (creates a `.venv/`). Use when the user types /harbor:env-install-uv [path], or asks "set up env for X", "make a venv".
 argument-hint: "[path]"
 ---
 

@@ -15,7 +15,8 @@ Two layers of checking:
 The MP4 + keyframes are written next to task-history.md (the per-task workspace), NOT /tmp.
 
 Substitutions:
-  VIEWER_BLOCK              — cfg.viewer camera framing; without it the keyframes are unusable
+  VIEWER_OVERRIDE_BLOCK     — OPTIONAL. Leave empty: the shared harbor framing is already
+                            set below. Only for a scene the shared angle cannot show.
   TASK_ID            — gym task id
   NUM_ENVS           — 2 for gpu-sim benchmarks, else 1 (env 0 is rendered)
   N_STEPS            — rollout length to render (default 120)
@@ -32,6 +33,8 @@ import sys
 # Kit's shutdown can kill the process before stdout flushes, losing the
 # `S<N> OK:` verdict line that IS this smoke's pass criterion.
 sys.stdout.reconfigure(line_buffering=True)
+from _verdict import Verdict   # noqa: E402  — sibling module, rendered alongside
+V = Verdict("S6")
 from pathlib import Path
 
 import numpy as np
@@ -59,15 +62,28 @@ POS_BOUND    = 50.0     # |root pos| larger than this ⇒ exploded / launched
 FLOOR_MARGIN = -2.0     # root z below this ⇒ fell through the floor
 
 cfg = parse_env_cfg(TASK_ID, device="cuda:0", num_envs=NUM_ENVS, use_fabric=True)
-# Camera. IsaacLab's default viewer is ~10 m from the scene, which renders keyframes that
-# are a few pixels of table — unusable for the visual judgement that is half of S6's pass
-# criterion. Frame the workspace before building the env.
-{{VIEWER_BLOCK}}
-# Typical fill for a table-top manipulation task (tune eye/lookat to the scene):
-#   cfg.viewer.origin_type = "env"
-#   cfg.viewer.env_index   = 0
-#   cfg.viewer.eye         = (1.2, 1.2, 0.9)
-#   cfg.viewer.lookat      = (0.0, 0.0, 0.2)
+# Camera — THE SHARED HARBOR FRAMING. Do not invent a per-task angle.
+#
+# These are the same numbers render.py uses for every trained-policy video
+# (`viewer_eye` / `viewer_target` in
+# knowledge/templates/rl-integration-generator/custom_torch/scripts/render.py.template),
+# expressed here as env-relative viewer cfg. Sharing one angle is what makes renders
+# comparable ACROSS tasks and across candidates of the same task — insert-drawer,
+# stack-cube and a new task should be viewed from the same place, and two reward
+# candidates must differ only in behavior, not in where the camera stood.
+#
+# (IsaacLab's default viewer sits ~10 m out and yields a few pixels of table, which is
+# why the framing has to be set at all.)
+cfg.viewer.origin_type = "env"
+cfg.viewer.env_index   = 0
+cfg.viewer.eye         = (1.35, 1.00, 0.75)
+cfg.viewer.lookat      = (0.35, 0.0, 0.10)
+cfg.viewer.resolution  = (1280, 720)
+
+# OPTIONAL override — leave EMPTY unless the scene genuinely cannot be judged from the
+# shared angle (e.g. a tall fixture the default framing crops). If you do override, say so
+# in the process log: a non-standard angle makes this render incomparable to every other.
+{{VIEWER_OVERRIDE_BLOCK}}
 
 env = gym.make(TASK_ID, cfg=cfg, render_mode="rgb_array")
 unw = env.unwrapped
@@ -127,7 +143,7 @@ for k, i in enumerate(idxs):
     imageio.imwrite(str(FRAMES_DIR / f"keyframe_{k:02d}_step{i:03d}.png"), frames[i])
 
 size_kb = OUTPUT_MP4.stat().st_size / 1024
-print(f"S6 OK: stable for {N_STEPS} steps across {NUM_ENVS} envs; wrote {len(frames)} frames "
+V.done(f"stable for {N_STEPS} steps across {NUM_ENVS} envs; wrote {len(frames)} frames "
       f"-> {OUTPUT_MP4} ({size_kb:.1f} KB) + {len(idxs)} keyframes in {FRAMES_DIR} "
       f"(motion={motion:.2f}). Agent: inspect the keyframes for description-match + penetration.")
 env.close()

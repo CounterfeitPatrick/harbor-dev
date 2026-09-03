@@ -2,6 +2,9 @@
 
 - robot: Bimanual UF850 arms + dual Allegro hands (44 DoF)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: cube_with_hole, drill, table
+- bimanual: true
+- summary: Thread a drill head through the hole of a cube held by the other hand.
 
 > Source package name anonymized as `bimanual_suite`. This task comes from an internal
 > bimanual manipulation suite rather than a public repo; the design below is otherwise verbatim.

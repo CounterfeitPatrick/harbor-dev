@@ -2,6 +2,9 @@
 
 - robot: Kuka LBR iiwa7 arm + Allegro hand (23 DoF)
 - simulator: IsaacLab (Isaac Sim, manager-based)
+- objects: randomly-shaped rigid object, table
+- bimanual: false
+- summary: Reorient a randomly shaped object to a commanded 6-DoF goal pose.
 
 > **Build caveat (read first).** This task is an UPSTREAM IsaacLab manager-based env registered inside `isaaclab_tasks` (NOT in `harbor/benchmark-spec.json`). `gym.make` requires `import isaaclab_tasks` first, which in turn imports `isaaclab.envs.mdp` → `isaaclab.utils.mesh` → `from pxr import Usd` and fails because the host `.venv` does not ship the Omniverse `pxr` package. The whole spec below is from a verbatim source read; the §1 build smoke and obs/action spaces were NOT executed. Resolved dims are analytic (see §2 / §5).
 
@@ -912,16 +915,3 @@ S7 DR smoke (DR ON vs OFF seed-matched obs trajectories diverge) — NOT CAPTURE
 
 ---
 
-## Source files (relative to source_repo IsaacLab)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dexsuite/config/kuka_allegro/__init__.py:18-39` — gym.register (Reorient + Reorient-Play)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dexsuite/config/kuka_allegro/dexsuite_kuka_allegro_env_cfg.py:18-68` — action cfg, kuka reward override, scene/sensor/obs mixin, env cfg classes
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dexsuite/dexsuite_env_cfg.py:27-467` — SceneCfg, CommandsCfg, ObservationsCfg, EventCfg, RewardsCfg, TerminationsCfg, DexsuiteReorientEnvCfg (+ Lift / PLAY)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dexsuite/mdp/rewards.py:22-127` — all 7 reward/contact funcs (verbatim §6)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dexsuite/mdp/observations.py:22-198` — object_quat_b, body_state_b, object_point_cloud_b, fingers_contact_force_b (+ unused object_pos_b)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dexsuite/mdp/terminations.py:25-50` — out_of_bound, abnormal_robot_state
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dexsuite/mdp/commands/pose_commands.py:27-181` — ObjectUniformPoseCommand
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dexsuite/mdp/commands/pose_commands_cfg.py:34-93` — ObjectUniformPoseCommandCfg
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dexsuite/adr_curriculum.py:12-123` — CurriculumCfg (ADR noise + gravity schedule)
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dexsuite/mdp/curriculums.py:22-115` — initial_final_interpolate_fn, DifficultyScheduler
-- `source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/dexsuite/mdp/__init__.py:6-12` — re-exports base `isaaclab.envs.mdp` + task-local modules
-- `source/isaaclab_assets/isaaclab_assets/robots/kuka_allegro.py:28-114` — KUKA_ALLEGRO_CFG (arm+hand articulation, 23 joints)
